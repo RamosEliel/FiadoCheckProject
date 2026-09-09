@@ -46,10 +46,10 @@ export default function LoginScreen() {
 
           {/* Email */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email</Text>
+            <Text style={styles.label}>Correo Electrónico</Text>
             <TextInput
               style={styles.input}
-              placeholder="example@example.com"
+              placeholder="nombre@correo.com"
               placeholderTextColor={COLORS.textMuted}
               value={email}
               onChangeText={setEmail}
@@ -72,9 +72,8 @@ export default function LoginScreen() {
                 secureTextEntry={!showPassword}
               />
               <TouchableOpacity style={styles.eyeBtn} onPress={togglePassword}>
-                <Text style={styles.eyeIcon}>
-                  {showPassword ? <Eye size={24} color="green" /> : <EyeOff size={24} color="#00D09E" />}
-                </Text>
+                {showPassword ? <Eye size={18} color="green" /> : <EyeOff size={18} color="#00D09E" />}
+                <Text style={styles.eyeLabel}>{showPassword ? 'Ocultar' : 'Mostrar'}</Text>
               </TouchableOpacity>
             </View>
           </View>

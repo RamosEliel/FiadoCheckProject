@@ -4,6 +4,7 @@ import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CONFIG } from '@/config/config';
 import { resolveClienteHomeRoute, clearTenderoSeleccionado } from '@/hooks/Usetiendasasociadas';
+import { friendlyErrorMessage } from '@/utils/errorMessages';
 
 const API_URL = CONFIG.API_URL;
 const FETCH_TIMEOUT_MS = 15000;
@@ -57,7 +58,7 @@ export const useLogin = () => {
       return;
     }
     if (!email.includes('@')) {
-      Alert.alert('Email inválido', 'Ingresa un email válido');
+      Alert.alert('Correo inválido', 'Ingresa un correo electrónico válido');
       return;
     }
 
@@ -113,12 +114,9 @@ export const useLogin = () => {
       Alert.alert('¡Bienvenido!', `Hola ${nombre} 👋`);
     } catch (err: any) {
       if (err.name === 'AbortError') {
-        Alert.alert(
-          'Sin conexión',
-          'No se pudo contactar el servidor. Verifica que el backend esté activo y que la IP en config.ts sea correcta.'
-        );
+        Alert.alert('Sin conexión', 'No se pudo contactar el servidor. Verifica tu conexión a internet.');
       } else {
-        Alert.alert('Error', err.message || 'No se pudo iniciar sesión');
+        Alert.alert('Error', friendlyErrorMessage(err.message || 'No se pudo iniciar sesión'));
       }
     } finally {
       setLoading(false);

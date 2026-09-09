@@ -8,10 +8,11 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { Stack, useFocusEffect, useLocalSearchParams, router } from 'expo-router';
 import { useCallback, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ChevronLeft, Bell } from 'lucide-react-native';
+import { HeaderIconButton } from '@/components/HeaderIconButton';
 import { registerPaymentStyles as styles } from '@/constants/Registerpayment.styles';
 import { COLORS } from '@/constants/colors';
 import { useRegisterPayment } from '@/hooks/Useregisterpayment';
@@ -58,16 +59,24 @@ export default function RegisterPaymentScreen() {
         <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
 
         <View style={styles.header}>
-          <TouchableOpacity onPress={handleCancelar} style={styles.backBtn}>
-            <ChevronLeft size={26} color={COLORS.white} />
-          </TouchableOpacity>
+          <HeaderIconButton
+            icon={ChevronLeft}
+            label="Volver"
+            onPress={handleCancelar}
+            style={styles.backBtn}
+          />
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>Registrar Pago</Text>
             <Text style={styles.headerSubtitle}>Asocia el pago a un crédito activo</Text>
           </View>
-          <TouchableOpacity style={styles.bellBtn}>
-            <Bell size={18} color={COLORS.primary} />
-          </TouchableOpacity>
+          <HeaderIconButton
+            icon={Bell}
+            label="Avisos"
+            onPress={() => router.push('/notificaciones' as any)}
+            color={COLORS.primary}
+            iconSize={18}
+            style={styles.bellBtn}
+          />
         </View>
 
         <ScrollView

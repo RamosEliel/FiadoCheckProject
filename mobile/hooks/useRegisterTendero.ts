@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Alert } from 'react-native';
 import { router } from 'expo-router';
 import { CONFIG } from '@/config/config';
+import { friendlyErrorMessage } from '@/utils/errorMessages';
 
 const API_URL = CONFIG.API_URL;
 
@@ -144,7 +145,7 @@ export const useRegisterTendero = () => {
       if (err.name === 'AbortError') {
         Alert.alert('Error', 'La conexión tardó demasiado. Verifica tu red e intenta de nuevo.');
       } else {
-        Alert.alert('Error', err.message || 'No se pudo crear la cuenta');
+        Alert.alert('Error', friendlyErrorMessage(err.message || 'No se pudo crear la cuenta'));
       }
     } finally {
       setLoading(false);

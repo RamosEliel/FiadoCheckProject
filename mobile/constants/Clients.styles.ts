@@ -22,9 +22,9 @@ export const clientStyles = StyleSheet.create({
     color: COLORS.white,
   },
   bellBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.4)',
     alignItems: 'center',
@@ -335,11 +335,19 @@ export const clientStyles = StyleSheet.create({
     color: COLORS.text,
   },
   modalSearchBtn: {
+    flexDirection: 'row',
+    gap: 6,
     backgroundColor: COLORS.text,
     borderRadius: 12,
     paddingHorizontal: 16,
+    paddingVertical: 12,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  modalSearchBtnText: {
+    color: COLORS.white,
+    fontSize: 13,
+    fontWeight: '700',
   },
   modalPreview: {
     backgroundColor: '#E8F5EE',

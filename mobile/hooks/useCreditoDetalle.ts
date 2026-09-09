@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert } from 'react-native';
 import { CONFIG } from '@/config/config';
 
 const API_URL = CONFIG.API_URL;
@@ -44,6 +43,7 @@ export type CreditoDetalleData = {
 export const useCreditoDetalle = (token: string | null, creditoId: string | null) => {
   const [loading, setLoading] = useState(true);
   const [credito, setCredito] = useState<CreditoDetalleData | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchCredito = useCallback(async () => {
     if (!token || !creditoId) {
@@ -53,6 +53,7 @@ export const useCreditoDetalle = (token: string | null, creditoId: string | null
 
     try {
       setLoading(true);
+      setError(null);
       const res = await fetchWithTimeout(`${API_URL}/creditos/${creditoId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -64,11 +65,11 @@ export const useCreditoDetalle = (token: string | null, creditoId: string | null
 
       const data = await res.json();
       setCredito(data);
-    } catch (error: any) {
-      const message = error.name === 'AbortError'
+    } catch (err: any) {
+      const message = err.name === 'AbortError'
         ? 'No se pudo contactar el servidor. Verifica tu conexión.'
-        : (error.message || 'No se pudo cargar el detalle del pago.');
-      Alert.alert('Error', message);
+        : (err.message || 'No se pudo cargar el detalle del pago.');
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -78,5 +79,5 @@ export const useCreditoDetalle = (token: string | null, creditoId: string | null
     fetchCredito();
   }, [fetchCredito]);
 
-  return { loading, credito, refetch: fetchCredito };
+  return { loading, credito, error, refetch: fetchCredito };
 };

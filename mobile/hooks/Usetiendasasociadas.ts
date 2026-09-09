@@ -3,6 +3,7 @@ import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import { CONFIG } from '@/config/config';
+import { friendlyErrorMessage } from '@/utils/errorMessages';
 
 const API_URL = CONFIG.API_URL;
 export const TENDERO_SELECCIONADO_KEY = 'tenderoSeleccionado';
@@ -99,7 +100,7 @@ export const useTiendasAsociadas = () => {
         setTiendaSeleccionada(lista[0]);
       }
     } catch (err: any) {
-      Alert.alert('Error', err.message);
+      Alert.alert('Error', friendlyErrorMessage(err.message));
       setTiendas([]);
     } finally {
       setLoading(false);

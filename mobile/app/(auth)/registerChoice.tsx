@@ -10,6 +10,7 @@ import { useState } from 'react';
 import { registerChoiceStyles as styles } from '@/constants/registerChoice.styles';
 import { COLORS } from '@/constants/colors';
 import { ChevronLeft, Store, User, Check } from 'lucide-react-native';
+import { HeaderIconButton } from '@/components/HeaderIconButton';
 
 type Opcion = 'tendero' | 'cliente' | null;
 
@@ -33,9 +34,12 @@ export default function RegisterChoiceScreen() {
 
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <ChevronLeft size={26} color={COLORS.white} />
-          </TouchableOpacity>
+          <HeaderIconButton
+            icon={ChevronLeft}
+            label="Volver"
+            onPress={() => router.back()}
+            style={styles.backBtn}
+          />
         </View>
 
         {/* Título */}

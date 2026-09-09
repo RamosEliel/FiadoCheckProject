@@ -8,10 +8,11 @@ StatusBar,
 ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Stack, useFocusEffect } from 'expo-router';
+import { Stack, useFocusEffect, router } from 'expo-router';
 import { useCallback, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Search, Bell, Banknote } from 'lucide-react-native';
+import { Bell, Banknote } from 'lucide-react-native';
+import { HeaderIconButton } from '@/components/HeaderIconButton';
 import { pagosStyles as styles } from '@/constants/pagos.styles';
 import { COLORS } from '@/constants/colors';
 import { usePagos, FiltroPeriodo, PagoItem } from '@/hooks/usePagos';
@@ -66,11 +67,16 @@ return (
     <SafeAreaView style={styles.safe}>
         <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
         <View style={styles.header}>
-        <View style={{ width: 40 }} />
+        <View style={{ width: 48 }} />
         <Text style={styles.headerTitle}>Pagos</Text>
-        <TouchableOpacity style={styles.bellBtn}>
-            <Bell size={20} color={COLORS.primary} />
-        </TouchableOpacity>
+        <HeaderIconButton
+          icon={Bell}
+          label="Avisos"
+          onPress={() => router.push('/notificaciones' as any)}
+          color={COLORS.primary}
+          iconSize={18}
+          style={styles.bellBtn}
+        />
         </View>
         <View style={styles.subHeader}>
         <Banknote size={16} color={COLORS.white} />
@@ -87,9 +93,6 @@ return (
             value={busqueda}
             onChangeText={setBusqueda}
             />
-            <TouchableOpacity style={styles.searchBtn}>
-            <Search size={20} color={COLORS.white} />
-            </TouchableOpacity>
         </View>
         <View style={styles.filtersRow}>
             {FILTROS.map((f) => (

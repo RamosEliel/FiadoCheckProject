@@ -11,12 +11,16 @@ import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ArrowLeft, Bell } from 'lucide-react-native';
+import { ChevronLeft, Bell, BarChart2 } from 'lucide-react-native';
 
 import { perfilClienteStyles as styles } from '@/constants/perfilCliente.styles';
 import { COLORS } from '@/constants/colors';
 import { useClientePerfil, EstadoBadge } from '@/hooks/useClientePerfil';
 import { formatNivelRiesgo, getRiesgoColor } from '@/utils/scoring';
+import { HeaderIconButton } from '@/components/HeaderIconButton';
+import { ErrorState } from '@/components/ErrorState';
+import { friendlyErrorMessage, clasificarError } from '@/utils/errorMessages';
+import { cerrarSesionYRedirigir } from '@/utils/session';
 
 const getBadgeStyles = (tipo: EstadoBadge) => {
   switch (tipo) {
@@ -43,6 +47,7 @@ export default function PerfilClienteScreen() {
     perfil,
     loading,
     error,
+    refetch,
     handleNuevoCredito,
   } = useClientePerfil(token, id);
 
@@ -52,6 +57,14 @@ export default function PerfilClienteScreen() {
       pathname: '/registerpayment',
       params: { clienteId: String(id) },
     });
+  };
+
+  const handleVerAnalitica = () => {
+    if (!id || !perfil) return;
+    router.push({
+      pathname: '/(tabs)/Analitica',
+      params: { clienteId: String(id), nombre: perfil.nombre },
+    } as any);
   };
 
   if (token === null || loading) {
@@ -65,12 +78,17 @@ export default function PerfilClienteScreen() {
   if (error || !perfil) {
     return (
       <SafeAreaView style={styles.safe}>
-        <View style={styles.center}>
-          <Text style={styles.errorText}>{error ?? 'Cliente no encontrado'}</Text>
-          <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 16 }}>
-            <Text style={{ color: COLORS.white, fontWeight: '600' }}>Volver</Text>
-          </TouchableOpacity>
-        </View>
+        <ErrorState
+          message={error ? friendlyErrorMessage(error) : 'Cliente no encontrado'}
+          primaryAction={
+            error
+              ? clasificarError(error) === 'sesion'
+                ? { label: 'Iniciar sesión', onPress: cerrarSesionYRedirigir }
+                : { label: 'Reintentar', onPress: refetch }
+              : undefined
+          }
+          secondaryAction={{ label: 'Volver', onPress: () => router.back() }}
+        />
       </SafeAreaView>
     );
   }
@@ -84,13 +102,21 @@ export default function PerfilClienteScreen() {
         <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
 
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <ArrowLeft size={22} color={COLORS.white} />
-          </TouchableOpacity>
+          <HeaderIconButton
+            icon={ChevronLeft}
+            label="Volver"
+            onPress={() => router.back()}
+            style={styles.backBtn}
+          />
           <Text style={styles.headerTitle}>Perfil Del Cliente</Text>
-          <TouchableOpacity style={styles.bellBtn} onPress={() => router.push('/notificaciones' as any)}>
-            <Bell size={20} color={COLORS.primary} />
-          </TouchableOpacity>
+          <HeaderIconButton
+            icon={Bell}
+            label="Avisos"
+            onPress={() => router.push('/notificaciones' as any)}
+            color={COLORS.primary}
+            iconSize={18}
+            style={styles.bellBtn}
+          />
         </View>
 
         <View style={styles.card}>
@@ -115,6 +141,7 @@ export default function PerfilClienteScreen() {
               </View>
               <View style={styles.statCard}>
                 <Text style={styles.statLabel}>Perfil IA</Text>
+                <Text style={styles.statValue}>{perfil.puntaje ?? '--'}</Text>
                 <View style={[styles.riesgoBadge, { backgroundColor: getRiesgoColor(perfil.nivelRiesgo) + '20' }]}>
                   <Text style={[styles.riesgoBadgeText, { color: getRiesgoColor(perfil.nivelRiesgo) }]}>
                     Riesgo {formatNivelRiesgo(perfil.nivelRiesgo)}
@@ -216,6 +243,11 @@ export default function PerfilClienteScreen() {
                 <Text style={styles.btnFillText}>Registrar Pago</Text>
               </TouchableOpacity>
             </View>
+
+            <TouchableOpacity style={styles.btnAnalitica} onPress={handleVerAnalitica} activeOpacity={0.85}>
+              <BarChart2 size={16} color={COLORS.primary} />
+              <Text style={styles.btnAnaliticaText}>Ver Análisis Completo</Text>
+            </TouchableOpacity>
           </ScrollView>
         </View>
       </SafeAreaView>

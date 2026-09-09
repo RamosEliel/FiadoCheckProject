@@ -16,8 +16,8 @@ export const registerPaymentStyles = StyleSheet.create({
     backgroundColor: COLORS.primary,
   },
   backBtn: {
-    width: 36,
-    height: 36,
+    width: 48,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -41,8 +41,8 @@ export const registerPaymentStyles = StyleSheet.create({
     marginTop: 2,
   },
   bellBtn: {
-    width: 36,
-    height: 36,
+    width: 48,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.white,

@@ -13,11 +13,15 @@ import { useState, useCallback } from 'react';
 import { Stack, useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Bell, ChevronLeft } from 'lucide-react-native';
+import { HeaderIconButton } from '@/components/HeaderIconButton';
 
 import { reportesStyles as styles } from '@/constants/reportes.styles';
 import { COLORS } from '@/constants/colors';
 import { useReportes, PeriodoReporte } from '@/hooks/useReportes';
 import { CONFIG } from '@/config/config';
+import { ErrorState } from '@/components/ErrorState';
+import { friendlyErrorMessage, clasificarError } from '@/utils/errorMessages';
+import { cerrarSesionYRedirigir } from '@/utils/session';
 
 // ── Períodos disponibles ─────────────────────────────────────────────────────
 const PERIODOS: { key: PeriodoReporte; label: string }[] = [
@@ -61,6 +65,7 @@ export default function ReportesScreen() {
     periodo,
     cambiarPeriodo,
     formatCOP,
+    refetch,
   } = useReportes(token);
 
   // Datos derivados
@@ -124,9 +129,14 @@ export default function ReportesScreen() {
   if (error) {
     return (
       <SafeAreaView style={styles.safe}>
-        <Text style={{ textAlign: 'center', marginTop: 60, color: COLORS.white, paddingHorizontal: 20 }}>
-          {error}
-        </Text>
+        <ErrorState
+          message={friendlyErrorMessage(error)}
+          primaryAction={
+            clasificarError(error) === 'sesion'
+              ? { label: 'Iniciar sesión', onPress: cerrarSesionYRedirigir }
+              : { label: 'Reintentar', onPress: refetch }
+          }
+        />
       </SafeAreaView>
     );
   }
@@ -139,13 +149,21 @@ export default function ReportesScreen() {
 
         {/* ── Header ──────────────────────────────────────────────────────── */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <ChevronLeft size={26} color={COLORS.white} />
-          </TouchableOpacity>
+          <HeaderIconButton
+            icon={ChevronLeft}
+            label="Volver"
+            onPress={() => router.back()}
+            style={styles.backBtn}
+          />
           <Text style={styles.headerTitle}>Reportes</Text>
-          <TouchableOpacity style={styles.bellBtn}>
-            <Bell size={18} color={COLORS.primary} />
-          </TouchableOpacity>
+          <HeaderIconButton
+            icon={Bell}
+            label="Avisos"
+            onPress={() => router.push('/notificaciones' as any)}
+            color={COLORS.primary}
+            iconSize={18}
+            style={styles.bellBtn}
+          />
         </View>
 
         {/* ── Pills de período ─────────────────────────────────────────────── */}

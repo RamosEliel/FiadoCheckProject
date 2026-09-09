@@ -78,10 +78,16 @@ export const registerTenderoStyles = StyleSheet.create({
     color: COLORS.text,
   },
   eyeBtn: {
-    padding: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
-  eyeIcon: {
-    fontSize: 16,
+  eyeLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.primary,
   },
 
   // Error

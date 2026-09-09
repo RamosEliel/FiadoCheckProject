@@ -19,9 +19,9 @@ export const creditoDetalleStyles = StyleSheet.create({
     backgroundColor: COLORS.primary,
   },
   backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.2)',
@@ -34,7 +34,7 @@ export const creditoDetalleStyles = StyleSheet.create({
     fontWeight: '700',
   },
   headerSpacer: {
-    width: 36,
+    width: 48,
   },
   scroll: {
     flex: 1,

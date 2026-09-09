@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -10,10 +10,11 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Stack, useFocusEffect, useRouter } from 'expo-router';
+import { Stack, useFocusEffect, useRouter, useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { G, Line, Rect } from 'react-native-svg';
-import { ArrowLeft, Bell, Calendar, MessageSquare, Search } from 'lucide-react-native';
+import { ChevronLeft, Bell, Calendar, Search } from 'lucide-react-native';
+import { HeaderIconButton } from '@/components/HeaderIconButton';
 import { analiticaStyles as styles } from '@/constants/Analitica.styles';
 import { COLORS } from '@/constants/colors';
 import {
@@ -111,6 +112,7 @@ function BarChart({ data, width, yMax, yTicks }: BarChartProps) {
 
 export default function AnaliticaScreen() {
   const router = useRouter();
+  const { clienteId, nombre } = useLocalSearchParams<{ clienteId?: string; nombre?: string }>();
   const [token, setToken] = useState<string | null>(null);
   const [isTendero, setIsTendero] = useState<boolean | null>(null);
   const { width } = useWindowDimensions();
@@ -164,6 +166,7 @@ export default function AnaliticaScreen() {
     busqueda,
     setBusqueda,
     buscarCliente,
+    seleccionarCliente,
     anio,
     toggleAnio,
     avanzarMes,
@@ -179,6 +182,14 @@ export default function AnaliticaScreen() {
     refetch,
     handleCancelar,
   } = useAnalitica(isTendero ? token : null);
+
+  useEffect(() => {
+    if (clienteId && nombre) {
+      seleccionarCliente(String(clienteId), String(nombre));
+    }
+    // Solo debe sembrar el cliente una vez, al llegar desde el perfil — no en cada re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clienteId, nombre]);
 
   useFocusEffect(
     useCallback(() => {
@@ -210,13 +221,19 @@ export default function AnaliticaScreen() {
         <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
 
         <View style={styles.header}>
-          <TouchableOpacity onPress={handleCancelar} style={styles.backBtn} activeOpacity={0.7}>
-            <ArrowLeft size={22} color={COLORS.white} />
-          </TouchableOpacity>
+          <HeaderIconButton
+            icon={ChevronLeft}
+            label="Volver"
+            onPress={handleCancelar}
+            style={styles.backBtn}
+          />
           <Text style={styles.headerTitle}>Analitica</Text>
-          <TouchableOpacity style={styles.bellBtn} activeOpacity={0.7}>
-            <Bell size={18} color={COLORS.white} />
-          </TouchableOpacity>
+          <HeaderIconButton
+            icon={Bell}
+            label="Avisos"
+            onPress={() => router.push('/notificaciones' as any)}
+            style={styles.bellBtn}
+          />
         </View>
 
         <ScrollView
@@ -237,7 +254,8 @@ export default function AnaliticaScreen() {
               autoCapitalize="none"
             />
             <TouchableOpacity style={styles.searchBtn} onPress={buscarCliente} activeOpacity={0.8}>
-              <Search size={18} color={COLORS.white} />
+              <Search size={16} color={COLORS.white} />
+              <Text style={styles.searchBtnText}>Buscar</Text>
             </TouchableOpacity>
           </View>
 
@@ -285,15 +303,13 @@ export default function AnaliticaScreen() {
                 <View style={styles.chartHeader}>
                   <Text style={styles.chartTitle}>{chartTitle}</Text>
                   <View style={styles.chartActions}>
-                    <TouchableOpacity style={styles.chartActionBtn} activeOpacity={0.7}>
-                      <MessageSquare size={14} color={COLORS.white} />
-                    </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.chartActionBtn}
                       onPress={avanzarMes}
                       activeOpacity={0.7}
                     >
                       <Calendar size={14} color={COLORS.white} />
+                      <Text style={styles.chartActionBtnText}>Avanzar Mes</Text>
                     </TouchableOpacity>
                   </View>
                 </View>

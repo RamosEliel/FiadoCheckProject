@@ -15,6 +15,9 @@ import { vistaUsuarioStyles as styles } from '@/constants/vistaUsuario.styles';
 import { COLORS } from '@/constants/colors';
 import { useVistaUsuario } from '@/hooks/useVistaUsuario';
 import { formatNivelRiesgo, getRiesgoColor } from '@/utils/scoring';
+import { ErrorState } from '@/components/ErrorState';
+import { friendlyErrorMessage, clasificarError } from '@/utils/errorMessages';
+import { cerrarSesionYRedirigir } from '@/utils/session';
 
 const VistaUsuario = () => {
   const router = useRouter();
@@ -26,7 +29,7 @@ const VistaUsuario = () => {
     }, [])
   );
 
-  const { loading, userData, movements, handleContactStore } = useVistaUsuario(token);
+  const { loading, userData, movements, error, handleContactStore, refetch } = useVistaUsuario(token);
 
   if (token === null || loading) {
     return (
@@ -34,6 +37,22 @@ const VistaUsuario = () => {
         <View style={[styles.center, { backgroundColor: COLORS.white }]}>
           <ActivityIndicator color={COLORS.primary} size="large" />
         </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error || !userData) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.white }}>
+        <ErrorState
+          tone="dark"
+          message={error ? friendlyErrorMessage(error) : 'No se pudo cargar tu cuenta.'}
+          primaryAction={
+            error && clasificarError(error) === 'sesion'
+              ? { label: 'Iniciar sesión', onPress: cerrarSesionYRedirigir }
+              : { label: 'Reintentar', onPress: refetch }
+          }
+        />
       </SafeAreaView>
     );
   }
@@ -95,11 +114,6 @@ const VistaUsuario = () => {
                     },
                   ]}
                 />
-              </View>
-              <View style={styles.scoreRow}>
-                <Text style={styles.scoreText}>
-                  Confianza del modelo: {userData?.nivelConfianza ?? 0}%
-                </Text>
               </View>
             </View>
             <Text style={[styles.confidenceBadge, { color: userData?.nivelConfianzaColor }]}>

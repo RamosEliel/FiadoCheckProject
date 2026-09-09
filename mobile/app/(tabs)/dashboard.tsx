@@ -15,6 +15,10 @@ import { X } from "lucide-react-native";
 import { Search } from "lucide-react-native";
 import { useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
+import { HeaderIconButton } from '@/components/HeaderIconButton';
+import { ErrorState } from '@/components/ErrorState';
+import { friendlyErrorMessage, clasificarError } from '@/utils/errorMessages';
+import { cerrarSesionYRedirigir } from '@/utils/session';
 
 
 const FILTROS_FECHA: { key: FiltroFecha; label: string }[] = [
@@ -75,7 +79,14 @@ useFocusEffect(
 
   if (error) return (
     <SafeAreaView style={styles.safe}>
-      <Text style={{ textAlign: 'center', marginTop: 60, color: COLORS.white }}>{error}</Text>
+      <ErrorState
+        message={friendlyErrorMessage(error)}
+        primaryAction={
+          clasificarError(error) === 'sesion'
+            ? { label: 'Iniciar sesión', onPress: cerrarSesionYRedirigir }
+            : { label: 'Reintentar', onPress: () => refetch() }
+        }
+      />
     </SafeAreaView>
   );
 
@@ -91,9 +102,13 @@ useFocusEffect(
             <Text style={styles.greeting}>Hola, {tendero?.nombre ?? 'Carlos'}</Text>
             <Text style={styles.storeName}>{tendero?.nombre_tienda ?? 'Tienda El Vecino'}</Text>
           </View>
-          <TouchableOpacity style={styles.bellBtn} onPress={handleBell}>
-            <Text style={styles.bellIcon}><Bell size={24} color="white" /></Text>
-          </TouchableOpacity>
+          <HeaderIconButton
+            icon={Bell}
+            label="Avisos"
+            onPress={handleBell}
+            iconSize={22}
+            style={styles.bellBtn}
+          />
         </View>
 
         {/* Card blanca fija */}
@@ -142,9 +157,8 @@ useFocusEffect(
             <View style={styles.activityHeader}>
               <Text style={styles.sectionTitle}>Actividad Reciente</Text>
               <TouchableOpacity onPress={toggleBusqueda} style={styles.searchIconBtn}>
-                <Text style={styles.searchIconText}>
-                  {mostrarBusqueda ? <X size={24} color="black" /> : <Search size={24} color="black" />}
-                </Text>
+                {mostrarBusqueda ? <X size={18} color="black" /> : <Search size={18} color="black" />}
+                <Text style={styles.searchIconLabel}>{mostrarBusqueda ? 'Cerrar' : 'Buscar'}</Text>
               </TouchableOpacity>
             </View>
 

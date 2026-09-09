@@ -1,12 +1,16 @@
-import { View, Text, TouchableOpacity, ScrollView, StatusBar, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, StatusBar, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useCallback, useState } from 'react';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ChevronLeft } from 'lucide-react-native';
+import { HeaderIconButton } from '@/components/HeaderIconButton';
 import { creditoDetalleStyles as styles } from '@/constants/creditoDetalle.styles';
 import { COLORS } from '@/constants/colors';
 import { useCreditoDetalle } from '@/hooks/useCreditoDetalle';
+import { ErrorState } from '@/components/ErrorState';
+import { friendlyErrorMessage, clasificarError } from '@/utils/errorMessages';
+import { cerrarSesionYRedirigir } from '@/utils/session';
 
 const ESTADO_COLORS: Record<string, string> = {
   vencido: '#E53935',
@@ -31,7 +35,7 @@ export default function CreditoDetalleScreen() {
     }, [])
   );
 
-  const { loading, credito } = useCreditoDetalle(token, id ?? null);
+  const { loading, credito, error, refetch } = useCreditoDetalle(token, id ?? null);
 
   if (token === null || loading) {
     return (
@@ -48,16 +52,29 @@ export default function CreditoDetalleScreen() {
       <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
 
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <ChevronLeft size={22} color={COLORS.white} />
-        </TouchableOpacity>
+        <HeaderIconButton
+          icon={ChevronLeft}
+          label="Volver"
+          onPress={() => router.back()}
+          style={styles.backBtn}
+        />
         <Text style={styles.headerTitle}>Detalle del Pago</Text>
         <View style={styles.headerSpacer} />
       </View>
 
       {!credito ? (
         <View style={styles.center}>
-          <Text style={styles.emptyText}>No se encontró el pago solicitado.</Text>
+          <ErrorState
+            tone="dark"
+            message={error ? friendlyErrorMessage(error) : 'No se encontró el pago solicitado.'}
+            primaryAction={
+              error
+                ? clasificarError(error) === 'sesion'
+                  ? { label: 'Iniciar sesión', onPress: cerrarSesionYRedirigir }
+                  : { label: 'Reintentar', onPress: refetch }
+                : undefined
+            }
+          />
         </View>
       ) : (
         <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>

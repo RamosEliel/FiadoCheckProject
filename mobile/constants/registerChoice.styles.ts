@@ -16,8 +16,8 @@ export const registerChoiceStyles = StyleSheet.create({
     paddingBottom: 20,
   },
   backBtn: {
-    width: 36,
-    height: 36,
+    width: 48,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
   },

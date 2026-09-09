@@ -20,6 +20,7 @@ import { clearTenderoSeleccionado } from '@/hooks/Usetiendasasociadas';
 import { COLORS } from '@/constants/colors';
 import { profileStyles as styles } from '@/constants/profile.styles';
 import { ChevronLeft, Bell, User, ShieldCheck, LogOut, Camera } from 'lucide-react-native';
+import { HeaderIconButton } from '@/components/HeaderIconButton';
 
 const DEFAULT_AVATAR = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
 
@@ -365,17 +366,27 @@ export default function ProfileScreen() {
       <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
 
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <ChevronLeft size={24} color={COLORS.white} />
-        </TouchableOpacity>
+        <HeaderIconButton
+          icon={ChevronLeft}
+          label="Volver"
+          onPress={() => router.back()}
+          style={styles.backBtn}
+        />
         <Text style={styles.headerTitle}>Perfil</Text>
-        <TouchableOpacity style={styles.bellBtn} onPress={() => router.push('/notificaciones' as any)}>
-          <Bell size={24} color={COLORS.white} />
-        </TouchableOpacity>
+        <HeaderIconButton
+          icon={Bell}
+          label="Avisos"
+          onPress={() => router.push('/notificaciones' as any)}
+          style={styles.bellBtn}
+        />
       </View>
 
       <View style={styles.profileContent}>
-        <TouchableOpacity onPress={() => setEditModalVisible(true)}>
+        <TouchableOpacity
+          onPress={() => setEditModalVisible(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Cambiar foto de perfil"
+        >
           <Image
             source={{ uri: user?.foto_perfil || DEFAULT_AVATAR }}
             style={styles.profileImage}
@@ -451,7 +462,7 @@ export default function ProfileScreen() {
           <View style={[styles.iconContainer, { backgroundColor: '#BFEBC4' }]}>
             <LogOut size={24} color={COLORS.primary} />
           </View>
-          <Text style={styles.menuText}>Logout</Text>
+          <Text style={styles.menuText}>Cerrar Sesión</Text>
         </TouchableOpacity>
       </View>
 
@@ -488,9 +499,19 @@ export default function ProfileScreen() {
                 <TouchableOpacity
                   onPress={pickImage}
                   disabled={saving}
-                  style={{ backgroundColor: COLORS.primary, padding: 8, borderRadius: 10, opacity: saving ? 0.6 : 1 }}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                    backgroundColor: COLORS.primary,
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                    borderRadius: 10,
+                    opacity: saving ? 0.6 : 1,
+                  }}
                 >
-                  <Camera size={20} color={COLORS.white} />
+                  <Camera size={18} color={COLORS.white} />
+                  <Text style={{ color: COLORS.white, fontSize: 13, fontWeight: '700' }}>Cambiar Foto</Text>
                 </TouchableOpacity>
               </TouchableOpacity>
 

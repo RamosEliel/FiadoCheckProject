@@ -11,7 +11,7 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams, router } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -20,6 +20,7 @@ import { COLORS } from '@/constants/colors';
 import { useAddCredit } from '@/hooks/Useaddcredit';
 import { formatNivelRiesgo } from '@/utils/scoring';
 import { Bell, CalendarDays, ChevronLeft, Sparkles, AlertCircle, Wallet, Receipt } from 'lucide-react-native';
+import { HeaderIconButton } from '@/components/HeaderIconButton';
 
 export default function AddCreditScreen() {
   const { clienteId } = useLocalSearchParams<{ clienteId?: string }>();
@@ -143,13 +144,21 @@ export default function AddCreditScreen() {
 
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backBtn} onPress={handleCancelar}>
-            <ChevronLeft size={26} color={COLORS.white} />
-          </TouchableOpacity>
+          <HeaderIconButton
+            icon={ChevronLeft}
+            label="Volver"
+            onPress={handleCancelar}
+            style={styles.backBtn}
+          />
           <Text style={styles.headerTitle}>Agregar Credito</Text>
-          <TouchableOpacity style={styles.bellBtn}>
-            <Bell size={18} color={COLORS.primary} />
-          </TouchableOpacity>
+          <HeaderIconButton
+            icon={Bell}
+            label="Avisos"
+            onPress={() => router.push('/notificaciones' as any)}
+            color={COLORS.primary}
+            iconSize={18}
+            style={styles.bellBtn}
+          />
         </View>
 
         {/* Card */}
@@ -198,13 +207,15 @@ export default function AddCreditScreen() {
                   keyboardType="numeric"
                   maxLength={10}
                 />
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.calendarBtn}
                   onPress={() => {
                     setCurrentCalendarDate(new Date());
                     setShowDatePicker(true);
                   }}
                   activeOpacity={0.7}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityLabel="Elegir fecha"
                 >
                   <CalendarDays size={22} color={COLORS.white}
                     style={{ backgroundColor: COLORS.primary, borderRadius: 8, padding: 4 }}
@@ -264,11 +275,10 @@ export default function AddCreditScreen() {
                         <View style={styles.scoreCircleWrap}>
                           <View style={[styles.scoreCircle, { borderColor: getRiesgoColor(scoring.nivel_riesgo) }]}>
                             <Text style={[styles.scoreCircleText, { color: getRiesgoColor(scoring.nivel_riesgo) }]}>
-                              {scoring.confianza ?? 0}
+                              {scoring.puntaje ?? 0}
                             </Text>
-                            <Text style={styles.scoreCircleLabel}>%</Text>
                           </View>
-                          <Text style={styles.scoreCircleHint}>Confianza del modelo</Text>
+                          <Text style={styles.scoreCircleHint}>Nivel de confianza: {scoring.confianza ?? 0}%</Text>
                         </View>
                         <View style={styles.scoreInfoColumn}>
                           <View style={[styles.badgeRiesgo, { backgroundColor: getRiesgoColor(scoring.nivel_riesgo) + '20' }]}>
@@ -286,29 +296,34 @@ export default function AddCreditScreen() {
                       </View>
 
                       {scoring.total_creditos > 0 ? (
-                        <View style={styles.miniStatsRow}>
-                          <View style={styles.miniStatCard}>
-                            <Receipt size={16} color={COLORS.primary} />
-                            <Text style={styles.miniStatValue}>{scoring.total_creditos}</Text>
-                            <Text style={styles.miniStatLabel}>Créditos</Text>
-                          </View>
-                          <View style={styles.miniStatCard}>
-                            <Wallet size={16} color={COLORS.primary} />
-                            <Text style={styles.miniStatValue}>
-                              ${scoring.total_deuda.toLocaleString('es-CO')}
-                            </Text>
-                            <Text style={styles.miniStatLabel}>Deuda</Text>
-                          </View>
-                          {scoring.creditos_vencidos > 0 && (
-                            <View style={[styles.miniStatCard, { backgroundColor: '#FFF0F0' }]}>
-                              <AlertCircle size={16} color="#FF5252" />
-                              <Text style={[styles.miniStatValue, { color: '#FF5252' }]}>
-                                {scoring.creditos_vencidos}
-                              </Text>
-                              <Text style={[styles.miniStatLabel, { color: '#FF5252' }]}>Vencidos</Text>
+                        <>
+                          {scoring.mensaje ? (
+                            <Text style={styles.scoringText}>{scoring.mensaje}</Text>
+                          ) : null}
+                          <View style={styles.miniStatsRow}>
+                            <View style={styles.miniStatCard}>
+                              <Receipt size={16} color={COLORS.primary} />
+                              <Text style={styles.miniStatValue}>{scoring.total_creditos}</Text>
+                              <Text style={styles.miniStatLabel}>Créditos</Text>
                             </View>
-                          )}
-                        </View>
+                            <View style={styles.miniStatCard}>
+                              <Wallet size={16} color={COLORS.primary} />
+                              <Text style={styles.miniStatValue}>
+                                ${scoring.total_deuda.toLocaleString('es-CO')}
+                              </Text>
+                              <Text style={styles.miniStatLabel}>Deuda</Text>
+                            </View>
+                            {scoring.creditos_vencidos > 0 && (
+                              <View style={[styles.miniStatCard, { backgroundColor: '#FFF0F0' }]}>
+                                <AlertCircle size={16} color="#FF5252" />
+                                <Text style={[styles.miniStatValue, { color: '#FF5252' }]}>
+                                  {scoring.creditos_vencidos}
+                                </Text>
+                                <Text style={[styles.miniStatLabel, { color: '#FF5252' }]}>Vencidos</Text>
+                              </View>
+                            )}
+                          </View>
+                        </>
                       ) : (
                         <View style={styles.iaEmptyState}>
                           <AlertCircle size={32} color={COLORS.textMuted} />
@@ -379,7 +394,7 @@ export default function AddCreditScreen() {
           >
             {/* Header del Calendario */}
             <View style={calendarStyles.header}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[
                   calendarStyles.navBtn,
                   esMesAnteriorAlActual(
@@ -390,17 +405,21 @@ export default function AddCreditScreen() {
                 disabled={esMesAnteriorAlActual(
                   new Date(currentCalendarDate.getFullYear(), currentCalendarDate.getMonth() - 1, 1)
                 )}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                accessibilityLabel="Mes anterior"
               >
                 <ChevronLeft size={20} color={COLORS.text} />
               </TouchableOpacity>
-              
+
               <Text style={calendarStyles.monthTitle}>
                 {obtenerNombreMes(currentCalendarDate.getMonth())} {currentCalendarDate.getFullYear()}
               </Text>
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 style={calendarStyles.navBtn}
                 onPress={() => changeMonth(1)}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                accessibilityLabel="Mes siguiente"
               >
                 <ChevronLeft size={20} color={COLORS.text} style={{ transform: [{ rotate: '180deg' }] }} />
               </TouchableOpacity>
@@ -436,6 +455,7 @@ export default function AddCreditScreen() {
                     onPress={() => seleccionarDia(dia)}
                     disabled={esPasado}
                     activeOpacity={esPasado ? 1 : 0.7}
+                    hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
                   >
                     <Text
                       style={[

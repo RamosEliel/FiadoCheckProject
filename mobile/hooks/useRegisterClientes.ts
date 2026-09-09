@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Alert } from 'react-native';
 import { router } from 'expo-router';
 import { CONFIG } from '@/config/config';
+import { friendlyErrorMessage } from '@/utils/errorMessages';
 
 const API_URL = CONFIG.API_URL;
 
@@ -27,7 +28,7 @@ export const useRegister = () => {
       return;
     }
     if (!email.includes('@')) {
-      Alert.alert('Email inválido', 'Ingresa un email válido');
+      Alert.alert('Correo inválido', 'Ingresa un correo electrónico válido');
       return;
     }
     if (password !== confirmPassword) {
@@ -63,7 +64,7 @@ export const useRegister = () => {
         { text: 'OK', onPress: () => router.replace('/(auth)/login') }
       ]);
     } catch (err: any) {
-      Alert.alert('Error', err.message || 'No se pudo crear la cuenta');
+      Alert.alert('Error', friendlyErrorMessage(err.message || 'No se pudo crear la cuenta'));
     } finally {
       setLoading(false);
     }

@@ -13,13 +13,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useCallback, useState } from 'react';
-import { Stack, useFocusEffect } from 'expo-router';
+import { Stack, useFocusEffect, router } from 'expo-router';
 import { clientStyles as styles } from '@/constants/Clients.styles';
 import { COLORS } from '@/constants/colors';
 import { useClients, Cliente } from '@/hooks/Useclients';
 import { useClienteAcciones } from '@/hooks/Useclienteacciones';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Search, Bell, BadgeCheck, UserPlus, Link2, X } from 'lucide-react-native';
+import { HeaderIconButton } from '@/components/HeaderIconButton';
 
 const FILTROS = [
   { key: 'todos',     label: 'Todos'     },
@@ -109,11 +110,16 @@ export default function ClientsScreen() {
         <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
 
         <View style={styles.header}>
-          <View style={{ width: 40 }} />
+          <View style={{ width: 48 }} />
           <Text style={styles.headerTitle}>Clientes</Text>
-          <TouchableOpacity style={styles.bellBtn}>
-            <Bell size={20} color={COLORS.primary} />
-          </TouchableOpacity>
+          <HeaderIconButton
+            icon={Bell}
+            label="Avisos"
+            onPress={() => router.push('/notificaciones' as any)}
+            color={COLORS.primary}
+            iconSize={18}
+            style={styles.bellBtn}
+          />
         </View>
 
         <View style={styles.subHeader}>
@@ -130,9 +136,6 @@ export default function ClientsScreen() {
               value={busqueda}
               onChangeText={setBusqueda}
             />
-            <TouchableOpacity style={styles.searchBtn}>
-              <Search size={20} color={COLORS.white} />
-            </TouchableOpacity>
           </View>
 
           <View style={styles.filtersRow}>
@@ -328,7 +331,12 @@ export default function ClientsScreen() {
                   >
                     {buscando
                       ? <ActivityIndicator size="small" color={COLORS.white} />
-                      : <Search size={18} color={COLORS.white} />}
+                      : (
+                        <>
+                          <Search size={16} color={COLORS.white} />
+                          <Text style={styles.modalSearchBtnText}>Buscar</Text>
+                        </>
+                      )}
                   </TouchableOpacity>
                 </View>
 
@@ -360,6 +368,9 @@ export default function ClientsScreen() {
             <TouchableOpacity
               style={{ position: 'absolute', top: 16, right: 20, padding: 4 }}
               onPress={cerrarModal}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              accessibilityRole="button"
+              accessibilityLabel="Cerrar"
             >
               <X size={20} color={COLORS.textMuted} />
             </TouchableOpacity>

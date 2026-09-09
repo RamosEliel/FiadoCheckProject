@@ -70,10 +70,16 @@ export const loginStyles = StyleSheet.create({
     color: COLORS.text,
   },
   eyeBtn: {
-    padding: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
-  eyeIcon: {
-    fontSize: 18,
+  eyeLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.primary,
   },
   btnPrimary: {
     backgroundColor: COLORS.primary,

@@ -4,9 +4,13 @@ import { useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ChevronLeft } from 'lucide-react-native';
+import { HeaderIconButton } from '@/components/HeaderIconButton';
 import { notificacionesStyles as styles } from '@/constants/notificaciones.styles';
 import { COLORS } from '@/constants/colors';
 import { useNotificaciones, Alerta } from '@/hooks/useNotificaciones';
+import { ErrorState } from '@/components/ErrorState';
+import { friendlyErrorMessage, clasificarError } from '@/utils/errorMessages';
+import { cerrarSesionYRedirigir } from '@/utils/session';
 
 const TIPO_COLOR: Record<Alerta['tipo'], string> = {
   critica: '#E53935',
@@ -40,7 +44,7 @@ export default function NotificacionesScreen() {
     }, [])
   );
 
-  const { loading, alertas, marcarLeida } = useNotificaciones(token, esTendero);
+  const { loading, alertas, error, refetch, marcarLeida } = useNotificaciones(token, esTendero);
 
   const handleAlertaPress = (alerta: Alerta) => {
     marcarLeida(alerta.id_alerta);
@@ -55,9 +59,12 @@ export default function NotificacionesScreen() {
       <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
 
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <ChevronLeft size={22} color={COLORS.white} />
-        </TouchableOpacity>
+        <HeaderIconButton
+          icon={ChevronLeft}
+          label="Volver"
+          onPress={() => router.back()}
+          style={styles.backBtn}
+        />
         <Text style={styles.headerTitle}>Notificaciones</Text>
         <View style={styles.headerSpacer} />
       </View>
@@ -72,6 +79,18 @@ export default function NotificacionesScreen() {
             Las notificaciones de cartera están disponibles para tenderos. Pronto agregaremos
             notificaciones para clientes.
           </Text>
+        </View>
+      ) : error ? (
+        <View style={styles.center}>
+          <ErrorState
+            tone="dark"
+            message={friendlyErrorMessage(error)}
+            primaryAction={
+              clasificarError(error) === 'sesion'
+                ? { label: 'Iniciar sesión', onPress: cerrarSesionYRedirigir }
+                : { label: 'Reintentar', onPress: refetch }
+            }
+          />
         </View>
       ) : alertas.length === 0 ? (
         <View style={styles.center}>

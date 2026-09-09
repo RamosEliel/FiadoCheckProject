@@ -3,6 +3,7 @@ import { Alert } from 'react-native';
 import { router } from 'expo-router';
 import { CONFIG } from '@/config/config';
 import { getRiesgoColor, mapScoringML } from '@/utils/scoring';
+import { friendlyErrorMessage } from '@/utils/errorMessages';
 
 const API_URL = CONFIG.API_URL;
 
@@ -19,6 +20,7 @@ export type RecomendacionIA = {
   limite_sugerido: number | null;
   nivel_riesgo: string | null;
   confianza: number;
+  puntaje: number | null;
   total_creditos: number;
   total_deuda: number;
   creditos_vencidos: number;
@@ -29,7 +31,7 @@ type RecomendacionResponse = {
   estado: EstadoRecomendacion;
   mensaje: string;
   nombre_completo?: string;
-  puntaje?: number;
+  puntaje?: number | null;
   limite_sugerido?: number;
   nivel_riesgo?: string;
   confianza?: number | null;
@@ -51,6 +53,7 @@ const mapRecomendacion = (json: RecomendacionResponse): RecomendacionIA => {
     limite_sugerido: json.limite_sugerido ?? null,
     nivel_riesgo: ml.nivel_riesgo,
     confianza: ml.confianza,
+    puntaje: ml.puntaje,
     total_creditos: json.totales?.total_creditos ?? 0,
     total_deuda: json.totales?.total_deuda ?? 0,
     creditos_vencidos: json.totales?.creditos_vencidos ?? 0,
@@ -84,34 +87,11 @@ export const useAddCredit = (token: string, id_tendero: string, initialClienteId
 
     const json = await res.json().catch(() => ({}));
 
-    if (res.ok) {
-      return json;
+    if (!res.ok) {
+      throw new Error(json.error || 'No se pudo cargar la recomendación');
     }
 
-    if (res.status === 404 && json.error?.includes('No existe scoring')) {
-      const calcRes = await fetch(`${API_URL}/scoring/${clienteId}/calcular`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!calcRes.ok) {
-        const calcErr = await calcRes.json().catch(() => ({}));
-        throw new Error(calcErr.error || 'No se pudo calcular el scoring');
-      }
-
-      const retryRes = await fetch(`${API_URL}/scoring/${clienteId}/recomendacion`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      const retryJson = await retryRes.json().catch(() => ({}));
-      if (!retryRes.ok) {
-        throw new Error(retryJson.error || 'No se pudo obtener la recomendación');
-      }
-
-      return retryJson;
-    }
-
-    throw new Error(json.error || 'No se pudo cargar la recomendación');
+    return json;
   };
 
   const buscarScoring = async (clienteId?: unknown) => {
@@ -125,7 +105,7 @@ export const useAddCredit = (token: string, id_tendero: string, initialClienteId
       const data = await fetchRecomendacion(id);
       setScoring(mapRecomendacion(data));
     } catch (err: any) {
-      Alert.alert('Error', err.message || 'No se pudo cargar la información del cliente.');
+      Alert.alert('Error', friendlyErrorMessage(err.message || 'No se pudo cargar la información del cliente.'));
       setScoring(null);
     } finally {
       setLoadingScoring(false);
@@ -145,7 +125,7 @@ export const useAddCredit = (token: string, id_tendero: string, initialClienteId
         if (!cancelled) setScoring(mapRecomendacion(data));
       } catch (err: any) {
         if (!cancelled) {
-          Alert.alert('Error', err.message || 'No se pudo cargar la información del cliente.');
+          Alert.alert('Error', friendlyErrorMessage(err.message || 'No se pudo cargar la información del cliente.'));
           setScoring(null);
         }
       } finally {
@@ -253,7 +233,7 @@ export const useAddCredit = (token: string, id_tendero: string, initialClienteId
         { text: 'OK', onPress: () => setTimeout(() => router.back(), 300) }
       ]);
     } catch (err: any) {
-      Alert.alert('Error', err.message);
+      Alert.alert('Error', friendlyErrorMessage(err.message));
     } finally {
       setLoading(false);
     }

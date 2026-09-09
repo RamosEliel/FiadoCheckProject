@@ -30,12 +30,15 @@ export const getRiesgoLabelCliente = (nivel: string | null | undefined): string 
 export type ScoringML = {
   confianza: number;
   nivel_riesgo: string | null;
+  puntaje: number | null;
 };
 
 export const mapScoringML = (json: {
   confianza?: number | null;
   nivel_riesgo?: string | null;
+  puntaje?: number | null;
 }): ScoringML => ({
   confianza: formatConfianza(json.confianza),
   nivel_riesgo: json.nivel_riesgo ?? null,
+  puntaje: json.puntaje ?? null,
 });

@@ -10,10 +10,11 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Stack, useFocusEffect } from 'expo-router';
+import { Stack, useFocusEffect, router } from 'expo-router';
 import { useCallback, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ArrowLeft, Bell, Bot, Send } from 'lucide-react-native';
+import { ChevronLeft, Bell, Bot, Send } from 'lucide-react-native';
+import { HeaderIconButton } from '@/components/HeaderIconButton';
 import { asistenteIAStyles as styles } from '@/constants/Asistenteia.styles';
 import { COLORS } from '@/constants/colors';
 import { useAsistenteIA } from '@/hooks/Useasistenteia';
@@ -66,16 +67,24 @@ export default function AsistenteIAScreen() {
         <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
 
         <View style={styles.header}>
-          <TouchableOpacity onPress={handleCancelar} style={styles.backBtn} activeOpacity={0.75}>
-            <ArrowLeft size={22} color={COLORS.primary} strokeWidth={2.5} />
-          </TouchableOpacity>
+          <HeaderIconButton
+            icon={ChevronLeft}
+            label="Volver"
+            onPress={handleCancelar}
+            color={COLORS.primary}
+            style={styles.backBtn}
+          />
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>Asistente IA</Text>
             <Text style={styles.headerSubtitle}>Pregunta sobre tu negocio</Text>
           </View>
-          <TouchableOpacity style={styles.bellBtn} activeOpacity={0.75}>
-            <Bell size={20} color={COLORS.primary} strokeWidth={2} />
-          </TouchableOpacity>
+          <HeaderIconButton
+            icon={Bell}
+            label="Avisos"
+            onPress={() => router.push('/notificaciones' as any)}
+            color={COLORS.primary}
+            style={styles.bellBtn}
+          />
         </View>
 
         <KeyboardAvoidingView
@@ -161,6 +170,8 @@ export default function AsistenteIAScreen() {
                 onPress={handleEnviar}
                 disabled={!input.trim() || loading}
                 activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel="Enviar mensaje"
               >
                 <Send size={20} color={COLORS.white} strokeWidth={2.5} />
               </TouchableOpacity>

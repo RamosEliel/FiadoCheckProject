@@ -50,6 +50,7 @@ export const useVistaUsuario = (token: string | null) => {
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [movements, setMovements] = useState<Movimiento[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchUserData = useCallback(async () => {
     if (!token) {
@@ -59,6 +60,7 @@ export const useVistaUsuario = (token: string | null) => {
 
     try {
       setLoading(true);
+      setError(null);
 
       const tenderoActivo = await getTenderoSeleccionado();
       const tenderoQuery = tenderoActivo?.id ? `?id_tendero=${encodeURIComponent(tenderoActivo.id)}` : '';
@@ -160,11 +162,11 @@ export const useVistaUsuario = (token: string | null) => {
         console.error('Error cargando historial:', historyError);
         setMovements([]);
       }
-    } catch (error: any) {
-      const message = error.name === 'AbortError'
-        ? 'No se pudo contactar el servidor. Verifica la conexión y la IP en config.ts.'
-        : (error.message || 'No se pudieron cargar los datos de la cuenta.');
-      Alert.alert('Error cargando datos', message);
+    } catch (err: any) {
+      const message = err.name === 'AbortError'
+        ? 'No se pudo contactar el servidor. Verifica tu conexión a internet.'
+        : (err.message || 'No se pudieron cargar los datos de la cuenta.');
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -186,6 +188,7 @@ export const useVistaUsuario = (token: string | null) => {
     loading,
     userData,
     movements,
+    error,
     handleContactStore,
     refetch: fetchUserData,
   };

@@ -19,9 +19,9 @@ headerTitle: {
     color: COLORS.white,
 },
 bellBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.4)',
     alignItems: 'center',

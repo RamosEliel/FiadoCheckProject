@@ -81,10 +81,10 @@ export default function RegisterTenderoScreen() {
 
               {/* Email */}
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Email</Text>
+                <Text style={styles.label}>Correo Electrónico</Text>
                 <TextInput
                   style={[styles.input, borderError('email')]}
-                  placeholder="example@example.com"
+                  placeholder="nombre@correo.com"
                   placeholderTextColor={COLORS.textMuted}
                   value={email}
                   onChangeText={(text) => {
@@ -170,7 +170,7 @@ export default function RegisterTenderoScreen() {
 
               {/* Password */}
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Password</Text>
+                <Text style={styles.label}>Contraseña</Text>
                 <View style={styles.passwordRow}>
                   <TextInput
                     style={[styles.passwordInput, borderError('password')]}
@@ -185,13 +185,8 @@ export default function RegisterTenderoScreen() {
                     autoCapitalize="none"
                   />
                   <TouchableOpacity style={styles.eyeBtn} onPress={togglePassword}>
-                    <Text style={styles.eyeIcon}>
-                      {showPassword ? (
-                        <Eye size={24} color="green" />
-                      ) : (
-                        <EyeOff size={24} color="green" />
-                      )}
-                    </Text>
+                    {showPassword ? <Eye size={18} color="green" /> : <EyeOff size={18} color="green" />}
+                    <Text style={styles.eyeLabel}>{showPassword ? 'Ocultar' : 'Mostrar'}</Text>
                   </TouchableOpacity>
                 </View>
                 {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
@@ -199,7 +194,7 @@ export default function RegisterTenderoScreen() {
 
               {/* Confirm Password */}
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Confirm Password</Text>
+                <Text style={styles.label}>Confirmar Contraseña</Text>
                 <View style={styles.passwordRow}>
                   <TextInput
                     style={[styles.passwordInput, borderError('confirmPassword')]}
@@ -214,13 +209,8 @@ export default function RegisterTenderoScreen() {
                     autoCapitalize="none"
                   />
                   <TouchableOpacity style={styles.eyeBtn} onPress={toggleConfirm}>
-                    <Text style={styles.eyeIcon}>
-                      {showConfirm ? (
-                        <Eye size={24} color="green" />
-                      ) : (
-                        <EyeOff size={24} color="green" />
-                      )}
-                    </Text>
+                    {showConfirm ? <Eye size={18} color="green" /> : <EyeOff size={18} color="green" />}
+                    <Text style={styles.eyeLabel}>{showConfirm ? 'Ocultar' : 'Mostrar'}</Text>
                   </TouchableOpacity>
                 </View>
                 {errors.confirmPassword ? <Text style={styles.errorText}>{errors.confirmPassword}</Text> : null}
@@ -236,7 +226,7 @@ export default function RegisterTenderoScreen() {
                 {loading ? (
                   <ActivityIndicator color={COLORS.white} />
                 ) : (
-                  <Text style={styles.btnPrimaryText}>Regístrarse</Text>
+                  <Text style={styles.btnPrimaryText}>Registrarse</Text>
                 )}
               </TouchableOpacity>
 

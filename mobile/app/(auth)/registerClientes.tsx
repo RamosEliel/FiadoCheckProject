@@ -67,10 +67,10 @@ export default function RegisterScreen() {
 
               {/* Email */}
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Email</Text>
+                <Text style={styles.label}>Correo Electrónico</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="example@example.com"
+                  placeholder="nombre@correo.com"
                   placeholderTextColor={COLORS.textMuted}
                   value={email}
                   onChangeText={setEmail}
@@ -119,7 +119,7 @@ export default function RegisterScreen() {
 
               {/* Password */}
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Password</Text>
+                <Text style={styles.label}>Contraseña</Text>
                 <View style={styles.passwordRow}>
                   <TextInput
                     style={styles.passwordInput}
@@ -130,14 +130,15 @@ export default function RegisterScreen() {
                     secureTextEntry={!showPassword}
                   />
                   <TouchableOpacity style={styles.eyeBtn} onPress={togglePassword}>
-                    <Text style={styles.eyeIcon}>{showPassword ? <Eye size={24} color="green" /> : <EyeOff size={24} color="green" />}</Text>
+                    {showPassword ? <Eye size={18} color="green" /> : <EyeOff size={18} color="green" />}
+                    <Text style={styles.eyeLabel}>{showPassword ? 'Ocultar' : 'Mostrar'}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
 
               {/* Confirm Password */}
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Confirm Password</Text>
+                <Text style={styles.label}>Confirmar Contraseña</Text>
                 <View style={styles.passwordRow}>
                   <TextInput
                     style={styles.passwordInput}
@@ -148,7 +149,8 @@ export default function RegisterScreen() {
                     secureTextEntry={!showConfirm}
                   />
                   <TouchableOpacity style={styles.eyeBtn} onPress={toggleConfirm}>
-                    <Text style={styles.eyeIcon}>{showConfirm ? <Eye size={24} color="green" /> : <EyeOff size={24} color="green" />}</Text>
+                    {showConfirm ? <Eye size={18} color="green" /> : <EyeOff size={18} color="green" />}
+                    <Text style={styles.eyeLabel}>{showConfirm ? 'Ocultar' : 'Mostrar'}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -162,7 +164,7 @@ export default function RegisterScreen() {
               >
                 {loading
                   ? <ActivityIndicator color={COLORS.white} />
-                  : <Text style={styles.btnPrimaryText}>Regístrarse</Text>
+                  : <Text style={styles.btnPrimaryText}>Registrarse</Text>
                 }
               </TouchableOpacity>
 

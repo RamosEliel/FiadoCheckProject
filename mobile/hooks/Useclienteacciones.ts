@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { CONFIG } from '@/config/config';
+import { friendlyErrorMessage } from '@/utils/errorMessages';
 
 const API_URL = CONFIG.API_URL;
 
@@ -84,7 +85,7 @@ export const useClienteAcciones = (token: string | null, onSuccess: () => void) 
       });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Error al buscar cliente';
-      Alert.alert('Sin resultados', message);
+      Alert.alert('Sin resultados', friendlyErrorMessage(message));
     } finally {
       setBuscando(false);
     }
@@ -114,7 +115,7 @@ export const useClienteAcciones = (token: string | null, onSuccess: () => void) 
       onSuccess();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Error al asociar cliente';
-      Alert.alert('Error', message);
+      Alert.alert('Error', friendlyErrorMessage(message));
     } finally {
       setGuardando(false);
     }
@@ -166,7 +167,7 @@ export const useClienteAcciones = (token: string | null, onSuccess: () => void) 
       onSuccess();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Error al registrar cliente';
-      Alert.alert('Error', message);
+      Alert.alert('Error', friendlyErrorMessage(message));
     } finally {
       setGuardando(false);
     }

@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert } from 'react-native';
 import { CONFIG } from '@/config/config';
 
 const API_URL = CONFIG.API_URL;
@@ -31,6 +30,7 @@ export type Alerta = {
 export const useNotificaciones = (token: string | null, esTendero: boolean) => {
   const [loading, setLoading] = useState(true);
   const [alertas, setAlertas] = useState<Alerta[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchAlertas = useCallback(async () => {
     if (!token || !esTendero) {
@@ -40,6 +40,7 @@ export const useNotificaciones = (token: string | null, esTendero: boolean) => {
 
     try {
       setLoading(true);
+      setError(null);
       const res = await fetchWithTimeout(`${API_URL}/alertas`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -51,11 +52,11 @@ export const useNotificaciones = (token: string | null, esTendero: boolean) => {
 
       const data = await res.json();
       setAlertas(data);
-    } catch (error: any) {
-      const message = error.name === 'AbortError'
+    } catch (err: any) {
+      const message = err.name === 'AbortError'
         ? 'No se pudo contactar el servidor. Verifica tu conexión.'
-        : (error.message || 'No se pudieron cargar las notificaciones.');
-      Alert.alert('Error', message);
+        : (err.message || 'No se pudieron cargar las notificaciones.');
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -79,5 +80,5 @@ export const useNotificaciones = (token: string | null, esTendero: boolean) => {
     }
   }, [token, fetchAlertas]);
 
-  return { loading, alertas, refetch: fetchAlertas, marcarLeida };
+  return { loading, alertas, error, refetch: fetchAlertas, marcarLeida };
 };

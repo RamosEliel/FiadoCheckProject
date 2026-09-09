@@ -32,6 +32,7 @@ export type ClientePerfil = {
   deudaActual: string;
   nivelRiesgo: string | null;
   nivelConfianza: number;
+  puntaje: number | null;
   telefono: string;
   direccion: string;
   historial: CreditoHistorial[];
@@ -55,27 +56,13 @@ const formatClienteDesde = (fecha: string) => {
 const fetchScoringML = async (clienteId: string, token: string):
 Promise<ScoringML> => {
   const headers = { Authorization: `Bearer ${token}` };
-  const empty: ScoringML = { confianza: 0, nivel_riesgo: null };
+  const empty: ScoringML = { confianza: 0, nivel_riesgo: null, puntaje: null };
   try {
     const res = await fetch(`${API_URL}/scoring/${clienteId}/recomendacion`, {
 headers });
     if (res.ok) {
       const json = await res.json();
       return mapScoringML(json);
-    }
-    if (res.status === 404) {
-      const calcRes = await fetch(`${API_URL}/scoring/${clienteId}/calcular`, {
-        method: 'POST',
-        headers,
-      });
-      if (calcRes.ok) {
-        const retryRes = await
-fetch(`${API_URL}/scoring/${clienteId}/recomendacion`, { headers });
-        if (retryRes.ok) {
-          const json = await retryRes.json();
-          return mapScoringML(json);
-        }
-      }
     }
   } catch (err) {
     console.error('Error obteniendo scoring ML:', err);
@@ -172,6 +159,7 @@ Promise.all([
         deudaActual: formatCOP(totalDeuda),
         nivelRiesgo: scoringML.nivel_riesgo,
         nivelConfianza: scoringML.confianza,
+        puntaje: scoringML.puntaje,
         telefono: cliente.telefono || 'No registrado',
         direccion: cliente.direccion || 'No registrada',
         historial: mapHistorial(historialJson.historial ?? []),

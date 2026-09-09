@@ -33,16 +33,13 @@ export const dashboardStyles = StyleSheet.create({
     marginTop: 2,
   },
   bellBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.4)',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  bellIcon: {
-    fontSize: 18,
   },
  
   // Card blanca que sube desde abajo igual que login
@@ -240,10 +237,16 @@ export const dashboardStyles = StyleSheet.create({
     marginBottom: 8,
   },
   searchIconBtn: {
-    padding: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
   },
-  searchIconText: {
-    fontSize: 18,
+  searchIconLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.text,
   },
   searchBar: {
     backgroundColor: '#fff',
