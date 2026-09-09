@@ -4,6 +4,11 @@
   "description": "Newman runner + reporte Obsidian para pruebas SV",
   "scripts": {
     "test:sv": "newman run FiadoCheck-SV-Pruebas.postman_collection.json -e FiadoCheck-SV-Pruebas.postman_environment.json --reporters cli,json,htmlextra --reporter-json-export reports/newman-results.json --reporter-htmlextra-export reports/postman-report.html --reporter-htmlextra-title \"FiadoCheck SV — Postman\"",
+    "test:auth": "newman run FiadoCheck-SCRUM-52-Auth.postman_collection.json -e FiadoCheck-Azure.postman_environment.json --reporters cli",
+    "test:sesion": "newman run FiadoCheck-SCRUM-66-Sesion.postman_collection.json -e FiadoCheck-Azure.postman_environment.json --reporters cli",
+    "test:scoring": "newman run FiadoCheck-SCRUM-110-Scoring.postman_collection.json -e FiadoCheck-Azure.postman_environment.json --reporters cli",
+    "test:recomendacion": "newman run FiadoCheck-SCRUM-111-Recomendacion.postman_collection.json -e FiadoCheck-Azure.postman_environment.json --reporters cli",
+    "test:all": "npm run test:sv && npm run test:auth && npm run test:sesion && npm run test:scoring && npm run test:recomendacion",
     "report:obsidian": "node generate-obsidian-report.js reports/newman-results.json",
     "docs:sv": "npm run test:sv && npm run report:obsidian"
   },

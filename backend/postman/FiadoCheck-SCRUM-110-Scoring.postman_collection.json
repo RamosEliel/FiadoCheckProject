@@ -1,19 +1,19 @@
 {
   "info": {
     "name": "FiadoCheck — SCRUM-110 Scoring y ML (SCO-01 a SCO-10)",
-    "description": "Colección ejecutable del bloque §4.4 del plan de pruebas (responsable: Eliel).\n\nCUBRE: SCO-01, SCO-02, SCO-03, SCO-04, SCO-05, SCO-08, SCO-09a, SCO-09c, SCO-10.\n\nNO CUBRE (no son peticiones HTTP, se ejecutan aparte):\n  SCO-06  atomicidad de syncMLPrediction  -> consulta SQL\n  SCO-07  ML caído degrada sin crash      -> apagar predict.py desde la terminal\n  SCO-09b modelo.pkl ausente              -> renombrar el archivo\n  SCO-11  ML_SERVICE_URL                  -> variable de entorno\n\nREQUISITOS ANTES DE CORRER\n  Elegir un entorno: 'FiadoCheck — Local' o 'FiadoCheck — Azure'. Cada uno define\n  baseUrl (backend Node) y mlUrl (microservicio ML). En local hay que tener ambos\n  procesos levantados: Node en el 3000 y predict.py en el 8000.\n\nCREDENCIALES\n  tendero1@tiendasegura.com / FiadoTest2026 (id_tendero = 6).\n\nEL SCORING ES POR PAR (CLIENTE, TENDERO) — BUG-012\n  Desde esa corrección la tabla scoring tiene una fila por cada par activo, no por\n  cliente, así que un mismo cliente puede tener nivel distinto en cada tienda. Por eso\n  SCO-09a envía id_tendero además de id_cliente al /predict: sin él el microservicio\n  toma la fila más reciente, que podría ser la de otro tendero.\n\nDATOS VERIFICADOS EN BASE DE DATOS (actualizado tras BUG-009 y BUG-012)\n  Cliente 6            -> 90 puntos, nivel bajo con el tendero 6 (SCO-01/03/05/08)\n                          Es su único tendero, así que solo tiene una fila de scoring.\n  Cliente 1            -> NO vinculado al tendero 6 (sirve para SCO-04)\n  Cliente 56           -> existe, sin vínculos activos y sin fila en scoring (SCO-09c)\n  Cliente nuevo        -> lo crea y vincula la propia colección (sirve para SCO-02)\n\nRE-EJECUTABLE: el cliente nuevo se crea con cédula por timestamp.\n\nLIMPIEZA — IMPORTANTE\nDesde BUG-013 la petición 02 sí crea el cliente, y ese cliente NO tiene fila en\n`usuario` (es el caso de un cliente al que el tendero le fía sin que use la app).\nPor eso ya no basta con borrar por email: hay que borrar por nombre, y en este\norden por las claves foráneas.\n\nLo más seguro es usar el script, que borra en el orden correcto y aborta si algo\nde lo que iba a borrar tiene créditos asociados:\n\n  node scripts/limpiar_datos_de_prueba.js --dry-run\n  node scripts/limpiar_datos_de_prueba.js\n\nSi se prefiere hacerlo a mano, estas tres sentencias borran solo los clientes,\nen este orden por las claves foráneas:\n\n  DELETE FROM scoring         WHERE id_cliente IN (SELECT id_cliente FROM clientes WHERE nombre_completo LIKE 'Cliente Scoring %' AND id_cliente <> '111759174');\n  DELETE FROM tendero_cliente WHERE id_cliente IN (SELECT id_cliente FROM clientes WHERE nombre_completo LIKE 'Cliente Scoring %' AND id_cliente <> '111759174');\n  DELETE FROM clientes        WHERE nombre_completo LIKE 'Cliente Scoring %' AND id_cliente <> '111759174';\n\nDOS ADVERTENCIAS\n1. NO usar `DELETE FROM usuario WHERE email LIKE '%@test.fiadocheck.com'` a secas.\n   Las claves foráneas de sesiones, tenderos y clientes hacia usuario son NO ACTION,\n   así que esa sentencia aborta mientras existan filas dependientes. Hay que borrar\n   esas tablas primero; el script lo hace.\n2. Preservar el cliente 111759174. Pese al nombre, pertenece a\n   tendero1@tiendasegura.com y es uno de los dos pares sin créditos citados en la\n   evidencia de GC-05 (SCRUM-71).\n\nSi no se limpia, cada corrida suma un cliente y una fila de scoring, y esas filas\nentran en el conjunto con el que se entrena el Random Forest.",
+    "description": "Colección ejecutable del bloque §4.4 del plan de pruebas (responsable: Eliel).\n\nCUBRE: SCO-01, SCO-02, SCO-03, SCO-04, SCO-05, SCO-08, SCO-09a, SCO-09c, SCO-10.\n\nNO CUBRE (no son peticiones HTTP, se ejecutan aparte):\n  SCO-06  atomicidad de syncMLPrediction  -> consulta SQL\n  SCO-07  ML caído degrada sin crash      -> apagar predict.py desde la terminal\n  SCO-09b modelo.pkl ausente              -> renombrar el archivo\n  SCO-11  ML_SERVICE_URL                  -> variable de entorno\n\nREQUISITOS ANTES DE CORRER\n  Backend en {{baseUrl}} (Local o Azure)\n  Microservicio ML en {{mlUrl}} (Local: http://localhost:8000 · Azure: https://fiadocheck-ml.azurewebsites.net)\n\nCREDENCIALES\n  tendero1@tiendasegura.com / FiadoTest2026 (id_tendero = 6).\n\n  IMPORTANTE: NO usar soto@fiado.com. Esa cuenta tiene fila en la tabla tenderos\n  pero su usuario está con id_rol = 2 (cliente), así que el login emite el JWT con\n  id_tendero = null y TODOS los endpoints de scoring devuelven 404 Cliente no\n  encontrado. Existe un script fixSotoAsCliente.js que la convirtió a cliente.\n\nDATOS FIJOS VERIFICADOS EN BASE DE DATOS\n  Cliente 6            -> 2 créditos con el tendero 6, nivel medio (SCO-01/03/05/08)\n  Cliente 1            -> pertenece al tendero 1, NO vinculado al 6 (sirve para SCO-04)\n  Cliente 56           -> existe pero no tiene fila en scoring (sirve para SCO-09c)\n  Cliente nuevo        -> lo crea y vincula la propia colección (sirve para SCO-02)\n\nRE-EJECUTABLE: el cliente nuevo se crea con cédula por timestamp. Limpieza:\n  DELETE FROM usuario WHERE email LIKE '%@test.fiadocheck.com';",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "mlUrl", "value": "http://localhost:8000" },
+    { "key": "mlUrl", "value": "https://fiadocheck-ml.azurewebsites.net" },
     { "key": "tenderoEmail", "value": "tendero1@tiendasegura.com" },
     { "key": "tenderoPassword", "value": "FiadoTest2026" },
     { "key": "clienteConHistorial", "value": "6" },
     { "key": "clienteAjeno", "value": "1" },
     { "key": "clienteSinScoring", "value": "56" },
     { "key": "clienteNuevo", "value": "" },
+    { "key": "clienteNuevoPassword", "value": "FiadoTest2026" },
     { "key": "tokenTendero", "value": "" },
-    { "key": "tenderoId", "value": "" },
     { "key": "fechaCalculo1", "value": "" }
   ],
   "item": [
@@ -32,10 +32,7 @@
               "pm.test('Setup — es un tendero con id_tendero', function () {",
               "    pm.expect(body.tendero).to.not.be.null;",
               "});",
-              "if (body.token) { pm.collectionVariables.set('tokenTendero', body.token); }",
-              "// El scoring es por par (cliente, tendero) desde BUG-012, así que /predict",
-              "// necesita saber de qué tendero se le pregunta.",
-              "if (body.tendero) { pm.collectionVariables.set('tenderoId', body.tendero.id_tendero); }"
+              "if (body.token) { pm.collectionVariables.set('tokenTendero', body.token); }"
             ]
           }
         }
@@ -48,14 +45,14 @@
       }
     },
     {
-      "name": "02 — Setup: crear y vincular cliente nuevo (sin créditos)",
+      "name": "02 — Setup: registrar cliente nuevo (sin créditos)",
       "event": [
         {
           "listen": "prerequest",
           "script": {
             "type": "text/javascript",
             "exec": [
-              "const ts = Date.now().toString().slice(-9);",
+              "const ts = (Date.now() % 900000000 + 100000000).toString();",
               "pm.collectionVariables.set('clienteNuevo', ts);"
             ]
           }
@@ -65,10 +62,32 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('Setup — cliente nuevo creado y vinculado al tendero', function () {",
-              "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+              "pm.test('Setup — cliente registrado en auth', function () {",
+              "    pm.response.to.have.status(201);",
               "});",
               "console.log('Cliente nuevo (sin créditos):', pm.collectionVariables.get('clienteNuevo'));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"nombre_completo\": \"Cliente Scoring {{clienteNuevo}}\",\n  \"email\": \"scoring.{{clienteNuevo}}@test.fiadocheck.com\",\n  \"telefono\": \"3001112233\",\n  \"cedula\": \"{{clienteNuevo}}\",\n  \"direccion\": \"Calle Prueba 45\",\n  \"password\": \"{{clienteNuevoPassword}}\"\n}" },
+        "url": { "raw": "{{baseUrl}}/auth/registerClientes", "host": ["{{baseUrl}}"], "path": ["auth", "registerClientes"] }
+      }
+    },
+    {
+      "name": "02b — Setup: asociar cliente al tendero",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Setup — cliente asociado al tendero', function () {",
+              "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+              "});"
             ]
           }
         }
@@ -79,8 +98,8 @@
           { "key": "Content-Type", "value": "application/json" },
           { "key": "Authorization", "value": "Bearer {{tokenTendero}}" }
         ],
-        "body": { "mode": "raw", "raw": "{\n  \"nombre\": \"Cliente Scoring {{clienteNuevo}}\",\n  \"identificacion\": \"{{clienteNuevo}}\",\n  \"telefono\": \"3001112233\",\n  \"direccion\": \"Calle Prueba 45\"\n}" },
-        "url": { "raw": "{{baseUrl}}/clientes", "host": ["{{baseUrl}}"], "path": ["clientes"] }
+        "body": { "mode": "raw", "raw": "{\n  \"id_cliente\": \"{{clienteNuevo}}\"\n}" },
+        "url": { "raw": "{{baseUrl}}/clientes/asociar", "host": ["{{baseUrl}}"], "path": ["clientes", "asociar"] }
       }
     },
     {
@@ -330,7 +349,7 @@
       "request": {
         "method": "POST",
         "header": [{ "key": "Content-Type", "value": "application/json" }],
-        "body": { "mode": "raw", "raw": "{\n  \"id_cliente\": {{clienteConHistorial}},\n  \"id_tendero\": {{tenderoId}}\n}" },
+        "body": { "mode": "raw", "raw": "{\n  \"id_cliente\": {{clienteConHistorial}}\n}" },
         "url": { "raw": "{{mlUrl}}/predict", "host": ["{{mlUrl}}"], "path": ["predict"] }
       }
     },

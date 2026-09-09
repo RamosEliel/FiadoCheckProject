@@ -58,8 +58,6 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "const CryptoJS = require('crypto-js');",
-              "",
               "pm.test('Setup — login correcto', function () {",
               "    pm.response.to.have.status(200);",
               "});",
@@ -67,9 +65,7 @@
               "const token = pm.response.json().token;",
               "pm.collectionVariables.set('tokenTendero', token);",
               "",
-              "// El backend guarda en sesiones.token_hash el SHA256 hex del token.",
-              "// Ver middleware/auth.js: crypto.createHash('sha256').update(token).digest('hex')",
-              "const hash = CryptoJS.SHA256(token).toString(CryptoJS.enc.Hex);",
+              "const hash = require('crypto-js').SHA256(token).toString(require('crypto-js').enc.Hex);",
               "pm.collectionVariables.set('tokenHash', hash);",
               "",
               "console.log('===== AUTH-09: datos para la verificación en NeonDB =====');",

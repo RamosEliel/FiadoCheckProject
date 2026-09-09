@@ -206,11 +206,10 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "const CryptoJS = require('crypto-js');",
               "function decodeJwtPayload(token) {",
-              "    let p = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');",
-              "    while (p.length % 4) { p += '='; }",
-              "    return JSON.parse(CryptoJS.enc.Utf8.stringify(CryptoJS.enc.Base64.parse(p)));",
+              "    const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');",
+              "    const padded = base64 + '='.repeat((4 - base64.length % 4) % 4);",
+              "    return JSON.parse(Buffer.from(padded, 'base64').toString('utf8'));",
               "}",
               "",
               "pm.test('AUTH-06 — login de tendero devuelve 200', function () {",
@@ -250,11 +249,10 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "const CryptoJS = require('crypto-js');",
               "function decodeJwtPayload(token) {",
-              "    let p = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');",
-              "    while (p.length % 4) { p += '='; }",
-              "    return JSON.parse(CryptoJS.enc.Utf8.stringify(CryptoJS.enc.Base64.parse(p)));",
+              "    const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');",
+              "    const padded = base64 + '='.repeat((4 - base64.length % 4) % 4);",
+              "    return JSON.parse(Buffer.from(padded, 'base64').toString('utf8'));",
               "}",
               "",
               "pm.test('AUTH-07 — login de cliente devuelve 200', function () {",

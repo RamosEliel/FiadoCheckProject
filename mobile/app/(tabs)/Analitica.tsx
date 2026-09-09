@@ -36,7 +36,7 @@ type BarChartProps = {
 };
 
 function BarChart({ data, width, yMax, yTicks }: BarChartProps) {
-  const plotHeight = CHART_HEIGHT - CHART_PADDING_BOTTOM;
+anali  const plotHeight = CHART_HEIGHT - CHART_PADDING_BOTTOM;
   const plotWidth = Math.max(width - 34, 200);
   const groupWidth = plotWidth / 4;
   const barWidth = 10;
