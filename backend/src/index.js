@@ -87,7 +87,7 @@ const server = app.listen(PORT, () => {
   console.log(`  Clientes: /api/clientes, /api/clientes/:id, /api/clientes/:id/historial, /api/clientes/:id/pagos`);
   console.log(`  Créditos: /api/creditos, /api/creditos/:id, /api/creditos/cliente/:id, /api/creditos/:id/abonos`);
   console.log(`  Abonos: /api/abonos/:id`);
-  console.log(`  Scoring: /api/scoring/:id, /api/scoring/:id/calcular, /api/scoring/:id/recomendacion`);
+  console.log(`  Scoring: /api/scoring/:id, /api/scoring/:id/recomendacion`);
   console.log(`  Alertas: /api/alertas, /api/alertas/:id/leer`);
   console.log(`  Analítica: /api/analitica/cliente/:id, /api/analitica/indicadores, /api/analitica/pagos-diarios, /api/analitica/prediccion-flujo`);
   console.log(`  Reportes: /api/reportes, /api/reportes/export/pdf`);

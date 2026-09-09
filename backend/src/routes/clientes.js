@@ -1,8 +1,8 @@
 const express = require('express');
 const pool = require('../config/database');
 const authMiddleware = require('../middleware/auth');
-const { mapScoringRow, queryCreditosHistorico } = require('../utils/scoringUtils');
-const { syncMLPrediction } = require('../utils/mlScoring');
+const { CLIENTE_NUEVO_SCORING, mapScoringRow, queryCreditosHistorico } = require('../utils/scoringUtils');
+const { getOrComputeScoring } = require('../utils/mlScoring');
 
 const router = express.Router();
 router.use(authMiddleware);
@@ -323,15 +323,15 @@ router.get('/me', async (req, res) => {
       FROM creditos WHERE id_cliente = $1 AND id_tendero = $2 AND estado != 'pagado'
     `, [idCliente, idTendero]);
 
-    const scoring = await pool.query(`
-      SELECT * FROM scoring WHERE id_cliente = $1 AND id_tendero = $2 ORDER BY fecha_calculo DESC LIMIT 1
-    `, [idCliente, idTendero]);
-
     const creditosHistorico = await queryCreditosHistorico(pool, idCliente, idTendero);
     const sinHistorialCrediticio = creditosHistorico === 0;
-    const syncedScoring = scoring.rows[0]
-      ? await syncMLPrediction(pool, idCliente, scoring.rows[0], idTendero, { sinHistorialCrediticio })
-      : null;
+    let scoringMapped = null;
+    if (sinHistorialCrediticio) {
+      scoringMapped = CLIENTE_NUEVO_SCORING;
+    } else {
+      const scoringRow = await getOrComputeScoring(pool, idCliente, idTendero, { sinHistorialCrediticio: false });
+      scoringMapped = scoringRow ? mapScoringRow(scoringRow, { sinHistorialCrediticio: false }) : null;
+    }
 
     const tiendaResult = await pool.query(`
       SELECT t.id_tendero, t.nombre, t.nombre_tienda, t.telefono, t.direccion
@@ -358,9 +358,7 @@ router.get('/me', async (req, res) => {
         direccion: tienda.direccion
       } : null,
       id_tendero: idTendero,
-      scoring: syncedScoring
-        ? mapScoringRow(syncedScoring, { sinHistorialCrediticio })
-        : null,
+      scoring: scoringMapped,
       totales: {
         total_deuda: parseFloat(totales.rows[0].total_deuda) || 0,
         total_creditos: parseInt(totales.rows[0].total_creditos) || 0,
@@ -397,9 +395,15 @@ router.get('/:id', async (req, res) => {
       FROM creditos WHERE id_cliente = $1 AND id_tendero = $2 AND estado != 'pagado'
     `, [id, idTendero]);
 
-    const scoring = await pool.query(`
-      SELECT * FROM scoring WHERE id_cliente = $1 AND id_tendero = $2 ORDER BY fecha_calculo DESC LIMIT 1
-    `, [id, idTendero]);
+    const creditosHistorico = await queryCreditosHistorico(pool, id, idTendero);
+    const sinHistorialCrediticio = creditosHistorico === 0;
+    let scoringMapped = null;
+    if (sinHistorialCrediticio) {
+      scoringMapped = CLIENTE_NUEVO_SCORING;
+    } else {
+      const scoringRow = await getOrComputeScoring(pool, id, idTendero, { sinHistorialCrediticio: false });
+      scoringMapped = scoringRow ? mapScoringRow(scoringRow, { sinHistorialCrediticio: false }) : null;
+    }
 
     const tiendaResult = await pool.query(`
       SELECT t.nombre, t.nombre_tienda, t.telefono, t.direccion
@@ -425,7 +429,7 @@ router.get('/:id', async (req, res) => {
         telefono: tienda.telefono,
         direccion: tienda.direccion
       } : null,
-      scoring: scoring.rows[0] ? mapScoringRow(scoring.rows[0]) : null,
+      scoring: scoringMapped,
       totales: {
         total_deuda: parseFloat(totales.rows[0].total_deuda) || 0,
         total_creditos: parseInt(totales.rows[0].total_creditos) || 0,

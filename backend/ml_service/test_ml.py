@@ -24,9 +24,9 @@ def _request(path, payload=None):
         return {"error": str(e)}
 
 
-def test_predict(id_cliente):
-    print(f"\n>>> POST /predict (id_cliente={id_cliente})")
-    result = _request("/predict", {"id_cliente": id_cliente})
+def test_predict(id_cliente, id_tendero):
+    print(f"\n>>> POST /predict (id_cliente={id_cliente}, id_tendero={id_tendero})")
+    result = _request("/predict", {"id_cliente": id_cliente, "id_tendero": id_tendero})
     print(json.dumps(result, indent=2, ensure_ascii=False))
     return result
 
@@ -43,14 +43,14 @@ def run_all_tests():
     print("PRUEBAS DEL MICROSERVICIO ML (Random Forest)")
     print("=" * 50)
 
-    # 1. Probar predicción con cliente existente
-    print("\n--- 1. Predicción con cliente existente ---")
-    for cid in [1, 2, 3]:
-        test_predict(cid)
+    # 1. Probar predicción con pares (cliente, tendero) existentes
+    print("\n--- 1. Predicción con pares cliente-tendero existentes ---")
+    for cid, tid in [(1, 1), (1, 2), (10, 10)]:
+        test_predict(cid, tid)
 
-    # 2. Probar predicción con cliente inexistente
-    print("\n--- 2. Predicción con cliente inexistente ---")
-    test_predict(99999)
+    # 2. Probar predicción con par inexistente
+    print("\n--- 2. Predicción con par inexistente ---")
+    test_predict(99999, 99999)
 
     # 3. Probar retrain (puede saltar por umbral)
     print("\n--- 3. Solicitud de reentrenamiento ---")

@@ -1,32 +1,23 @@
-function calcularPuntaje(row, options = {}) {
-  const sum =
-    (row.pts_puntualidad || 0) +
-    (row.pts_cumplimiento || 0) +
-    (row.pts_historial || 0) +
-    (row.pts_antiguedad || 0);
+// Regla fija para un cliente sin créditos con este tendero: no hay features
+// reales que evaluar, así que no tiene sentido pedirle nada al RF.
+const CLIENTE_NUEVO_SCORING = {
+  puntaje: 50,
+  nivel_riesgo: 'medio',
+  limite_sugerido: 50000,
+  confianza: null,
+  fecha_calculo: null,
+};
 
-  // Cliente sin créditos con este tendero: puntaje neutral por reglas de negocio
-  if (options.sinHistorialCrediticio) return 50;
-
-  // Fallback legacy: pts en 0 y nivel medio antes de sobrescritura ML
-  if (sum === 0 && row.nivel_riesgo === 'medio') return 50;
-
-  return sum;
-}
-
+// El puntaje ya no se calcula por reglas: viene directo del Random Forest
+// (ver ml_service/predict.py). Para el cliente sin historial con este tendero
+// no hay features reales que evaluar, así que se usa el valor neutral fijo.
 function mapScoringRow(row, options = {}) {
   return {
-    puntaje: calcularPuntaje(row, options),
+    puntaje: options.sinHistorialCrediticio ? 50 : row.puntaje,
     nivel_riesgo: row.nivel_riesgo,
     limite_sugerido: parseFloat(row.limite_sugerido),
     confianza: row.confianza != null ? parseFloat(row.confianza) : null,
     fecha_calculo: row.fecha_calculo,
-    desglose: {
-      puntualidad: row.pts_puntualidad,
-      cumplimiento: row.pts_cumplimiento,
-      historial: row.pts_historial,
-      antiguedad: row.pts_antiguedad,
-    },
   };
 }
 
@@ -98,7 +89,7 @@ async function calcularLimiteSugerido(pool, clienteId, idTendero, nivelRiesgo) {
 }
 
 module.exports = {
-  calcularPuntaje,
+  CLIENTE_NUEVO_SCORING,
   mapScoringRow,
   queryTotalesCreditos,
   queryCreditosHistorico,

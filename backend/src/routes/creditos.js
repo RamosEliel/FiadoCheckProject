@@ -3,6 +3,7 @@ const pool = require('../config/database');
 const authMiddleware = require('../middleware/auth');
 const { validateBody, validateQuery, validateParams, rules } = require('../middlewares/validateBody');
 const { triggerMLRetrain } = require('../utils/mlTrigger');
+const { invalidateScoring } = require('../utils/mlScoring');
 const { todayBusinessKey } = require('../utils/dateUtils');
 const creditsController = require('../modules/creditos/credits.controller');
 
@@ -216,7 +217,7 @@ router.patch('/:id', validateParams([rules.paramPositiveInt('id')]), async (req,
     const idTendero = req.user.id_tendero;
 
     const credito = await pool.query(`
-      SELECT 1 FROM creditos WHERE id_credito = $1 AND id_tendero = $2
+      SELECT id_cliente FROM creditos WHERE id_credito = $1 AND id_tendero = $2
     `, [id, idTendero]);
 
     if (credito.rows.length === 0) {
@@ -231,6 +232,16 @@ router.patch('/:id', validateParams([rules.paramPositiveInt('id')]), async (req,
       'UPDATE creditos SET estado = $1 WHERE id_credito = $2',
       [estado, id]
     );
+
+    // El crédito se cerró (pagado o vencido): el historial que alimenta las
+    // features de este par cambió, así que la predicción cacheada ya no aplica.
+    if (estado === 'pagado' || estado === 'vencido') {
+      try {
+        await invalidateScoring(pool, credito.rows[0].id_cliente, idTendero);
+      } catch (invalidateErr) {
+        console.error('Error invalidando caché de scoring:', invalidateErr.message);
+      }
+    }
 
     res.json({ message: 'Estado del crédito actualizado' });
   } catch (err) {

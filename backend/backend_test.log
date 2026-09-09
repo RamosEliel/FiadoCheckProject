@@ -1,0 +1,40 @@
+
+> backend@1.0.0 dev
+> nodemon src/index.js
+
+[33m[nodemon] 3.1.14[39m
+[33m[nodemon] to restart at any time, enter `rs`[39m
+[33m[nodemon] watching path(s): src\**\*[39m
+[33m[nodemon] watching extensions: js,json[39m
+[32m[nodemon] starting `node src/index.js`[39m
+◇ injected env (6) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
+◇ injected env (0) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
+=================================
+Servidor FiadoCheck corriendo en puerto 3000
+=================================
+Endpoints disponibles:
+  Health: GET /health
+  Auth: /api/auth/login, /api/auth/logout
+  Dashboard: /api/dashboard
+  Cartera: /api/cartera, /api/cartera/cliente/:id, /api/cartera/vencidos
+  Clientes: /api/clientes, /api/clientes/:id, /api/clientes/:id/historial, /api/clientes/:id/pagos
+  Créditos: /api/creditos, /api/creditos/:id, /api/creditos/cliente/:id, /api/creditos/:id/abonos
+  Abonos: /api/abonos/:id
+  Scoring: /api/scoring/:id, /api/scoring/:id/calcular, /api/scoring/:id/recomendacion
+  Alertas: /api/alertas, /api/alertas/:id/leer
+  Analítica: /api/analitica/cliente/:id, /api/analitica/indicadores, /api/analitica/pagos-diarios, /api/analitica/prediccion-flujo
+  Reportes: /api/reportes, /api/reportes/export/pdf
+  Pagos: /api/pagos
+  Asistente IA: POST /api/asistente/chat
+=================================
+Servidor activo. Deja esta terminal abierta (Ctrl+C para detener).
+(node:11056) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 'verify-full'.
+In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq semantics, which have weaker security guarantees.
+
+To prepare for this change:
+- If you want the current behavior, explicitly use 'sslmode=verify-full'
+- If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+
+See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[ML Retrain] No se alcanzó el umbral del 20% de registros nuevos.

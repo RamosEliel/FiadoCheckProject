@@ -1,8 +1,14 @@
 const { mlPost } = require('./mlServiceClient');
 const { calcularLimiteSugerido } = require('./scoringUtils');
 
-// El microservicio necesita el tendero porque las features salen de la fila de
-// scoring de ese par: un mismo cliente tiene un historial distinto en cada tienda.
+const SELECT_SCORING = `
+  SELECT * FROM scoring
+  WHERE id_cliente = $1 AND id_tendero = $2
+  ORDER BY fecha_calculo DESC LIMIT 1
+`;
+
+// El microservicio necesita el tendero porque las features salen del historial
+// de créditos de ese par: un mismo cliente tiene un historial distinto en cada tienda.
 async function callMLService(clienteId, idTendero) {
   const postData = JSON.stringify({
     id_cliente: parseInt(clienteId, 10),
@@ -13,47 +19,80 @@ async function callMLService(clienteId, idTendero) {
   return json;
 }
 
-async function persistMLPrediction(pool, clienteId, idTendero, nivelRiesgo, confianza, limiteSugerido) {
+async function upsertPrediction(pool, clienteId, idTendero, { nivelRiesgo, puntaje, confianza, limiteSugerido }) {
   await pool.query(`
-    UPDATE scoring
-    SET nivel_riesgo = $1, confianza = $2, limite_sugerido = $3
-    WHERE id_cliente = $4 AND id_tendero = $5
-  `, [nivelRiesgo, confianza, limiteSugerido, clienteId, idTendero]);
+    INSERT INTO scoring (id_cliente, id_tendero, nivel_riesgo, puntaje, confianza, limite_sugerido)
+    VALUES ($1, $2, $3, $4, $5, $6)
+    ON CONFLICT (id_cliente, id_tendero) DO UPDATE SET
+      nivel_riesgo = EXCLUDED.nivel_riesgo,
+      puntaje = EXCLUDED.puntaje,
+      confianza = EXCLUDED.confianza,
+      limite_sugerido = EXCLUDED.limite_sugerido,
+      fecha_calculo = NOW()
+  `, [clienteId, idTendero, nivelRiesgo, puntaje, confianza, limiteSugerido]);
 }
 
 /**
- * Garantiza que nivel_riesgo, confianza y limite_sugerido provienen de la misma
- * predicción ML. Si confianza es null, invoca al microservicio, recalcula el
- * límite con el nivel_riesgo del RF (para no dejarlo desincronizado) y persiste
- * los tres campos juntos.
+ * Fuente única de la predicción para un par (cliente, tendero): ya no depende de
+ * que exista una fila previa creada por un paso manual de "calcular". Si no hay
+ * fila en `scoring`, o quedó con confianza en null (predicción pendiente o el
+ * microservicio falló la última vez), llama al RF y persiste el resultado. Si ya
+ * hay una predicción vigente, la devuelve tal cual sin volver a llamar al ML.
  *
- * Los clientes sin historial crediticio con el tendero tienen features en cero
- * (no hay nada real que predecir), así que se respeta la regla fija de negocio
- * (nivel_riesgo = 'medio') y nunca se le pide una predicción al RF.
+ * Los clientes sin historial crediticio con este tendero no tienen features
+ * reales que evaluar, así que se respeta la regla fija de negocio (nivel_riesgo
+ * = 'medio', puntaje = 50) y nunca se le pide una predicción al RF: se devuelve
+ * null y el caller aplica esa regla.
  */
-async function syncMLPrediction(pool, clienteId, scoringRow, idTendero, options = {}) {
-  if (!scoringRow) return scoringRow;
-  if (options.sinHistorialCrediticio) return scoringRow;
-  if (scoringRow.confianza != null) return scoringRow;
+async function getOrComputeScoring(pool, clienteId, idTendero, options = {}) {
+  if (options.sinHistorialCrediticio) return null;
+
+  const existing = await pool.query(SELECT_SCORING, [clienteId, idTendero]);
+  if (existing.rows.length > 0 && existing.rows[0].confianza != null) {
+    return existing.rows[0];
+  }
 
   try {
     const rf = await callMLService(clienteId, idTendero);
     const limiteSugerido = await calcularLimiteSugerido(pool, clienteId, idTendero, rf.nivel_riesgo);
-    await persistMLPrediction(pool, clienteId, idTendero, rf.nivel_riesgo, rf.confianza, limiteSugerido);
+    await upsertPrediction(pool, clienteId, idTendero, {
+      nivelRiesgo: rf.nivel_riesgo,
+      puntaje: rf.puntaje,
+      confianza: rf.confianza,
+      limiteSugerido,
+    });
     return {
-      ...scoringRow,
       nivel_riesgo: rf.nivel_riesgo,
+      puntaje: rf.puntaje,
       confianza: rf.confianza,
       limite_sugerido: limiteSugerido,
+      fecha_calculo: new Date(),
     };
   } catch (mlErr) {
-    console.error('Error sincronizando predicción ML:', mlErr.message);
-    return scoringRow;
+    console.error('Error obteniendo predicción ML:', mlErr.message);
+    return existing.rows[0] || null;
   }
+}
+
+/**
+ * Marca la predicción cacheada de un par como vencida (sin borrar la fila, para
+ * no perder limite_sugerido/fecha_calculo si el ML tarda en responder de nuevo).
+ * La siguiente llamada a getOrComputeScoring la recalcula, porque confianza NULL
+ * es la señal que ya usa esa función para decidir si debe volver a preguntarle al RF.
+ *
+ * Se invoca cuando un crédito de ese par se cierra (pagado o vencido): el
+ * historial que alimenta las features de ese par cambió, así que la predicción
+ * anterior ya no refleja los datos actuales.
+ */
+async function invalidateScoring(pool, clienteId, idTendero) {
+  await pool.query(
+    'UPDATE scoring SET confianza = NULL WHERE id_cliente = $1 AND id_tendero = $2',
+    [clienteId, idTendero]
+  );
 }
 
 module.exports = {
   callMLService,
-  persistMLPrediction,
-  syncMLPrediction,
+  getOrComputeScoring,
+  invalidateScoring,
 };

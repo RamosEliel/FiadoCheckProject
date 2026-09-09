@@ -2,7 +2,9 @@ import os
 import json
 import atexit
 import threading
+from collections import defaultdict
 from contextlib import contextmanager
+from datetime import datetime, date, time
 
 from psycopg2 import pool as pgpool
 from dotenv import dotenv_values, load_dotenv
@@ -29,12 +31,17 @@ if not os.environ.get("DATABASE_URL"):
 
 STATE_FILE = os.path.join(BASE_DIR, 'ml_state.json')
 
+# Un crédito 'vencido' nunca recibió un abono a tiempo: cuenta como un atraso
+# fijo de 31 días, igual que scoringCalculo.js en el backend Node.
+DIAS_ATRASO_VENCIDO = 31
+
 
 # Pool de conexiones.
 #
 # Antes cada consulta abría su propia conexión con psycopg2.connect() y la
-# cerraba al terminar. Como /predict invoca get_features() y get_limit_data(),
-# eran dos handshakes TCP+SSL completos contra NeonDB por cada predicción.
+# cerraba al terminar. Como /predict invoca get_features_for_pair() y
+# get_limit_data(), eran dos handshakes TCP+SSL completos contra NeonDB por
+# cada predicción.
 #
 # Es threaded porque el reentrenamiento corre en un hilo de background
 # (_retrain_in_background en predict.py) y también consulta la base.
@@ -82,52 +89,154 @@ def _close_pool():
         _pool = None
 
 
-def get_features(id_cliente: int, id_tendero=None):
-    """Devuelve [pts_puntualidad, pts_historial, pts_cumplimiento, pts_antiguedad, puntaje_calc].
-    El puntaje se calcula como suma de las 4 variables (ya no se almacena en BD).
+def _a_datetime(valor):
+    """`fecha_credito`/`fecha_limite_pago` llegan como `date`, `created_at` como
+    `datetime` — normaliza ambos antes de restar."""
+    if isinstance(valor, datetime):
+        return valor
+    if isinstance(valor, date):
+        return datetime.combine(valor, time.min)
+    return valor
 
-    El scoring es por par (cliente, tendero): un mismo cliente tiene un historial
-    distinto en cada tienda. id_tendero es opcional solo para no romper si un
-    backend antiguo aún no lo envía; en ese caso se toma la fila más reciente,
-    que puede ser la de otro tendero.
+
+def _meses_entre(fecha_inicio, fecha_fin) -> float:
+    if fecha_inicio is None or fecha_fin is None:
+        return 0.0
+    inicio = _a_datetime(fecha_inicio)
+    fin = _a_datetime(fecha_fin)
+    return (fin - inicio).total_seconds() / (60 * 60 * 24 * 30)
+
+
+def _clasificar_credito(estado: str, fecha_limite_pago, ultimo_abono):
+    """Clasifica el desenlace real de un crédito cerrado.
+
+    - 'malo': el crédito quedó vencido (nunca se pagó dentro del plazo).
+    - 'bueno': se pagó y el último abono llegó dentro del plazo.
+    - 'regular': se pagó pero el último abono llegó después del plazo.
+
+    Devuelve (etiqueta, dias_atraso). dias_atraso solo se usa para alimentar
+    el feature agregado de créditos previos, no como feature directo.
     """
+    if estado == 'vencido':
+        return 'malo', DIAS_ATRASO_VENCIDO
+
+    if ultimo_abono is None:
+        # Dato inconsistente (pagado sin abonos registrados): no penalizar.
+        return 'bueno', 0
+
+    dias = (ultimo_abono - fecha_limite_pago).days
+    if dias <= 0:
+        return 'bueno', 0
+    return 'regular', dias
+
+
+def _fetch_creditos_cerrados(id_cliente=None, id_tendero=None):
+    """Créditos cerrados (pagado + vencido) con la fecha del último abono.
+
+    Ordenados por (id_cliente, id_tendero, fecha_credito) para poder acumular
+    el historial "previo" de cada par en una sola pasada.
+    """
+    filtros = []
+    params = []
+    if id_cliente is not None:
+        filtros.append("cr.id_cliente = %s")
+        params.append(str(id_cliente))
+    if id_tendero is not None:
+        filtros.append("cr.id_tendero = %s")
+        params.append(str(id_tendero))
+    where_extra = f"AND {' AND '.join(filtros)}" if filtros else ""
+
     with get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            if id_tendero is not None:
-                cur.execute(
-                    """
-                    SELECT pts_puntualidad, pts_historial, pts_cumplimiento, pts_antiguedad
-                    FROM scoring
-                    WHERE id_cliente = %s AND id_tendero = %s
-                    ORDER BY fecha_calculo DESC
-                    LIMIT 1
-                    """,
-                    (str(id_cliente), str(id_tendero)),
-                )
-            else:
-                cur.execute(
-                    """
-                    SELECT pts_puntualidad, pts_historial, pts_cumplimiento, pts_antiguedad
-                    FROM scoring
-                    WHERE id_cliente = %s
-                    ORDER BY fecha_calculo DESC
-                    LIMIT 1
-                    """,
-                    (str(id_cliente),),
-                )
-            row = cur.fetchone()
+            cur.execute(
+                f"""
+                SELECT
+                    cr.id_credito,
+                    cr.id_cliente,
+                    cr.id_tendero,
+                    cr.fecha_credito,
+                    cr.fecha_limite_pago,
+                    cr.estado,
+                    cl.created_at AS cliente_created_at,
+                    (
+                        SELECT MAX(a.fecha_abono) FROM abonos a WHERE a.id_credito = cr.id_credito
+                    ) AS ultimo_abono
+                FROM creditos cr
+                JOIN clientes cl ON cl.id_cliente = cr.id_cliente
+                WHERE cr.estado IN ('pagado', 'vencido') {where_extra}
+                ORDER BY cr.id_cliente, cr.id_tendero, cr.fecha_credito ASC
+                """,
+                params,
+            )
+            return cur.fetchall()
 
-    if not row:
+
+def build_training_rows():
+    """Arma (X, y) para entrenar el RF a partir de desenlaces reales de créditos.
+
+    Cada fila es un crédito cerrado histórico. Las features se calculan SOLO
+    con créditos previos del mismo par (cliente, tendero) — anteriores por
+    fecha_credito — para no filtrar información del propio desenlace que se
+    está etiquetando. La antigüedad se calcula contra la fecha de ESE crédito,
+    no contra hoy, para no meter fuga temporal en filas viejas.
+
+    Limitación conocida: no existe una tabla de historial de estados de
+    `creditos`, así que "créditos previos cerrados" se aproxima ordenando por
+    fecha_credito en vez de reconstruir el estado exacto en el instante T.
+    """
+    rows = _fetch_creditos_cerrados()
+
+    historial = defaultdict(list)  # (id_cliente, id_tendero) -> [(etiqueta, dias_atraso), ...]
+    X, y = [], []
+
+    for r in rows:
+        par = (r["id_cliente"], r["id_tendero"])
+        previos = historial[par]
+        num_previos = len(previos)
+
+        if num_previos > 0:
+            ratio_a_tiempo = sum(1 for etiqueta, _ in previos if etiqueta == "bueno") / num_previos
+            atraso_promedio = sum(dias for _, dias in previos) / num_previos
+        else:
+            ratio_a_tiempo = 0.0
+            atraso_promedio = 0.0
+
+        antiguedad_meses = _meses_entre(r["cliente_created_at"], r["fecha_credito"])
+        etiqueta, dias_atraso = _clasificar_credito(r["estado"], r["fecha_limite_pago"], r["ultimo_abono"])
+
+        X.append([num_previos, ratio_a_tiempo, atraso_promedio, antiguedad_meses])
+        y.append(etiqueta)
+
+        historial[par].append((etiqueta, dias_atraso))
+
+    return X, y
+
+
+def get_features_for_pair(id_cliente: int, id_tendero: int):
+    """Features en vivo para decidir sobre un crédito NUEVO de este par.
+
+    A diferencia del entrenamiento, aquí "previos" son TODOS los créditos
+    cerrados que existen hoy para el par (el crédito que se está evaluando
+    todavía no existe), y la antigüedad se calcula contra el momento actual.
+
+    Devuelve None si el par no tiene ningún crédito cerrado — en ese caso no
+    hay nada real que predecir (el backend ya filtra este caso con la regla de
+    cliente nuevo antes de llegar a pedir una predicción).
+    """
+    rows = _fetch_creditos_cerrados(id_cliente, id_tendero)
+    if not rows:
         return None
 
-    puntaje = row["pts_puntualidad"] + row["pts_historial"] + row["pts_cumplimiento"] + row["pts_antiguedad"]
-    return [
-        row["pts_puntualidad"],
-        row["pts_historial"],
-        row["pts_cumplimiento"],
-        row["pts_antiguedad"],
-        puntaje,
+    etiquetas_dias = [
+        _clasificar_credito(r["estado"], r["fecha_limite_pago"], r["ultimo_abono"])
+        for r in rows
     ]
+    num_previos = len(etiquetas_dias)
+    ratio_a_tiempo = sum(1 for etiqueta, _ in etiquetas_dias if etiqueta == "bueno") / num_previos
+    atraso_promedio = sum(dias for _, dias in etiquetas_dias) / num_previos
+    antiguedad_meses = _meses_entre(rows[0]["cliente_created_at"], datetime.now())
+
+    return [num_previos, ratio_a_tiempo, atraso_promedio, antiguedad_meses]
 
 
 def get_limit_data(id_cliente: int, id_tendero=None):
@@ -138,14 +247,13 @@ def get_limit_data(id_cliente: int, id_tendero=None):
 
     Los créditos se filtran por tendero cuando se conoce: el límite que se le
     sugiere a una tienda debe salir de lo que esa tienda fió, no de lo que el
-    cliente deba en otro negocio. El backend Node ya lo calcula así.
+    cliente deba en otro negocio.
     """
     filtro_tendero = "AND id_tendero = %s" if id_tendero is not None else ""
     params = (str(id_cliente), str(id_tendero)) if id_tendero is not None else (str(id_cliente),)
 
     with get_connection() as conn:
         with conn.cursor() as cur:
-            # Promedio de los últimos 3 créditos cerrados
             cur.execute(
                 f"""
                 SELECT COALESCE(AVG(monto_total), 0)
@@ -161,7 +269,6 @@ def get_limit_data(id_cliente: int, id_tendero=None):
             )
             base = float(cur.fetchone()[0])
 
-            # Saldo pendiente actual (créditos que no están pagados)
             cur.execute(
                 f"""
                 SELECT COALESCE(SUM(saldo_pendiente), 0)
@@ -175,24 +282,26 @@ def get_limit_data(id_cliente: int, id_tendero=None):
     return base, saldo_pendiente
 
 
-def fetch_all_scoring():
-    """Devuelve filas con las 4 variables + nivel_riesgo. El puntaje se recalcula en model.py."""
+def invalidate_all_scoring_cache():
+    """Marca como vencidas todas las predicciones cacheadas en `scoring`.
+
+    Se llama tras un reentrenamiento exitoso: los pesos del RF cambiaron para
+    TODOS los pares, no solo el que disparó el evento, así que una predicción
+    calculada con el modelo anterior ya no es válida en ningún caso. El
+    backend Node ya trata confianza NULL como "hay que recalcular" (ver
+    getOrComputeScoring), así que esto basta para que la próxima consulta de
+    cada par la recalcule con el modelo nuevo.
+    """
     with get_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT pts_puntualidad, pts_historial, pts_cumplimiento, pts_antiguedad, nivel_riesgo
-                FROM scoring
-                """
-            )
-            rows = cur.fetchall()
-    return rows
+            cur.execute("UPDATE scoring SET confianza = NULL")
+        conn.commit()
 
 
-def count_scoring_records() -> int:
+def count_closed_creditos() -> int:
     with get_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT COUNT(*) FROM scoring")
+            cur.execute("SELECT COUNT(*) FROM creditos WHERE estado IN ('pagado', 'vencido')")
             row = cur.fetchone()
     return row[0]
 

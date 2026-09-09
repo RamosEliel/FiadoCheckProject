@@ -4,6 +4,7 @@
 
 const AppError = require('../../utils/AppError');
 const { triggerMLRetrain } = require('../../utils/mlTrigger');
+const { invalidateScoring } = require('../../utils/mlScoring');
 const { toDateKey, todayBusinessKey } = require('../../utils/dateUtils');
 const creditsRepository = require('./credits.repository');
 
@@ -104,6 +105,11 @@ const registrarPago = async ({ creditoId, idTendero, monto, fechaAbono }) => {
 
     if (estadoNuevo === 'pagado') {
       triggerMLRetrain('credito_pagado').catch(() => {});
+      try {
+        await invalidateScoring(client, credito.id_cliente, idTendero);
+      } catch (invalidateErr) {
+        console.error('Error invalidando caché de scoring:', invalidateErr.message);
+      }
     }
 
     return {
