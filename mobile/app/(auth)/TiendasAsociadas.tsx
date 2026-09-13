@@ -11,6 +11,9 @@ import { Stack } from 'expo-router';
 import { tiendasAsociadasStyles as styles } from '@/constants/Tiendas_asociadas.styles';
 import { COLORS } from '@/constants/colors';
 import { useTiendasAsociadas } from '@/hooks/Usetiendasasociadas';
+import { AppDialog } from '@/components/ui/AppDialog';
+import { useAppDialog } from '@/hooks/useAppDialog';
+import { useConsumeLoginWelcome } from '@/hooks/useConsumeLoginWelcome';
 
 export default function TiendasAsociadasScreen() {
   const {
@@ -23,6 +26,8 @@ export default function TiendasAsociadasScreen() {
     handleContinuar,
     formatCOP,
   } = useTiendasAsociadas();
+  const { dialog, showSuccess, hide } = useAppDialog();
+  useConsumeLoginWelcome('tiendas', showSuccess);
 
   return (
     <>
@@ -124,6 +129,13 @@ export default function TiendasAsociadasScreen() {
           </View>
         </ScrollView>
       </SafeAreaView>
+      <AppDialog
+        visible={dialog.visible}
+        variant={dialog.variant}
+        title={dialog.title}
+        message={dialog.message}
+        onClose={hide}
+      />
     </>
   );
 }

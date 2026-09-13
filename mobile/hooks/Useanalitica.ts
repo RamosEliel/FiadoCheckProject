@@ -29,7 +29,7 @@ export type DistribucionItem = {
   color: string;
 };
 
-export const CHART_WEEKS = ['Semana 1', 'Semana 2', 'Semana 3', 'Semana 4'] as const;
+export const CHART_WEEKS = ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'] as const;
 
 const DIST_COLORS = {
   alDia: '#3EBF7A',
@@ -73,15 +73,21 @@ const mapDistribucion = (d: AnaliticaResponse['distribucion']): DistribucionItem
   { label: 'Mora +7 Días', pct: d.mora_mas_7.pct, monto: d.mora_mas_7.monto, color: DIST_COLORS.moraMas7 },
 ];
 
+const coercePagoSemanal = (s: PagoSemanal): PagoSemanal => ({
+  semana: Number(s.semana) || 0,
+  pagos: Number(s.pagos) || 0,
+  esperado: Number(s.esperado) || 0,
+});
+
 export const buildChartScale = (data: PagoSemanal[]) => {
   const maxVal = Math.max(0, ...data.flatMap((d) => [d.pagos, d.esperado]));
   if (maxVal === 0) {
-    return { yMax: 15000, yTicks: [1000, 5000, 10000, 15000] as number[] };
+    return { yMax: 750, yTicks: [0, 250, 500, 750] as number[] };
   }
 
   const yMax = Math.ceil(maxVal / 1000) * 1000 || 1000;
   const step = yMax / 4;
-  const yTicks = [step, step * 2, step * 3, yMax].map((v) => Math.round(v));
+  const yTicks = [0, step, step * 2, step * 3, yMax].map((v) => Math.round(v));
   return { yMax, yTicks };
 };
 
@@ -139,7 +145,9 @@ export const useAnalitica = (token: string | null) => {
       setRecuperado(json.recuperado ?? 0);
       setMoraPorcentaje(json.mora_porcentaje ?? 0);
       setPagosSemanales(
-        json.pagos_semanales?.length ? json.pagos_semanales : EMPTY_SEMANAS,
+        json.pagos_semanales?.length
+          ? json.pagos_semanales.map(coercePagoSemanal)
+          : EMPTY_SEMANAS,
       );
       setDistribucion(json.distribucion ? mapDistribucion(json.distribucion) : []);
     } catch (err: unknown) {
@@ -203,20 +211,44 @@ export const useAnalitica = (token: string | null) => {
   const toggleAnio = () => {
     const idx = ANIOS_DISPONIBLES.indexOf(anio);
     const next = ANIOS_DISPONIBLES[(idx + 1) % ANIOS_DISPONIBLES.length];
-    resetAnaliticaData();
     setMesChart(mesDefaultParaAnio(next));
     setAnio(next);
   };
 
-  const avanzarMes = () => {
-    resetAnaliticaData();
-    setMesChart((prev) => (prev >= 12 ? 1 : prev + 1));
+  const previewMes = (delta: 1 | -1) => {
+    let nextMes = mesChart + delta;
+    let nextAnio = parseInt(anio, 10);
+
+    if (nextMes > 12) {
+      nextMes = 1;
+      nextAnio += 1;
+    } else if (nextMes < 1) {
+      nextMes = 12;
+      nextAnio -= 1;
+    }
+
+    return { nextMes, nextAnio: String(nextAnio) };
   };
+
+  const cambiarMes = (delta: 1 | -1) => {
+    const { nextMes, nextAnio } = previewMes(delta);
+    if (!ANIOS_DISPONIBLES.includes(nextAnio)) return;
+    if (nextAnio !== anio) setAnio(nextAnio);
+    if (nextMes !== mesChart) setMesChart(nextMes);
+  };
+
+  const avanzarMes = () => cambiarMes(1);
+  const retrocederMes = () => cambiarMes(-1);
+  const puedeAvanzarMes = ANIOS_DISPONIBLES.includes(previewMes(1).nextAnio);
+  const puedeRetrocederMes = ANIOS_DISPONIBLES.includes(previewMes(-1).nextAnio);
 
   const handleCancelar = () => router.back();
 
-  const chartTitle = `Pagos Diarios — ${MESES[mesChart - 1] ?? ''}`;
+  const mesNombre = MESES[mesChart - 1] ?? '';
+  const chartTitle = `Pagos semanales — ${mesNombre}`;
   const chartScale = buildChartScale(pagosSemanales);
+  const sinPagosMes =
+    Math.max(0, ...pagosSemanales.flatMap((d) => [d.pagos, d.esperado])) === 0;
 
   return {
     busqueda,
@@ -226,7 +258,12 @@ export const useAnalitica = (token: string | null) => {
     anio,
     toggleAnio,
     avanzarMes,
+    retrocederMes,
+    puedeAvanzarMes,
+    puedeRetrocederMes,
     mesChart,
+    mesNombre,
+    sinPagosMes,
     anios: ANIOS_DISPONIBLES,
     cliente,
     recuperado,
@@ -241,4 +278,3 @@ export const useAnalitica = (token: string | null) => {
     handleCancelar,
   };
 };
-

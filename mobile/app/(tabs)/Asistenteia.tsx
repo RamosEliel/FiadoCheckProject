@@ -1,43 +1,63 @@
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
-  StatusBar,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Stack, useFocusEffect, router } from 'expo-router';
 import { useCallback, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  KeyboardAvoidingView,
+  ListRenderItem,
+  Platform,
+  StatusBar,
+} from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Stack, router, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ChevronLeft, Bell, Bot, Send } from 'lucide-react-native';
-import { HeaderIconButton } from '@/components/HeaderIconButton';
+import {
+  ActionBanner,
+  ChatComposer,
+  ChatHeader,
+  MessageBubble,
+  SuggestionChips,
+  TypingIndicator,
+  WelcomeState,
+} from '@/components/chat';
+import type { Mensaje } from '@/components/chat/types';
 import { asistenteIAStyles as styles } from '@/constants/Asistenteia.styles';
 import { COLORS } from '@/constants/colors';
-import { useAsistenteIA } from '@/hooks/Useasistenteia';
+import { SUGERENCIAS_INICIALES, useAsistenteIA } from '@/hooks/Useasistenteia';
 
 export default function AsistenteIAScreen() {
+  const insets = useSafeAreaInsets();
   const [token, setToken] = useState<string | null>(null);
   const [idTendero, setIdTendero] = useState('');
 
   useFocusEffect(
     useCallback(() => {
-      AsyncStorage.getItem('token').then(setToken);
-      AsyncStorage.getItem('tendero').then((raw) => {
-        if (!raw) {
+      let active = true;
+
+      Promise.all([AsyncStorage.getItem('token'), AsyncStorage.getItem('tendero')])
+        .then(([storedToken, raw]) => {
+          if (!active) return;
+          setToken(storedToken ?? '');
+          if (!raw) {
+            setIdTendero('');
+            return;
+          }
+          try {
+            const tendero = JSON.parse(raw);
+            setIdTendero(String(tendero.id_tendero ?? ''));
+          } catch {
+            setIdTendero('');
+          }
+        })
+        .catch(() => {
+          if (!active) return;
+          setToken('');
           setIdTendero('');
-          return;
-        }
-        try {
-          const tendero = JSON.parse(raw);
-          setIdTendero(String(tendero.id_tendero ?? ''));
-        } catch {
-          setIdTendero('');
-        }
-      });
+        });
+
+      return () => {
+        active = false;
+      };
     }, []),
   );
 
@@ -47,15 +67,76 @@ export default function AsistenteIAScreen() {
     setInput,
     loading,
     scrollRef,
+    actionBanner,
     handleEnviar,
-    handleCancelar,
     handleSugerencia,
+    clearChat,
+    retryLast,
   } = useAsistenteIA(token ?? '', idTendero);
+
+  const hasUserMessage = mensajes.some((msg) => msg.tipo === 'usuario');
+  const listData = hasUserMessage
+    ? mensajes.filter((msg) => msg.id !== 'welcome-chips' && msg.id !== 'welcome-bot')
+    : [];
+  const welcomeOpciones =
+    mensajes.find((msg) => msg.tipo === 'sugerencias')?.opciones ?? SUGERENCIAS_INICIALES;
+
+  const composerBottom = 12 + (Platform.OS === 'android' ? Math.min(insets.bottom, 12) : 0);
+
+  const confirmNewChat = () => {
+    if (!hasUserMessage) return;
+
+    Alert.alert(
+      'Nueva conversación',
+      'Se perderá el historial de esta sesión. ¿Quieres empezar de nuevo?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Empezar de nuevo',
+          style: 'destructive',
+          onPress: () => {
+            void clearChat();
+          },
+        },
+      ],
+    );
+  };
+
+  const renderItem: ListRenderItem<Mensaje> = ({ item, index }) => {
+    const prev = listData[index - 1];
+    const grouped = prev?.tipo === item.tipo && item.tipo !== 'sugerencias';
+
+    if (item.tipo === 'sugerencias') {
+      return (
+        <SuggestionChips
+          opciones={item.opciones ?? []}
+          onSelect={handleSugerencia}
+          disabled={loading}
+        />
+      );
+    }
+
+    const isLastItem = index === listData.length - 1;
+
+    return (
+      <MessageBubble
+        mensaje={item}
+        grouped={grouped}
+        onRetry={item.esError && isLastItem && !loading ? retryLast : undefined}
+      />
+    );
+  };
+
+  const placeholder = loading
+    ? 'Esperando respuesta…'
+    : hasUserMessage
+      ? 'Escribe tu pregunta…'
+      : 'Pregunta sobre tu cartera…';
 
   if (token === null) {
     return (
-      <SafeAreaView style={styles.safe}>
-        <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 60 }} />
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <ActivityIndicator size="large" color={COLORS.white} style={{ marginTop: 60 }} />
       </SafeAreaView>
     );
   }
@@ -63,120 +144,53 @@ export default function AsistenteIAScreen() {
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView style={styles.safe} edges={['top']}>
         <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
-
-        <View style={styles.header}>
-          <HeaderIconButton
-            icon={ChevronLeft}
-            label="Volver"
-            onPress={handleCancelar}
-            color={COLORS.primary}
-            style={styles.backBtn}
-          />
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Asistente IA</Text>
-            <Text style={styles.headerSubtitle}>Pregunta sobre tu negocio</Text>
-          </View>
-          <HeaderIconButton
-            icon={Bell}
-            label="Avisos"
-            onPress={() => router.push('/notificaciones' as any)}
-            color={COLORS.primary}
-            style={styles.bellBtn}
-          />
-        </View>
+        <ChatHeader
+          loading={loading}
+          onBell={() => router.push('/notificaciones' as any)}
+          onNewChat={confirmNewChat}
+        />
 
         <KeyboardAvoidingView
           style={styles.body}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           keyboardVerticalOffset={0}
         >
-          <ScrollView
+          {actionBanner?.visible ? <ActionBanner mensaje={actionBanner.mensaje} /> : null}
+
+          <FlatList
             ref={scrollRef}
             style={styles.chat}
+            data={listData}
+            keyExtractor={(item) => item.id}
+            renderItem={renderItem}
             contentContainerStyle={styles.chatContent}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
-          >
-            {mensajes.map((msg) => {
-              if (msg.tipo === 'bot') {
-                return (
-                  <View key={msg.id} style={styles.botRow}>
-                    <View style={styles.botAvatar}>
-                      <Bot size={20} color={COLORS.white} strokeWidth={2} />
-                    </View>
-                    <View style={styles.botBubble}>
-                      <Text style={styles.botText}>{msg.texto}</Text>
-                    </View>
-                  </View>
-                );
-              }
+            keyboardDismissMode="interactive"
+            extraData={loading}
+            onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
+            ListHeaderComponent={
+              hasUserMessage ? null : (
+                <WelcomeState
+                  opciones={welcomeOpciones}
+                  onSelect={handleSugerencia}
+                  disabled={loading}
+                />
+              )
+            }
+            ListFooterComponent={loading ? <TypingIndicator /> : null}
+          />
 
-              if (msg.tipo === 'sugerencias') {
-                return (
-                  <View key={msg.id} style={styles.sugerenciasRow}>
-                    {(msg.opciones ?? []).map((op) => (
-                      <TouchableOpacity
-                        key={op}
-                        style={styles.sugerenciaChip}
-                        onPress={() => handleSugerencia(op)}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={styles.sugerenciaText}>{op}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                );
-              }
-
-              return (
-                <View key={msg.id} style={styles.userRow}>
-                  <View style={styles.userBubble}>
-                    <Text style={styles.userText}>{msg.texto}</Text>
-                  </View>
-                </View>
-              );
-            })}
-
-            {loading && (
-              <View style={styles.botRow}>
-                <View style={styles.botAvatar}>
-                  <Bot size={20} color={COLORS.white} strokeWidth={2} />
-                </View>
-                <View style={[styles.botBubble, styles.botBubbleLoading]}>
-                  <ActivityIndicator size="small" color={COLORS.primary} />
-                  <Text style={styles.typingText}>Pensando...</Text>
-                </View>
-              </View>
-            )}
-          </ScrollView>
-
-          <View style={styles.inputWrapper}>
-            <View style={styles.divider} />
-            <View style={styles.inputRow}>
-              <TextInput
-                style={styles.textInput}
-                placeholder="Escribe tu pregunta..."
-                placeholderTextColor={COLORS.textMuted}
-                value={input}
-                onChangeText={setInput}
-                multiline
-                returnKeyType="send"
-                onSubmitEditing={handleEnviar}
-              />
-              <TouchableOpacity
-                style={[styles.sendBtn, (!input.trim() || loading) && styles.sendBtnDisabled]}
-                onPress={handleEnviar}
-                disabled={!input.trim() || loading}
-                activeOpacity={0.85}
-                accessibilityRole="button"
-                accessibilityLabel="Enviar mensaje"
-              >
-                <Send size={20} color={COLORS.white} strokeWidth={2.5} />
-              </TouchableOpacity>
-            </View>
-          </View>
+          <ChatComposer
+            value={input}
+            onChange={setInput}
+            onSend={handleEnviar}
+            loading={loading}
+            placeholder={placeholder}
+            bottomInset={composerBottom}
+          />
         </KeyboardAvoidingView>
       </SafeAreaView>
     </>

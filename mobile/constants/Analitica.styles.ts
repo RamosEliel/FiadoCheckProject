@@ -81,7 +81,10 @@ export const analiticaStyles = StyleSheet.create({
     fontWeight: '700',
   },
   anioBadgeWrap: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
   anioBadge: {
     backgroundColor: COLORS.white,
@@ -95,6 +98,24 @@ export const analiticaStyles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: COLORS.text,
+  },
+  mesNav: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  mesNavBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  mesNavBtnDisabled: {
+    opacity: 0.35,
   },
   card: {
     backgroundColor: COLORS.white,
@@ -217,30 +238,67 @@ export const analiticaStyles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
   },
+  chartActionBtnDisabled: {
+    opacity: 0.4,
+  },
+  chartLegend: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  legendDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  legendText: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: COLORS.textMuted,
+  },
   chartBody: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'flex-start',
     gap: 6,
   },
   chartYAxis: {
-    width: 28,
-    justifyContent: 'space-between',
+    width: 32,
     height: 150,
-    paddingBottom: 18,
+    position: 'relative',
   },
   chartYLabel: {
+    position: 'absolute',
+    right: 0,
     fontSize: 9,
+    lineHeight: 12,
     color: '#7EB8D4',
     textAlign: 'right',
   },
   chartPlot: {
     flex: 1,
     height: 150,
+    position: 'relative',
+  },
+  chartEmptyOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(232, 248, 240, 0.78)',
+  },
+  chartEmptyText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.textMuted,
   },
   chartXAxis: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingLeft: 34,
+    paddingLeft: 38,
     marginTop: 4,
   },
   chartXLabel: {
