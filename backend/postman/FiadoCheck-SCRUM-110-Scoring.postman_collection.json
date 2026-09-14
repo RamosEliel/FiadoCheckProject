@@ -1,20 +1,20 @@
 {
   "info": {
-    "name": "FiadoCheck — SCRUM-110 Scoring y ML (SCO-01 a SCO-10)",
-    "description": "Colección ejecutable del bloque §4.4 del plan de pruebas (responsable: Eliel).\n\nCUBRE: SCO-01, SCO-02, SCO-03, SCO-04, SCO-05, SCO-08, SCO-09a, SCO-09c, SCO-10.\n\nNO CUBRE (no son peticiones HTTP, se ejecutan aparte):\n  SCO-06  atomicidad de syncMLPrediction  -> consulta SQL\n  SCO-07  ML caído degrada sin crash      -> apagar predict.py desde la terminal\n  SCO-09b modelo.pkl ausente              -> renombrar el archivo\n  SCO-11  ML_SERVICE_URL                  -> variable de entorno\n\nREQUISITOS ANTES DE CORRER\n  Backend en {{baseUrl}} (Local o Azure)\n  Microservicio ML en {{mlUrl}} (Local: http://localhost:8000 · Azure: https://fiadocheck-ml.azurewebsites.net)\n\nCREDENCIALES\n  tendero1@tiendasegura.com / FiadoTest2026 (id_tendero = 6).\n\n  IMPORTANTE: NO usar soto@fiado.com. Esa cuenta tiene fila en la tabla tenderos\n  pero su usuario está con id_rol = 2 (cliente), así que el login emite el JWT con\n  id_tendero = null y TODOS los endpoints de scoring devuelven 404 Cliente no\n  encontrado. Existe un script fixSotoAsCliente.js que la convirtió a cliente.\n\nDATOS FIJOS VERIFICADOS EN BASE DE DATOS\n  Cliente 6            -> 2 créditos con el tendero 6, nivel medio (SCO-01/03/05/08)\n  Cliente 1            -> pertenece al tendero 1, NO vinculado al 6 (sirve para SCO-04)\n  Cliente 56           -> existe pero no tiene fila en scoring (sirve para SCO-09c)\n  Cliente nuevo        -> lo crea y vincula la propia colección (sirve para SCO-02)\n\nRE-EJECUTABLE: el cliente nuevo se crea con cédula por timestamp. Limpieza:\n  DELETE FROM usuario WHERE email LIKE '%@test.fiadocheck.com';",
+    "name": "FiadoCheck — SCRUM-110 Scoring y ML (motor RF puro, post-refactor 2026-09-08)",
+    "description": "Colección ejecutable del bloque §4.4 del plan de pruebas (responsable: Eliel).\n\nREESCRITA el 2026-09-10 tras el refactor que eliminó el scoring por reglas. Ya no\nexiste POST /scoring/:clienteId/calcular ni el desglose de 4 variables\n(puntualidad/cumplimiento/historial/antigüedad). El puntaje, nivel_riesgo y\nconfianza salen únicamente del Random Forest, calculados bajo demanda por\nGET /scoring/:clienteId (getOrComputeScoring). SCO-01 y GC-05 quedan RETIRADOS:\nprobaban que puntaje_total fuera la suma de esas 4 variables, mecanismo que ya\nno existe.\n\nCUBRE: SCO-02, SCO-04, SCO-05, SCO-06 (persistencia/upsert), SCO-08, SCO-09a,\nSCO-09c, SCO-10, y el caso nuevo 'crédito vigente sin cerrar' (BUG-015).\n\nNO CUBRE (no son peticiones HTTP, se ejecutan aparte — ver PASO A PASO):\n  SCO-07  ML caído degrada a 503 para un par nunca calculado -> apagar predict.py\n  SCO-09b modelo.pkl ausente                                -> renombrar el archivo\n  SCO-11  ML_SERVICE_URL                                     -> variable de entorno\n\nREQUISITOS ANTES DE CORRER\n  Backend en {{baseUrl}} (Local o Azure)\n  Microservicio ML en {{mlUrl}} (Local: http://localhost:8000 · Azure: https://fiadocheck-ml.azurewebsites.net)\n  Modelo entrenado con el código actual: cd backend/ml_service && venv\\Scripts\\python model.py\n\nCREDENCIALES\n  Tendero principal: carlos.mendez@fiado.com / FiadoTest2026 (id_tendero = 1)\n  Tendero ajeno (dueño real del cliente usado en SCO-04): tendero1@tiendasegura.com / FiadoTest2026 (id_tendero = 6)\n\nDATOS FIJOS VERIFICADOS EN VIVO EL 2026-09-10 (re-verificación post-refactor)\n  Cliente 2   -> créditos cerrados con el tendero 1 -> SCO-05/06/08 (54 puntos, medio, confianza 0.52)\n  Cliente 6   -> pertenece al tendero 6, NO vinculado al 1 -> SCO-04\n  Cliente 59  -> vinculado al tendero 1, 0 créditos -> SCO-02 (regla fija)\n  Cliente 3   -> vinculado al tendero 1, 1 crédito VIGENTE (0 cerrados) -> caso BUG-015 corregido\n\nSi estos IDs ya no existen tal cual en tu base (los datos semilla cambian), sustitúyelos\npor cualquier par que cumpla la misma condición (con créditos cerrados / sin ellos /\nvigente sin cerrar / ajeno a otro tendero).\n\nRE-EJECUTABLE: los primeros dos SCO consultan datos existentes, no crean nada.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "mlUrl", "value": "https://fiadocheck-ml.azurewebsites.net" },
-    { "key": "tenderoEmail", "value": "tendero1@tiendasegura.com" },
+    { "key": "mlUrl", "value": "http://localhost:8000" },
+    { "key": "tenderoEmail", "value": "carlos.mendez@fiado.com" },
     { "key": "tenderoPassword", "value": "FiadoTest2026" },
-    { "key": "clienteConHistorial", "value": "6" },
-    { "key": "clienteAjeno", "value": "1" },
-    { "key": "clienteSinScoring", "value": "56" },
-    { "key": "clienteNuevo", "value": "" },
-    { "key": "clienteNuevoPassword", "value": "FiadoTest2026" },
+    { "key": "clienteConHistorial", "value": "2" },
+    { "key": "clienteAjeno", "value": "6" },
+    { "key": "clienteSinCreditos", "value": "59" },
+    { "key": "clienteCreditoVigenteSinCerrar", "value": "3" },
     { "key": "tokenTendero", "value": "" },
-    { "key": "fechaCalculo1", "value": "" }
+    { "key": "fechaCalculo1", "value": "" },
+    { "key": "tiempoRespuesta1", "value": "" }
   ],
   "item": [
     {
@@ -45,89 +45,7 @@
       }
     },
     {
-      "name": "02 — Setup: registrar cliente nuevo (sin créditos)",
-      "event": [
-        {
-          "listen": "prerequest",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "const ts = (Date.now() % 900000000 + 100000000).toString();",
-              "pm.collectionVariables.set('clienteNuevo', ts);"
-            ]
-          }
-        },
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('Setup — cliente registrado en auth', function () {",
-              "    pm.response.to.have.status(201);",
-              "});",
-              "console.log('Cliente nuevo (sin créditos):', pm.collectionVariables.get('clienteNuevo'));"
-            ]
-          }
-        }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
-        "body": { "mode": "raw", "raw": "{\n  \"nombre_completo\": \"Cliente Scoring {{clienteNuevo}}\",\n  \"email\": \"scoring.{{clienteNuevo}}@test.fiadocheck.com\",\n  \"telefono\": \"3001112233\",\n  \"cedula\": \"{{clienteNuevo}}\",\n  \"direccion\": \"Calle Prueba 45\",\n  \"password\": \"{{clienteNuevoPassword}}\"\n}" },
-        "url": { "raw": "{{baseUrl}}/auth/registerClientes", "host": ["{{baseUrl}}"], "path": ["auth", "registerClientes"] }
-      }
-    },
-    {
-      "name": "02b — Setup: asociar cliente al tendero",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('Setup — cliente asociado al tendero', function () {",
-              "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
-              "});"
-            ]
-          }
-        }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" },
-          { "key": "Authorization", "value": "Bearer {{tokenTendero}}" }
-        ],
-        "body": { "mode": "raw", "raw": "{\n  \"id_cliente\": \"{{clienteNuevo}}\"\n}" },
-        "url": { "raw": "{{baseUrl}}/clientes/asociar", "host": ["{{baseUrl}}"], "path": ["clientes", "asociar"] }
-      }
-    },
-    {
-      "name": "03 — SCO-05b: GET scoring de cliente sin calcular → 404",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('SCO-05 — cliente vinculado pero sin scoring calculado devuelve 404', function () {",
-              "    pm.response.to.have.status(404);",
-              "});",
-              "pm.test('SCO-05 — el error indica que hay que calcular primero', function () {",
-              "    pm.expect(pm.response.json().error).to.include('No existe scoring');",
-              "});"
-            ]
-          }
-        }
-      ],
-      "request": {
-        "method": "GET",
-        "header": [{ "key": "Authorization", "value": "Bearer {{tokenTendero}}" }],
-        "url": { "raw": "{{baseUrl}}/scoring/{{clienteNuevo}}", "host": ["{{baseUrl}}"], "path": ["scoring", "{{clienteNuevo}}"] }
-      }
-    },
-    {
-      "name": "04 — SCO-02: calcular scoring de cliente sin créditos",
+      "name": "02 — SCO-02: cliente sin créditos con esta tienda aplica la regla fija",
       "event": [
         {
           "listen": "test",
@@ -139,7 +57,7 @@
               "});",
               "const b = pm.response.json();",
               "pm.test('SCO-02 — puntaje conceptual 50', function () {",
-              "    pm.expect(b.puntaje_total).to.eql(50);",
+              "    pm.expect(b.puntaje).to.eql(50);",
               "});",
               "pm.test('SCO-02 — nivel medio y límite 50.000', function () {",
               "    pm.expect(b.nivel_riesgo).to.eql('medio');",
@@ -147,91 +65,7 @@
               "});",
               "pm.test('SCO-02 — NO se invoca al Random Forest: confianza null', function () {",
               "    pm.expect(b.confianza).to.be.null;",
-              "});",
-              "pm.test('SCO-02 — desglose en ceros (comportamiento esperado, no inconsistencia)', function () {",
-              "    const d = b.desglose;",
-              "    pm.expect(d.puntualidad + d.cumplimiento + d.historial + d.antiguedad).to.eql(0);",
               "});"
-            ]
-          }
-        }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [{ "key": "Authorization", "value": "Bearer {{tokenTendero}}" }],
-        "url": { "raw": "{{baseUrl}}/scoring/{{clienteNuevo}}/calcular", "host": ["{{baseUrl}}"], "path": ["scoring", "{{clienteNuevo}}", "calcular"] }
-      }
-    },
-    {
-      "name": "05 — SCO-01 y SCO-08: calcular scoring de cliente con historial",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('SCO-01 — responde 200', function () {",
-              "    pm.response.to.have.status(200);",
-              "});",
-              "const b = pm.response.json();",
-              "const d = b.desglose;",
-              "",
-              "pm.test('SCO-01 — devuelve las 4 variables del desglose', function () {",
-              "    ['puntualidad', 'cumplimiento', 'historial', 'antiguedad'].forEach(function (k) {",
-              "        pm.expect(d, 'falta ' + k).to.have.property(k);",
-              "    });",
-              "});",
-              "pm.test('SCO-01 — cada variable está entre 0 y 25', function () {",
-              "    Object.values(d).forEach(function (v) {",
-              "        pm.expect(v).to.be.at.least(0);",
-              "        pm.expect(v).to.be.at.most(25);",
-              "    });",
-              "});",
-              "pm.test('SCO-01 — puntaje_total es exactamente la suma de las 4 variables', function () {",
-              "    const suma = d.puntualidad + d.cumplimiento + d.historial + d.antiguedad;",
-              "    pm.expect(b.puntaje_total).to.eql(suma);",
-              "});",
-              "",
-              "pm.test('SCO-08 — limite_sugerido dentro del rango [0, 300000]', function () {",
-              "    const lim = Number(b.limite_sugerido);",
-              "    pm.expect(lim).to.be.at.least(0);",
-              "    pm.expect(lim).to.be.at.most(300000);",
-              "});",
-              "pm.test('SCO-08 — nivel_riesgo es uno de los tres válidos', function () {",
-              "    pm.expect(b.nivel_riesgo).to.be.oneOf(['bajo', 'medio', 'alto']);",
-              "});",
-              "",
-              "console.log('SCO-01 desglose:', JSON.stringify(d), '| puntaje:', b.puntaje_total);",
-              "console.log('SCO-08 nivel:', b.nivel_riesgo, '| limite:', b.limite_sugerido, '| confianza:', b.confianza);"
-            ]
-          }
-        }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [{ "key": "Authorization", "value": "Bearer {{tokenTendero}}" }],
-        "url": { "raw": "{{baseUrl}}/scoring/{{clienteConHistorial}}/calcular", "host": ["{{baseUrl}}"], "path": ["scoring", "{{clienteConHistorial}}", "calcular"] }
-      }
-    },
-    {
-      "name": "06 — SCO-05: GET scoring persistido (captura fecha_calculo)",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('SCO-05 — devuelve el scoring persistido', function () {",
-              "    pm.response.to.have.status(200);",
-              "});",
-              "const b = pm.response.json();",
-              "pm.test('SCO-05 — trae los campos esperados', function () {",
-              "    ['puntaje_total', 'nivel_riesgo', 'limite_sugerido', 'fecha_calculo', 'desglose'].forEach(function (k) {",
-              "        pm.expect(b, 'falta ' + k).to.have.property(k);",
-              "    });",
-              "});",
-              "pm.collectionVariables.set('fechaCalculo1', b.fecha_calculo);",
-              "console.log('fecha_calculo antes del recálculo:', b.fecha_calculo);"
             ]
           }
         }
@@ -239,47 +73,28 @@
       "request": {
         "method": "GET",
         "header": [{ "key": "Authorization", "value": "Bearer {{tokenTendero}}" }],
-        "url": { "raw": "{{baseUrl}}/scoring/{{clienteConHistorial}}", "host": ["{{baseUrl}}"], "path": ["scoring", "{{clienteConHistorial}}"] }
+        "url": { "raw": "{{baseUrl}}/scoring/{{clienteSinCreditos}}", "host": ["{{baseUrl}}"], "path": ["scoring", "{{clienteSinCreditos}}"] }
       }
     },
     {
-      "name": "07 — SCO-03: recalcular scoring existente",
+      "name": "03 — Caso BUG-015: crédito vigente sin cerrar aplica la misma regla fija",
       "event": [
         {
           "listen": "test",
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('SCO-03 — el recálculo responde 200', function () {",
-              "    pm.response.to.have.status(200);",
-              "});"
-            ]
-          }
-        }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [{ "key": "Authorization", "value": "Bearer {{tokenTendero}}" }],
-        "url": { "raw": "{{baseUrl}}/scoring/{{clienteConHistorial}}/calcular", "host": ["{{baseUrl}}"], "path": ["scoring", "{{clienteConHistorial}}", "calcular"] }
-      }
-    },
-    {
-      "name": "08 — SCO-03: verificar upsert (no duplica, refresca fecha)",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('SCO-03 — sigue devolviendo un único scoring', function () {",
+              "pm.test('BUG-015 — responde 200, no cae en error', function () {",
               "    pm.response.to.have.status(200);",
               "});",
               "const b = pm.response.json();",
-              "const antes = pm.collectionVariables.get('fechaCalculo1');",
-              "pm.test('SCO-03 — fecha_calculo se refrescó (upsert, no insert duplicado)', function () {",
-              "    pm.expect(new Date(b.fecha_calculo).getTime()).to.be.at.least(new Date(antes).getTime());",
+              "pm.test('BUG-015 — usa la regla fija (puntaje 50, medio, límite 50.000, confianza null)', function () {",
+              "    pm.expect(b.puntaje).to.eql(50);",
+              "    pm.expect(b.nivel_riesgo).to.eql('medio');",
+              "    pm.expect(Number(b.limite_sugerido)).to.eql(50000);",
+              "    pm.expect(b.confianza).to.be.null;",
               "});",
-              "console.log('fecha_calculo después:', b.fecha_calculo, '| antes:', antes);"
+              "console.log('Antes de la corrección esta petición dependía de una fila cacheada vacía (puntaje null).');"
             ]
           }
         }
@@ -287,11 +102,11 @@
       "request": {
         "method": "GET",
         "header": [{ "key": "Authorization", "value": "Bearer {{tokenTendero}}" }],
-        "url": { "raw": "{{baseUrl}}/scoring/{{clienteConHistorial}}", "host": ["{{baseUrl}}"], "path": ["scoring", "{{clienteConHistorial}}"] }
+        "url": { "raw": "{{baseUrl}}/scoring/{{clienteCreditoVigenteSinCerrar}}", "host": ["{{baseUrl}}"], "path": ["scoring", "{{clienteCreditoVigenteSinCerrar}}"] }
       }
     },
     {
-      "name": "09 — SCO-04: cliente de otro tendero → 404",
+      "name": "04 — SCO-04: cliente de otro tendero → 404 (aislamiento)",
       "event": [
         {
           "listen": "test",
@@ -309,13 +124,83 @@
         }
       ],
       "request": {
-        "method": "POST",
+        "method": "GET",
         "header": [{ "key": "Authorization", "value": "Bearer {{tokenTendero}}" }],
-        "url": { "raw": "{{baseUrl}}/scoring/{{clienteAjeno}}/calcular", "host": ["{{baseUrl}}"], "path": ["scoring", "{{clienteAjeno}}", "calcular"] }
+        "url": { "raw": "{{baseUrl}}/scoring/{{clienteAjeno}}", "host": ["{{baseUrl}}"], "path": ["scoring", "{{clienteAjeno}}"] }
       }
     },
     {
-      "name": "10 — SCO-09a: POST /predict del microservicio ML",
+      "name": "05 — SCO-05/06/08/GC-06/GC-07: cálculo bajo demanda (primera lectura)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('SCO-05 — responde 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "const b = pm.response.json();",
+              "pm.test('SCO-05 — trae los campos esperados', function () {",
+              "    ['puntaje', 'nivel_riesgo', 'limite_sugerido', 'fecha_calculo', 'confianza'].forEach(function (k) {",
+              "        pm.expect(b, 'falta ' + k).to.have.property(k);",
+              "    });",
+              "});",
+              "pm.test('GC-06 — nivel_riesgo consistente con el puntaje (por construcción)', function () {",
+              "    const esperado = b.puntaje >= 80 ? 'bajo' : (b.puntaje >= 50 ? 'medio' : 'alto');",
+              "    pm.expect(b.nivel_riesgo).to.eql(esperado);",
+              "});",
+              "pm.test('GC-07/SCO-08 — límite dentro de [0, 300000]', function () {",
+              "    const lim = Number(b.limite_sugerido);",
+              "    pm.expect(lim).to.be.at.least(0);",
+              "    pm.expect(lim).to.be.at.most(300000);",
+              "});",
+              "pm.collectionVariables.set('fechaCalculo1', b.fecha_calculo);",
+              "pm.collectionVariables.set('tiempoRespuesta1', pm.response.responseTime);",
+              "console.log('Primera lectura:', JSON.stringify(b), '| tiempo:', pm.response.responseTime, 'ms');"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{tokenTendero}}" }],
+        "url": { "raw": "{{baseUrl}}/scoring/{{clienteConHistorial}}", "host": ["{{baseUrl}}"], "path": ["scoring", "{{clienteConHistorial}}"] }
+      }
+    },
+    {
+      "name": "06 — SCO-05/06: segunda lectura debe salir de caché (idéntica y más rápida)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('SCO-05 — sigue respondiendo 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "const b = pm.response.json();",
+              "const antes = pm.collectionVariables.get('fechaCalculo1');",
+              "const tiempoAntes = Number(pm.collectionVariables.get('tiempoRespuesta1'));",
+              "pm.test('SCO-06 — persistencia: misma fecha_calculo que la primera lectura (no recalculó)', function () {",
+              "    pm.expect(b.fecha_calculo).to.eql(antes);",
+              "});",
+              "pm.test('SCO-06 — la lectura cacheada es más rápida que el cálculo en vivo', function () {",
+              "    pm.expect(pm.response.responseTime).to.be.below(tiempoAntes);",
+              "});",
+              "console.log('Segunda lectura:', JSON.stringify(b), '| tiempo:', pm.response.responseTime, 'ms (antes:', tiempoAntes, 'ms)');"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{tokenTendero}}" }],
+        "url": { "raw": "{{baseUrl}}/scoring/{{clienteConHistorial}}", "host": ["{{baseUrl}}"], "path": ["scoring", "{{clienteConHistorial}}"] }
+      }
+    },
+    {
+      "name": "07 — SCO-09a: POST /predict del microservicio ML",
       "event": [
         {
           "listen": "test",
@@ -326,7 +211,7 @@
               "    pm.response.to.have.status(200);",
               "});",
               "const b = pm.response.json();",
-              "pm.test('SCO-09a — no devuelve error (el modelo está entrenado)', function () {",
+              "pm.test('SCO-09a — no devuelve error (el modelo está entrenado y el par tiene créditos cerrados)', function () {",
               "    pm.expect(b.error, b.error).to.be.undefined;",
               "});",
               "pm.test('SCO-09a — nivel_riesgo es una de las tres clases', function () {",
@@ -336,9 +221,9 @@
               "    pm.expect(b.confianza).to.be.at.least(0);",
               "    pm.expect(b.confianza).to.be.at.most(1);",
               "});",
-              "pm.test('SCO-09a — devuelve limite_sugerido y puntaje_rf', function () {",
+              "pm.test('SCO-09a — devuelve puntaje y limite_sugerido', function () {",
+              "    pm.expect(b).to.have.property('puntaje');",
               "    pm.expect(b).to.have.property('limite_sugerido');",
-              "    pm.expect(b).to.have.property('puntaje_rf');",
               "});",
               "console.log('SCO-09a — predicción:', JSON.stringify(b));",
               "console.log('Latencia /predict:', pm.response.responseTime, 'ms (referencia para SCRUM-112)');"
@@ -349,12 +234,12 @@
       "request": {
         "method": "POST",
         "header": [{ "key": "Content-Type", "value": "application/json" }],
-        "body": { "mode": "raw", "raw": "{\n  \"id_cliente\": {{clienteConHistorial}}\n}" },
+        "body": { "mode": "raw", "raw": "{\n  \"id_cliente\": {{clienteConHistorial}},\n  \"id_tendero\": 1\n}" },
         "url": { "raw": "{{mlUrl}}/predict", "host": ["{{mlUrl}}"], "path": ["predict"] }
       }
     },
     {
-      "name": "11 — SCO-09c: /predict de cliente sin scoring → error con HTTP 200",
+      "name": "08 — SCO-09c: /predict de par sin créditos cerrados → error con HTTP 200",
       "event": [
         {
           "listen": "test",
@@ -365,9 +250,9 @@
               "    pm.response.to.have.status(200);",
               "});",
               "pm.test('SCO-09c — el detalle viene en el campo error del cuerpo', function () {",
-              "    pm.expect(pm.response.json().error).to.include('No se encontraron datos de scoring');",
+              "    pm.expect(pm.response.json().error).to.include('No se encontraron créditos cerrados');",
               "});",
-              "console.log('SCO-09c — Node convierte esto en excepción y degrada al scoring por reglas.');"
+              "console.log('SCO-09c — mlScoring.js convierte esto en excepción y getOrComputeScoring cae al valor cacheado o a null (503).');"
             ]
           }
         }
@@ -375,12 +260,12 @@
       "request": {
         "method": "POST",
         "header": [{ "key": "Content-Type", "value": "application/json" }],
-        "body": { "mode": "raw", "raw": "{\n  \"id_cliente\": {{clienteSinScoring}}\n}" },
+        "body": { "mode": "raw", "raw": "{\n  \"id_cliente\": {{clienteCreditoVigenteSinCerrar}},\n  \"id_tendero\": 1\n}" },
         "url": { "raw": "{{mlUrl}}/predict", "host": ["{{mlUrl}}"], "path": ["predict"] }
       }
     },
     {
-      "name": "12 — SCO-10: POST /ml/retrain",
+      "name": "09 — SCO-10: POST /ml/retrain",
       "event": [
         {
           "listen": "test",
@@ -400,10 +285,10 @@
               "        pm.expect(b.message).to.include('20%');",
               "    });",
               "    console.log('SCO-10 — omitido. current_count:', b.current_count, '| last_train_count:', b.last_train_count);",
-              "    console.log('Para ejercitar el reentrenamiento real hacen falta', Math.ceil(b.last_train_count * 1.2), 'filas de scoring.');",
+              "    console.log('Para ejercitar el reentrenamiento real hacen falta', Math.ceil(b.last_train_count * 1.2), 'créditos cerrados.');",
               "} else {",
               "    console.log('SCO-10 — reentrenamiento lanzado en background. Revisa la terminal de predict.py:');",
-              "    console.log('debe aparecer: [ML] Modelo reentrenado y swapped correctamente.');",
+              "    console.log('debe aparecer: [ML] Modelo reentrenado, swapped y caché de predicciones invalidada.');",
               "}"
             ]
           }
