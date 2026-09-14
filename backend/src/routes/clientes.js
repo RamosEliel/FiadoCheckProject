@@ -1,7 +1,7 @@
 const express = require('express');
 const pool = require('../config/database');
 const authMiddleware = require('../middleware/auth');
-const { CLIENTE_NUEVO_SCORING, mapScoringRow, queryCreditosHistorico } = require('../utils/scoringUtils');
+const { CLIENTE_NUEVO_SCORING, mapScoringRow, queryCreditosCerrados } = require('../utils/scoringUtils');
 const { getOrComputeScoring } = require('../utils/mlScoring');
 
 const router = express.Router();
@@ -323,8 +323,8 @@ router.get('/me', async (req, res) => {
       FROM creditos WHERE id_cliente = $1 AND id_tendero = $2 AND estado != 'pagado'
     `, [idCliente, idTendero]);
 
-    const creditosHistorico = await queryCreditosHistorico(pool, idCliente, idTendero);
-    const sinHistorialCrediticio = creditosHistorico === 0;
+    const creditosCerrados = await queryCreditosCerrados(pool, idCliente, idTendero);
+    const sinHistorialCrediticio = creditosCerrados === 0;
     let scoringMapped = null;
     if (sinHistorialCrediticio) {
       scoringMapped = CLIENTE_NUEVO_SCORING;
@@ -395,8 +395,8 @@ router.get('/:id', async (req, res) => {
       FROM creditos WHERE id_cliente = $1 AND id_tendero = $2 AND estado != 'pagado'
     `, [id, idTendero]);
 
-    const creditosHistorico = await queryCreditosHistorico(pool, id, idTendero);
-    const sinHistorialCrediticio = creditosHistorico === 0;
+    const creditosCerrados = await queryCreditosCerrados(pool, id, idTendero);
+    const sinHistorialCrediticio = creditosCerrados === 0;
     let scoringMapped = null;
     if (sinHistorialCrediticio) {
       scoringMapped = CLIENTE_NUEVO_SCORING;

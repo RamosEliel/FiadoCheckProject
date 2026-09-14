@@ -2,7 +2,7 @@ const express = require('express');
 const pool = require('../config/database');
 const authMiddleware = require('../middleware/auth');
 const { getOrComputeScoring } = require('../utils/mlScoring');
-const { CLIENTE_NUEVO_SCORING, mapScoringRow, queryTotalesCreditos, queryCreditosHistorico } = require('../utils/scoringUtils');
+const { CLIENTE_NUEVO_SCORING, mapScoringRow, queryTotalesCreditos, queryCreditosHistorico, queryCreditosCerrados } = require('../utils/scoringUtils');
 
 const router = express.Router();
 router.use(authMiddleware);
@@ -21,8 +21,8 @@ router.get('/:clienteId', async (req, res) => {
       return res.status(404).json({ error: 'Cliente no encontrado' });
     }
 
-    const creditosHistorico = await queryCreditosHistorico(pool, clienteId, idTendero);
-    const sinHistorialCrediticio = creditosHistorico === 0;
+    const creditosCerrados = await queryCreditosCerrados(pool, clienteId, idTendero);
+    const sinHistorialCrediticio = creditosCerrados === 0;
 
     if (sinHistorialCrediticio) {
       return res.json({ id_cliente: parseInt(clienteId), ...CLIENTE_NUEVO_SCORING });
@@ -83,7 +83,13 @@ router.get('/:clienteId/recomendacion', async (req, res) => {
     }
 
     const creditosHistorico = await queryCreditosHistorico(pool, clienteId, idTendero);
-    const sinCreditoTienda = creditosHistorico === 0;
+    // El RF solo puede predecir sobre créditos CERRADOS. Un cliente con crédito(s)
+    // únicamente vigentes (creditosHistorico > 0 pero 0 cerrados) no tiene ningún
+    // desenlace real que evaluar todavía, así que se trata igual que "sin crédito
+    // en la tienda" para efectos de scoring (regla fija), aunque el mensaje deja
+    // claro que sí existe una relación crediticia en curso.
+    const creditosCerrados = await queryCreditosCerrados(pool, clienteId, idTendero);
+    const sinCreditoTienda = creditosCerrados === 0;
 
     let mapped;
     if (sinCreditoTienda) {
@@ -101,9 +107,12 @@ router.get('/:clienteId/recomendacion', async (req, res) => {
     let recomendacion;
     let mensaje;
 
-    if (sinCreditoTienda) {
+    if (sinCreditoTienda && creditosHistorico === 0) {
       recomendacion = 'con_precaucion';
       mensaje = `El cliente está registrado y vinculado a tu tienda, pero aún no tiene ningún crédito asociado contigo. Puedes crear el primero con un monto de hasta $${mapped.limite_sugerido.toLocaleString('es-CO')}.`;
+    } else if (sinCreditoTienda) {
+      recomendacion = 'con_precaucion';
+      mensaje = `El cliente tiene ${creditosHistorico} crédito(s) en curso contigo, pero ninguno se ha cerrado todavía, así que aún no hay historial de pago para evaluar. Se aplica un límite base de $${mapped.limite_sugerido.toLocaleString('es-CO')} mientras tanto.`;
     } else if (mapped.nivel_riesgo === 'bajo') {
       recomendacion = 'aprobar';
       mensaje = `El cliente tiene un excelente historial con ${mapped.puntaje} puntos. Es muy recomendable aprobar nuevos créditos.`;

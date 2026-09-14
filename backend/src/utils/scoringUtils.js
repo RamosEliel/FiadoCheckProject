@@ -48,6 +48,23 @@ async function queryCreditosHistorico(pool, clienteId, idTendero) {
   return parseInt(result.rows[0].total_historico, 10) || 0;
 }
 
+// A diferencia de queryCreditosHistorico (cuenta cualquier estado, para mostrar
+// "créditos totales" al tendero), esta cuenta solo los CERRADOS. El Random
+// Forest entrena y predice sobre desenlaces reales (pagado/vencido): un
+// cliente con créditos únicamente vigentes no tiene ningún desenlace que
+// evaluar todavía, así que pedirle una predicción al RF fallaría. Debe usarse
+// esta función (no queryCreditosHistorico) para decidir si hay algo que el RF
+// pueda predecir.
+async function queryCreditosCerrados(pool, clienteId, idTendero) {
+  const result = await pool.query(`
+    SELECT COUNT(*) AS total_cerrados
+    FROM creditos
+    WHERE id_cliente = $1 AND id_tendero = $2 AND estado IN ('pagado', 'vencido')
+  `, [clienteId, idTendero]);
+
+  return parseInt(result.rows[0].total_cerrados, 10) || 0;
+}
+
 /**
  * Único punto de cálculo del límite sugerido. Debe llamarse con el nivel_riesgo
  * final (el corregido por el RF cuando esté disponible) para que nunca quede
@@ -93,5 +110,6 @@ module.exports = {
   mapScoringRow,
   queryTotalesCreditos,
   queryCreditosHistorico,
+  queryCreditosCerrados,
   calcularLimiteSugerido,
 };
