@@ -28,6 +28,7 @@ build/
 # Herramientas de IA
 CLAUDE.md
 .claude/
+.cursor/
 
 # Sistema operativo
 .DS_Store

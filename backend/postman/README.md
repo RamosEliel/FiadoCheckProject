@@ -24,6 +24,7 @@ Colecciones y runner Newman para pruebas de API.
 | `*.postman_environment.local.json` | Overrides personales (tokens, URLs privadas) |
 
 Los reportes Obsidian se escriben **fuera** del repo (`Obsidian Vault/Sistema_Fiado/`), no en esta carpeta.
+La documentación de desarrollo vive en `Sistema_Fiado/02 - Desarrollo/` vía MCP Obsidian, no en la ruta Windows de Fiury.
 
 ## Colecciones
 

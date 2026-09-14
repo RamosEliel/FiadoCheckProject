@@ -1,9 +1,16 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CONFIG } from '@/config/config';
 import { resolveClienteHomeRoute, clearTenderoSeleccionado } from '@/hooks/Usetiendasasociadas';
+import { useAppDialog } from '@/hooks/useAppDialog';
+import { publishPendingLoginWelcome } from '@/hooks/useConsumeLoginWelcome';
+import {
+  mapLoginFeedback,
+  PENDING_LOGIN_WELCOME_KEY,
+  type LoginFeedback,
+  type WelcomeSurface,
+} from '@/utils/mapLoginFeedback';
 import { friendlyErrorMessage } from '@/utils/errorMessages';
 
 const API_URL = CONFIG.API_URL;
@@ -49,16 +56,23 @@ export const useLogin = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { dialog, showSuccess, showError, showInfo, hide } = useAppDialog();
+
+  const presentFeedback = (fb: LoginFeedback) => {
+    if (fb.variant === 'success') showSuccess(fb.title, fb.message);
+    else if (fb.variant === 'info') showInfo(fb.title, fb.message);
+    else showError(fb.title, fb.message);
+  };
 
   const togglePassword = () => setShowPassword(prev => !prev);
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Campos vacíos', 'Por favor completa todos los campos');
+      presentFeedback(mapLoginFeedback({ reason: 'empty' }));
       return;
     }
     if (!email.includes('@')) {
-      Alert.alert('Correo inválido', 'Ingresa un correo electrónico válido');
+      presentFeedback(mapLoginFeedback({ reason: 'email' }));
       return;
     }
 
@@ -74,11 +88,13 @@ export const useLogin = () => {
       try {
         json = await res.json();
       } catch {
-        throw new Error('Respuesta inválida del servidor');
+        presentFeedback(mapLoginFeedback({ reason: 'invalid_json' }));
+        return;
       }
 
       if (!res.ok) {
-        throw new Error(json.error || 'No se pudo iniciar sesión');
+        presentFeedback(mapLoginFeedback({ status: res.status, message: json.error }));
+        return;
       }
 
       await AsyncStorage.setItem('token', json.token);
@@ -103,28 +119,35 @@ export const useLogin = () => {
         target = '/(tabs)/vistaUsuario';
       }
 
-      setLoading(false);
-      router.replace(target as any);
-
       const nombre =
         json.tendero?.nombre ??
         json.cliente?.nombre_completo ??
         json.usuario.email;
+      const rol = isCliente ? 'cliente' : json.tendero ? 'tendero' : 'otro';
+      const surface: WelcomeSurface = target.includes('TiendasAsociadas')
+        ? 'tiendas'
+        : 'tabs';
 
-      Alert.alert('¡Bienvenido!', `Hola ${nombre} 👋`);
-    } catch (err: any) {
-      if (err.name === 'AbortError') {
-        Alert.alert('Sin conexión', 'No se pudo contactar el servidor. Verifica tu conexión a internet.');
-      } else {
-        Alert.alert('Error', friendlyErrorMessage(err.message || 'No se pudo iniciar sesión'));
-      }
+      await AsyncStorage.setItem(
+        PENDING_LOGIN_WELCOME_KEY,
+        JSON.stringify({ nombre, rol, surface }),
+      );
+      publishPendingLoginWelcome();
+
+      setLoading(false);
+      router.replace(target as any);
+    } catch (err: unknown) {
+      const name = err instanceof Error ? err.name : undefined;
+      const raw = err instanceof Error ? err.message : undefined;
+      const message = raw ? friendlyErrorMessage(raw) : undefined;
+      presentFeedback(mapLoginFeedback({ name, message }));
     } finally {
       setLoading(false);
     }
   };
 
   const handleForgotPassword = () => {
-    Alert.alert('Próximamente', 'Recuperación de contraseña en desarrollo');
+    showInfo('Próximamente', 'Recuperación de contraseña en desarrollo');
   };
 
   const handleRegister = () => {
@@ -132,7 +155,7 @@ export const useLogin = () => {
   };
 
   const handleGoogleLogin = () => {
-    Alert.alert('Próximamente', 'Login con Google en desarrollo');
+    showInfo('Próximamente', 'Login con Google en desarrollo');
   };
 
   return {
@@ -144,5 +167,7 @@ export const useLogin = () => {
     handleRegister,
     handleRegisterTendero: () => router.push('/(auth)/registerTendero'),
     handleGoogleLogin,
+    dialog,
+    hideDialog: hide,
   };
 };

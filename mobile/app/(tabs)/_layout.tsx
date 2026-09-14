@@ -1,20 +1,24 @@
-import { Tabs } from 'expo-router';
+import { Tabs, useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { Banknote, Bot, BarChart2 } from 'lucide-react-native';
+import { Banknote, Bot, BarChart2, LineChart } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect } from 'expo-router';
 
 import { HapticTab } from '@/components/haptic-tab';
+import { AppDialog } from '@/components/ui/AppDialog';
 import { AppFonts, Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { COLORS } from '@/constants/colors';
+import { useAppDialog } from '@/hooks/useAppDialog';
+import { useConsumeLoginWelcome } from '@/hooks/useConsumeLoginWelcome';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'].palette ?? Colors.light.palette;
   const [isTendero, setIsTendero] = useState<boolean | null>(null);
+  const { dialog, showSuccess, hide } = useAppDialog();
+  useConsumeLoginWelcome('tabs', showSuccess);
 
   useFocusEffect(
     useCallback(() => {
@@ -57,15 +61,13 @@ export default function TabLayout() {
     }, [])
   );
 
-  if (isTendero === null) {
-    return (
+  return (
+    <>
+    {isTendero === null ? (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.primary }}>
         <ActivityIndicator size="large" color={COLORS.white} />
       </View>
-    );
-  }
-
-  return (
+    ) : (
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: palette.primary,
@@ -122,11 +124,20 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="Analitica"
+        options={{
+          title: 'Análisis',
+          href: isTendero ? undefined : null,
+          tabBarIcon: ({ color }) => <LineChart size={24} color={color} strokeWidth={2} />,
+        }}
+      />
+      <Tabs.Screen
         name="Asistenteia"
         options={{
           title: 'Asistente',
           href: isTendero ? undefined : null,
           tabBarIcon: ({ color }) => <Bot size={24} color={color} strokeWidth={2} />,
+          tabBarHideOnKeyboard: true,
         }}
       />
 
@@ -158,9 +169,17 @@ export default function TabLayout() {
       />
 
       {/* Ocultamos pestañas técnicas que no queremos en el menú */}
-      <Tabs.Screen name="Analitica" options={{ href: null }} />
       <Tabs.Screen name="transfer" options={{ href: null }} />
       <Tabs.Screen name="perfilCliente" options={{ href: null }} />
     </Tabs>
+    )}
+    <AppDialog
+      visible={dialog.visible}
+      variant={dialog.variant}
+      title={dialog.title}
+      message={dialog.message}
+      onClose={hide}
+    />
+    </>
   );
 }

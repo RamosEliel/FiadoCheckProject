@@ -13,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useFocusEffect, useRouter, useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { G, Line, Rect } from 'react-native-svg';
-import { ChevronLeft, Bell, Calendar, Search } from 'lucide-react-native';
+import { Bell, Calendar, ChevronLeft, ChevronRight, Search } from 'lucide-react-native';
 import { HeaderIconButton } from '@/components/HeaderIconButton';
 import { analiticaStyles as styles } from '@/constants/Analitica.styles';
 import { COLORS } from '@/constants/colors';
@@ -33,26 +33,35 @@ type BarChartProps = {
   width: number;
   yMax: number;
   yTicks: number[];
+  empty?: boolean;
 };
 
-function BarChart({ data, width, yMax, yTicks }: BarChartProps) {
-anali  const plotHeight = CHART_HEIGHT - CHART_PADDING_BOTTOM;
-  const plotWidth = Math.max(width - 34, 200);
+const Y_LABEL_OFFSET = 6;
+
+function BarChart({ data, width, yMax, yTicks, empty }: BarChartProps) {
+  const plotHeight = CHART_HEIGHT - CHART_PADDING_BOTTOM;
+  const plotWidth = Math.max(width - 38, 200);
   const groupWidth = plotWidth / 4;
   const barWidth = 10;
   const gap = 4;
 
   const scaleY = (value: number) =>
-    plotHeight - (Math.min(value, yMax) / yMax) * plotHeight;
+    yMax <= 0 ? plotHeight : plotHeight - (Math.min(value, yMax) / yMax) * plotHeight;
 
   const formatTick = (value: number) =>
     value >= 1000 ? `${value / 1000}k` : String(value);
 
   return (
     <View style={styles.chartBody}>
-      <View style={styles.chartYAxis}>
-        {[...yTicks].reverse().map((tick) => (
-          <Text key={tick} style={styles.chartYLabel}>
+      <View style={[styles.chartYAxis, { height: CHART_HEIGHT }]}>
+        {yTicks.map((tick) => (
+          <Text
+            key={tick}
+            style={[
+              styles.chartYLabel,
+              { top: scaleY(tick) - Y_LABEL_OFFSET },
+            ]}
+          >
             {formatTick(tick)}
           </Text>
         ))}
@@ -105,6 +114,12 @@ anali  const plotHeight = CHART_HEIGHT - CHART_PADDING_BOTTOM;
             );
           })}
         </Svg>
+
+        {empty && (
+          <View style={styles.chartEmptyOverlay} pointerEvents="none">
+            <Text style={styles.chartEmptyText}>Sin pagos este mes</Text>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -170,6 +185,9 @@ export default function AnaliticaScreen() {
     anio,
     toggleAnio,
     avanzarMes,
+    retrocederMes,
+    puedeAvanzarMes,
+    puedeRetrocederMes,
     cliente,
     recuperado,
     moraPorcentaje,
@@ -177,10 +195,11 @@ export default function AnaliticaScreen() {
     distribucion,
     chartTitle,
     chartScale,
+    mesNombre,
+    sinPagosMes,
     formatMoneda,
     loading,
     refetch,
-    handleCancelar,
   } = useAnalitica(isTendero ? token : null);
 
   useEffect(() => {
@@ -221,13 +240,8 @@ export default function AnaliticaScreen() {
         <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
 
         <View style={styles.header}>
-          <HeaderIconButton
-            icon={ChevronLeft}
-            label="Volver"
-            onPress={handleCancelar}
-            style={styles.backBtn}
-          />
-          <Text style={styles.headerTitle}>Analitica</Text>
+          <View style={{ width: 48 }} />
+          <Text style={styles.headerTitle}>Analítica</Text>
           <HeaderIconButton
             icon={Bell}
             label="Avisos"
@@ -263,6 +277,33 @@ export default function AnaliticaScreen() {
             <TouchableOpacity style={styles.anioBadge} onPress={toggleAnio} activeOpacity={0.7}>
               <Text style={styles.anioBadgeText}>Año {anio}</Text>
             </TouchableOpacity>
+            <View style={styles.mesNav}>
+              <TouchableOpacity
+                style={[styles.mesNavBtn, !puedeRetrocederMes && styles.mesNavBtnDisabled]}
+                onPress={retrocederMes}
+                disabled={!puedeRetrocederMes}
+                activeOpacity={0.7}
+              >
+                <ChevronLeft
+                  size={16}
+                  color={puedeRetrocederMes ? COLORS.text : COLORS.textMuted}
+                />
+              </TouchableOpacity>
+              <View style={styles.anioBadge}>
+                <Text style={styles.anioBadgeText}>{mesNombre}</Text>
+              </View>
+              <TouchableOpacity
+                style={[styles.mesNavBtn, !puedeAvanzarMes && styles.mesNavBtnDisabled]}
+                onPress={avanzarMes}
+                disabled={!puedeAvanzarMes}
+                activeOpacity={0.7}
+              >
+                <ChevronRight
+                  size={16}
+                  color={puedeAvanzarMes ? COLORS.text : COLORS.textMuted}
+                />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {loading && !cliente ? (
@@ -284,7 +325,7 @@ export default function AnaliticaScreen() {
                   <View style={styles.kpiIconSquareGreen}>
                     <Text style={styles.kpiIconSymbol}>↗</Text>
                   </View>
-                  <Text style={styles.kpiLabel}>Recuperado</Text>
+                  <Text style={styles.kpiLabel}>Recuperado (año {anio})</Text>
                   <Text style={styles.kpiValueGreen}>{formatMoneda(recuperado)}</Text>
                 </View>
 
@@ -304,8 +345,23 @@ export default function AnaliticaScreen() {
                   <Text style={styles.chartTitle}>{chartTitle}</Text>
                   <View style={styles.chartActions}>
                     <TouchableOpacity
-                      style={styles.chartActionBtn}
+                      style={[
+                        styles.chartActionBtn,
+                        !puedeRetrocederMes && styles.chartActionBtnDisabled,
+                      ]}
+                      onPress={retrocederMes}
+                      disabled={!puedeRetrocederMes}
+                      activeOpacity={0.7}
+                    >
+                      <ChevronLeft size={14} color={COLORS.white} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.chartActionBtn,
+                        !puedeAvanzarMes && styles.chartActionBtnDisabled,
+                      ]}
                       onPress={avanzarMes}
+                      disabled={!puedeAvanzarMes}
                       activeOpacity={0.7}
                     >
                       <Calendar size={14} color={COLORS.white} />
@@ -314,12 +370,24 @@ export default function AnaliticaScreen() {
                   </View>
                 </View>
 
+                <View style={styles.chartLegend}>
+                  <View style={styles.legendItem}>
+                    <View style={[styles.legendDot, { backgroundColor: BAR_GREEN }]} />
+                    <Text style={styles.legendText}>Pagos</Text>
+                  </View>
+                  <View style={styles.legendItem}>
+                    <View style={[styles.legendDot, { backgroundColor: BAR_BLUE }]} />
+                    <Text style={styles.legendText}>Esperado</Text>
+                  </View>
+                </View>
+
                 <BarChart
-                  key={`${cliente.id}-${anio}-${chartTitle}-${chartScale.yMax}`}
+                  key={cliente.id}
                   data={pagosSemanales}
                   width={width - 80}
                   yMax={chartScale.yMax}
                   yTicks={chartScale.yTicks}
+                  empty={sinPagosMes && !loading}
                 />
 
                 <View style={styles.chartXAxis}>
