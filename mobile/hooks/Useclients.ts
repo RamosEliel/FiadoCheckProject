@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { router } from 'expo-router';
 import { CONFIG } from '@/config/config';
 
@@ -41,18 +41,12 @@ export const useClients = (token: string | null) => {
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
 
-  useEffect(() => {
-    if (token) {
-      fetchClientes();
+  const fetchClientes = useCallback(async (silent = false) => {
+    if (!token) {
+      setLoading(false);
+      return;
     }
-  }, [token]);
-
-  useEffect(() => {
-    aplicarFiltros();
-  }, [busqueda, filtroActivo, clientes]);
-
-    const fetchClientes = async () => {
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const res = await fetch(`${API_URL}/clientes`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -87,7 +81,17 @@ export const useClients = (token: string | null) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
+
+  useEffect(() => {
+    if (token) {
+      fetchClientes();
+    }
+  }, [token, fetchClientes]);
+
+  useEffect(() => {
+    aplicarFiltros();
+  }, [busqueda, filtroActivo, clientes]);
 
 
   const aplicarFiltros = () => {

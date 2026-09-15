@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { CONFIG } from '@/config/config';
 
 const API_URL = CONFIG.API_URL;
@@ -43,16 +43,18 @@ export type CreditoDetalleData = {
 export const useCreditoDetalle = (token: string | null, creditoId: string | null) => {
   const [loading, setLoading] = useState(true);
   const [credito, setCredito] = useState<CreditoDetalleData | null>(null);
+  const creditoRef = useRef(credito);
+  creditoRef.current = credito;
   const [error, setError] = useState<string | null>(null);
 
-  const fetchCredito = useCallback(async () => {
+  const fetchCredito = useCallback(async (silent = false) => {
     if (!token || !creditoId) {
       setLoading(false);
       return;
     }
 
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       setError(null);
       const res = await fetchWithTimeout(`${API_URL}/creditos/${creditoId}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -69,7 +71,11 @@ export const useCreditoDetalle = (token: string | null, creditoId: string | null
       const message = err.name === 'AbortError'
         ? 'No se pudo contactar el servidor. Verifica tu conexión.'
         : (err.message || 'No se pudo cargar el detalle del pago.');
-      setError(message);
+      if (silent && creditoRef.current) {
+        console.error('Error actualizando crédito:', err);
+      } else {
+        setError(message);
+      }
     } finally {
       setLoading(false);
     }

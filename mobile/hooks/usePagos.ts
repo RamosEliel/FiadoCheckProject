@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { router } from 'expo-router';
 import { CONFIG } from '@/config/config';
 const API_URL = CONFIG.API_URL;
@@ -37,16 +37,18 @@ fechaRaw: p.fecha_abono,
 });
 export const usePagos = (token: string | null) => {
 const [pagos, setPagos] = useState<PagoItem[]>([]);
+const pagosRef = useRef(pagos);
+pagosRef.current = pagos;
 const [busqueda, setBusqueda] = useState('');
 const [filtroPeriodo, setFiltroPeriodo] = useState<FiltroPeriodo>('todos');
 const [loading, setLoading] = useState(true);
 const [totalRecaudado, setTotalRecaudado] = useState(0);
-const fetchPagos = async () => {
+const fetchPagos = useCallback(async (silent = false) => {
     if (!token) {
     setLoading(false);
     return;
     }
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
     const params = new URLSearchParams();
     if (busqueda.trim()) params.set('q', busqueda.trim());
@@ -58,16 +60,20 @@ const fetchPagos = async () => {
     if (!res.ok) throw new Error(json.error || 'Error al cargar pagos');
     setPagos((json.pagos ?? []).map(mapPago));
     setTotalRecaudado(json.total_recaudado ?? 0);
-    } catch {
-    setPagos([]);
-    setTotalRecaudado(0);
+    } catch (err) {
+    if (silent && pagosRef.current.length > 0) {
+        console.error('Error actualizando pagos:', err);
+    } else {
+        setPagos([]);
+        setTotalRecaudado(0);
+    }
     } finally {
     setLoading(false);
     }
-};
+}, [token, filtroPeriodo]);
 useEffect(() => {
     fetchPagos();
-}, [token, filtroPeriodo]);
+}, [fetchPagos]);
 const pagosFiltrados = useMemo(() => {
     if (!busqueda.trim()) return pagos;
     const q = busqueda.toLowerCase();

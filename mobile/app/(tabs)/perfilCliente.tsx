@@ -51,6 +51,12 @@ export default function PerfilClienteScreen() {
     handleNuevoCredito,
   } = useClientePerfil(token, id);
 
+  useFocusEffect(
+    useCallback(() => {
+      if (token) refetch(true);
+    }, [token, refetch]),
+  );
+
   const handleRegistrarPago = () => {
     if (!id) return;
     router.push({

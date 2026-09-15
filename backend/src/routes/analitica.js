@@ -70,7 +70,7 @@ router.get('/cliente/:clienteId', async (req, res) => {
       ? mesQuery
       : mesDefault;
 
-    const [recuperadoRes, moraRes, pagosSemRes, esperadoSemRes, distRes] = await Promise.all([
+    const [recuperadoRes, pagosSemRes, esperadoSemRes, distRes] = await Promise.all([
       pool.query(`
         SELECT COALESCE(SUM(a.monto), 0) AS total
         FROM abonos a
@@ -78,14 +78,6 @@ router.get('/cliente/:clienteId', async (req, res) => {
         WHERE a.id_cliente = $1 AND c.id_tendero = $2
           AND EXTRACT(YEAR FROM a.fecha_abono) = $3
       `, [clienteId, idTendero, anioNum]),
-
-      pool.query(`
-        SELECT
-          COALESCE(SUM(CASE WHEN estado = 'vencido' THEN saldo_pendiente ELSE 0 END), 0) AS saldo_mora,
-          COALESCE(SUM(saldo_pendiente), 0) AS total_saldo
-        FROM creditos
-        WHERE id_cliente = $1 AND id_tendero = $2 AND estado != 'pagado'
-      `, [clienteId, idTendero]),
 
       pool.query(`
         SELECT
@@ -144,14 +136,12 @@ router.get('/cliente/:clienteId', async (req, res) => {
     ]);
 
     const recuperado = round2(parseFloat(recuperadoRes.rows[0].total) || 0);
-    const saldoMora = parseFloat(moraRes.rows[0].saldo_mora) || 0;
-    const totalSaldo = parseFloat(moraRes.rows[0].total_saldo) || 0;
-    const moraPorcentaje = totalSaldo > 0 ? round1((saldoMora / totalSaldo) * 100) : 0;
 
     const alDia = round2(parseFloat(distRes.rows[0].al_dia) || 0);
     const mora17 = round2(parseFloat(distRes.rows[0].mora_1_7) || 0);
     const moraMas7 = round2(parseFloat(distRes.rows[0].mora_mas_7) || 0);
     const totalDist = alDia + mora17 + moraMas7;
+    const moraPorcentaje = totalDist > 0 ? round1(((mora17 + moraMas7) / totalDist) * 100) : 0;
 
     res.json({
       cliente: {

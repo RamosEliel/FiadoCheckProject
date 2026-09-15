@@ -46,6 +46,12 @@ export default function NotificacionesScreen() {
 
   const { loading, alertas, error, refetch, marcarLeida } = useNotificaciones(token, esTendero);
 
+  useFocusEffect(
+    useCallback(() => {
+      if (token && esTendero) refetch(true);
+    }, [token, esTendero, refetch]),
+  );
+
   const handleAlertaPress = (alerta: Alerta) => {
     marcarLeida(alerta.id_alerta);
     router.push({

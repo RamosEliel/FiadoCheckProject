@@ -31,6 +31,12 @@ const VistaUsuario = () => {
 
   const { loading, userData, movements, error, handleContactStore, refetch } = useVistaUsuario(token);
 
+  useFocusEffect(
+    useCallback(() => {
+      if (token) refetch(true);
+    }, [token, refetch]),
+  );
+
   if (token === null || loading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.white }}>

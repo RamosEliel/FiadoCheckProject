@@ -316,6 +316,12 @@ export const analiticaStyles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.text,
   },
+  distSubtitle: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    marginTop: -4,
+    marginBottom: 2,
+  },
   distRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -339,10 +345,19 @@ export const analiticaStyles = StyleSheet.create({
     borderRadius: 50,
     paddingVertical: 8,
     paddingHorizontal: 12,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  distFill: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
   },
   distLabel: {
     fontSize: 12,
     color: COLORS.textMuted,
+    zIndex: 1,
   },
   emptyState: {
     alignItems: 'center',

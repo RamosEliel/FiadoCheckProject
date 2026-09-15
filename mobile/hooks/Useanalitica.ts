@@ -49,29 +49,47 @@ const EMPTY_SEMANAS: PagoSemanal[] = [
   { semana: 4, pagos: 0, esperado: 0 },
 ];
 
+type DistribucionResponse = {
+  al_dia: { pct: number; monto: number };
+  mora_1_7: { pct: number; monto: number };
+  mora_mas_7: { pct: number; monto: number };
+};
+
 type AnaliticaResponse = {
   cliente: Cliente;
   anio: number;
   mes_chart: number;
   recuperado: number;
-  mora_porcentaje: number;
+  mora_porcentaje?: number;
   pagos_semanales: PagoSemanal[];
-  distribucion: {
-    al_dia: { pct: number; monto: number };
-    mora_1_7: { pct: number; monto: number };
-    mora_mas_7: { pct: number; monto: number };
-  };
+  distribucion?: DistribucionResponse;
   error?: string;
 };
 
 export const formatMoneda = (valor: number) =>
   `$${valor.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-const mapDistribucion = (d: AnaliticaResponse['distribucion']): DistribucionItem[] => [
+const round1 = (n: number) => Math.round(n * 10) / 10;
+
+const mapDistribucion = (d: DistribucionResponse): DistribucionItem[] => [
   { label: 'Al Día', pct: d.al_dia.pct, monto: d.al_dia.monto, color: DIST_COLORS.alDia },
   { label: 'Mora 1 - 7 Días', pct: d.mora_1_7.pct, monto: d.mora_1_7.monto, color: DIST_COLORS.mora17 },
   { label: 'Mora +7 Días', pct: d.mora_mas_7.pct, monto: d.mora_mas_7.monto, color: DIST_COLORS.moraMas7 },
 ];
+
+/** Mora % desde montos de buckets; si no hay distribución, usa mora_porcentaje. */
+export const moraPorcentajeFromResponse = (
+  json: Pick<AnaliticaResponse, 'distribucion' | 'mora_porcentaje'>,
+): number => {
+  const d = json.distribucion;
+  if (!d) return json.mora_porcentaje ?? 0;
+
+  const alDia = Number(d.al_dia?.monto) || 0;
+  const mora17 = Number(d.mora_1_7?.monto) || 0;
+  const moraMas7 = Number(d.mora_mas_7?.monto) || 0;
+  const total = alDia + mora17 + moraMas7;
+  return total > 0 ? round1(((mora17 + moraMas7) / total) * 100) : 0;
+};
 
 const coercePagoSemanal = (s: PagoSemanal): PagoSemanal => ({
   semana: Number(s.semana) || 0,
@@ -143,7 +161,7 @@ export const useAnalitica = (token: string | null) => {
 
       setMesChart(json.mes_chart ?? mesChart);
       setRecuperado(json.recuperado ?? 0);
-      setMoraPorcentaje(json.mora_porcentaje ?? 0);
+      setMoraPorcentaje(moraPorcentajeFromResponse(json));
       setPagosSemanales(
         json.pagos_semanales?.length
           ? json.pagos_semanales.map(coercePagoSemanal)
@@ -155,7 +173,7 @@ export const useAnalitica = (token: string | null) => {
       const message = err instanceof Error ? err.message : 'No se pudo cargar la analítica.';
       Alert.alert('Error', friendlyErrorMessage(message));
     } finally {
-      if (seq === fetchSeq.current && !silent) {
+      if (seq === fetchSeq.current) {
         setLoading(false);
       }
     }
@@ -199,6 +217,7 @@ export const useAnalitica = (token: string | null) => {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Error al buscar cliente.';
       Alert.alert('Error', friendlyErrorMessage(message));
+    } finally {
       setLoading(false);
     }
   };

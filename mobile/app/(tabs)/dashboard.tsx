@@ -39,7 +39,7 @@ useFocusEffect(
     AsyncStorage.getItem('token').then(t => {
       setToken(t);
       if (t && !isFirstFocus.current) {
-        refetch(t);
+        refetch(t, true);
       }
       isFirstFocus.current = false;
     });

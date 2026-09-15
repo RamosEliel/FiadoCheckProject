@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { router } from 'expo-router';
 import { CONFIG } from '@/config/config';
 import { mapScoringML, ScoringML } from '@/utils/scoring';
@@ -110,14 +110,16 @@ const mapPagos = (pagos: any[]): PagoHistorial[] =>
 export const useClientePerfil = (token: string | null, clienteId: string |
 undefined) => {
   const [perfil, setPerfil] = useState<ClientePerfil | null>(null);
+  const perfilRef = useRef(perfil);
+  perfilRef.current = perfil;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const fetchPerfil = useCallback(async () => {
+  const fetchPerfil = useCallback(async (silent = false) => {
     if (!token || !clienteId) {
       setLoading(false);
       return;
     }
-    setLoading(true);
+    if (!silent) setLoading(true);
     setError(null);
     try {
       const headers = { Authorization: `Bearer ${token}` };
@@ -166,7 +168,11 @@ Promise.all([
         historialPagos: mapPagos(pagosJson.pagos ?? []), // NUEVO
       });
     } catch (err: any) {
-      setError(err.message || 'Error de conexión');
+      if (silent && perfilRef.current) {
+        console.error('Error actualizando perfil:', err);
+      } else {
+        setError(err.message || 'Error de conexión');
+      }
     } finally {
       setLoading(false);
     }

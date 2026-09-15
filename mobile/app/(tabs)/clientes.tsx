@@ -84,6 +84,12 @@ export default function ClientsScreen() {
     loading, total, handleFiltro, handleClientePress, refetch,
   } = useClients(token);
 
+  useFocusEffect(
+    useCallback(() => {
+      if (token) refetch(true);
+    }, [token, refetch]),
+  );
+
   const {
     modalPaso,
     abrirModal,

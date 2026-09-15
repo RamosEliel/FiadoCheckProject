@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { CONFIG } from '@/config/config';
 
 const API_URL = CONFIG.API_URL;
@@ -30,16 +30,18 @@ export type Alerta = {
 export const useNotificaciones = (token: string | null, esTendero: boolean) => {
   const [loading, setLoading] = useState(true);
   const [alertas, setAlertas] = useState<Alerta[]>([]);
+  const alertasRef = useRef(alertas);
+  alertasRef.current = alertas;
   const [error, setError] = useState<string | null>(null);
 
-  const fetchAlertas = useCallback(async () => {
+  const fetchAlertas = useCallback(async (silent = false) => {
     if (!token || !esTendero) {
       setLoading(false);
       return;
     }
 
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       setError(null);
       const res = await fetchWithTimeout(`${API_URL}/alertas`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -56,7 +58,11 @@ export const useNotificaciones = (token: string | null, esTendero: boolean) => {
       const message = err.name === 'AbortError'
         ? 'No se pudo contactar el servidor. Verifica tu conexión.'
         : (err.message || 'No se pudieron cargar las notificaciones.');
-      setError(message);
+      if (silent && alertasRef.current.length > 0) {
+        console.error('Error actualizando notificaciones:', err);
+      } else {
+        setError(message);
+      }
     } finally {
       setLoading(false);
     }

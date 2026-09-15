@@ -58,8 +58,8 @@ const {
 } = usePagos(token);
 useFocusEffect(
     useCallback(() => {
-    if (token) refetch();
-    }, [token])
+    if (token) refetch(true);
+    }, [token, refetch])
 );
 return (
     <>

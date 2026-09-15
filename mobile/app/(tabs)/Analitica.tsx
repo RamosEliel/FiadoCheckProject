@@ -387,7 +387,7 @@ export default function AnaliticaScreen() {
                   width={width - 80}
                   yMax={chartScale.yMax}
                   yTicks={chartScale.yTicks}
-                  empty={sinPagosMes && !loading}
+                  empty={sinPagosMes}
                 />
 
                 <View style={styles.chartXAxis}>
@@ -401,6 +401,9 @@ export default function AnaliticaScreen() {
 
               <View style={styles.distSection}>
                 <Text style={styles.distTitle}>Distribucion De Cartera</Text>
+                <Text style={styles.distSubtitle}>
+                  Saldo pendiente actual (no depende del mes)
+                </Text>
 
                 {distribucion.map((item) => (
                   <View key={item.label} style={styles.distRow}>
@@ -408,6 +411,14 @@ export default function AnaliticaScreen() {
                       <Text style={styles.distBadgeText}>{item.pct}%</Text>
                     </View>
                     <View style={styles.distTrack}>
+                      {item.pct > 0 ? (
+                        <View
+                          style={[
+                            styles.distFill,
+                            { width: `${item.pct}%`, backgroundColor: item.color },
+                          ]}
+                        />
+                      ) : null}
                       <Text style={styles.distLabel}>
                         {item.label} - {formatMoneda(item.monto)}
                       </Text>

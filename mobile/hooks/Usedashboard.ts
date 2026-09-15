@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { CONFIG } from '@/config/config';
 import { router } from 'expo-router';
 
@@ -55,6 +55,8 @@ const isMes = (fecha: string) => {
  
 export const useDashboard = (token: string) => {
   const [data, setData] = useState<HomeData | null>(null);
+  const dataRef = useRef(data);
+  dataRef.current = data;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
  
@@ -67,13 +69,13 @@ export const useDashboard = (token: string) => {
     fetchDashboard();
   }, [token]);
  
-  const fetchDashboard = async (overrideToken?: string) => {
+  const fetchDashboard = async (overrideToken?: string, silent = false) => {
     const effectiveToken = overrideToken || token;
     if (!effectiveToken) {
       setLoading(false);
       return;
     }
-    setLoading(true);
+    if (!silent) setLoading(true);
     setError(null);
     try {
       const res = await fetch(`${API_URL}/dashboard`, {
@@ -83,7 +85,11 @@ export const useDashboard = (token: string) => {
       if (!res.ok) throw new Error(json.error || 'Error al cargar');
       setData(json);
     } catch (err: any) {
-      setError(err.message);
+      if (silent && dataRef.current) {
+        console.error('Error actualizando dashboard:', err);
+      } else {
+        setError(err.message);
+      }
     } finally {
       setLoading(false);
     }

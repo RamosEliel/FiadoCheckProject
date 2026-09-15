@@ -37,6 +37,12 @@ export default function CreditoDetalleScreen() {
 
   const { loading, credito, error, refetch } = useCreditoDetalle(token, id ?? null);
 
+  useFocusEffect(
+    useCallback(() => {
+      if (token) refetch(true);
+    }, [token, refetch]),
+  );
+
   if (token === null || loading) {
     return (
       <SafeAreaView style={styles.safe}>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Alert, Linking } from 'react-native';
 import { CONFIG } from '@/config/config';
 import { getTenderoSeleccionado } from '@/hooks/Usetiendasasociadas';
@@ -49,17 +49,21 @@ export type UserData = {
 export const useVistaUsuario = (token: string | null) => {
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState<UserData | null>(null);
+  const userDataRef = useRef(userData);
+  userDataRef.current = userData;
   const [movements, setMovements] = useState<Movimiento[]>([]);
+  const movementsRef = useRef(movements);
+  movementsRef.current = movements;
   const [error, setError] = useState<string | null>(null);
 
-  const fetchUserData = useCallback(async () => {
+  const fetchUserData = useCallback(async (silent = false) => {
     if (!token) {
       setLoading(false);
       return;
     }
 
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       setError(null);
 
       const tenderoActivo = await getTenderoSeleccionado();
@@ -160,13 +164,19 @@ export const useVistaUsuario = (token: string | null) => {
         setMovements(sortedMovements);
       } catch (historyError: any) {
         console.error('Error cargando historial:', historyError);
-        setMovements([]);
+        if (!(silent && movementsRef.current.length > 0)) {
+          setMovements([]);
+        }
       }
     } catch (err: any) {
       const message = err.name === 'AbortError'
         ? 'No se pudo contactar el servidor. Verifica tu conexión a internet.'
         : (err.message || 'No se pudieron cargar los datos de la cuenta.');
-      setError(message);
+      if (silent && userDataRef.current) {
+        console.error('Error actualizando cuenta:', err);
+      } else {
+        setError(message);
+      }
     } finally {
       setLoading(false);
     }
