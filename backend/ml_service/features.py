@@ -49,17 +49,56 @@ _pool = None
 _pool_lock = threading.Lock()
 
 
+def _normalizar_dsn(dsn):
+    """Obliga a TLS si la cadena de conexión no lo pide explícitamente.
+
+    NeonDB rechaza las conexiones sin cifrar. La DATABASE_URL de backend/.env sí
+    trae `sslmode=require`, pero la que se configura como App Setting en Azure se
+    copia a mano y es fácil que llegue sin ese parámetro; el fallo aparecería
+    recién en la primera consulta, no al arrancar.
+    """
+    if not dsn:
+        return dsn
+    if "sslmode=" in dsn:
+        return dsn
+    if dsn.startswith("postgres://") or dsn.startswith("postgresql://"):
+        separador = "&" if "?" in dsn else "?"
+        return f"{dsn}{separador}sslmode=require"
+    # Forma "host=... dbname=..." (palabras clave separadas por espacios).
+    return f"{dsn} sslmode=require"
+
+
 def _get_pool():
     global _pool
     if _pool is None:
         with _pool_lock:
             if _pool is None:
-                _pool = pgpool.ThreadedConnectionPool(
-                    minconn=1,
-                    maxconn=5,
-                    dsn=os.getenv("DATABASE_URL"),
-                )
+                dsn = _normalizar_dsn(os.getenv("DATABASE_URL"))
+                if not dsn:
+                    raise RuntimeError(
+                        "DATABASE_URL no está definida: el microservicio no puede "
+                        "consultar el historial de créditos."
+                    )
+                _pool = pgpool.ThreadedConnectionPool(minconn=1, maxconn=5, dsn=dsn)
     return _pool
+
+
+def check_db_connection():
+    """Comprueba la conexión de verdad, con una consulta trivial.
+
+    Devuelve (ok, detalle_del_error). Que DATABASE_URL exista no garantiza que
+    la base responda: la credencial puede estar mal, el host puede ser otro o
+    el firewall puede bloquear la salida. /health lo usa para distinguir
+    "configurada" de "conectada".
+    """
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1")
+                cur.fetchone()
+        return True, None
+    except Exception as e:
+        return False, f"{type(e).__name__}: {e}".strip()
 
 
 @contextmanager

@@ -33,3 +33,8 @@ CLAUDE.md
 # Sistema operativo
 .DS_Store
 Thumbs.db
+
+# Temporales y diagnósticos del ML
+.tmp_main_ml/
+backend/ml_service/_diag_tmp.py
+backend/ml_service/*.log

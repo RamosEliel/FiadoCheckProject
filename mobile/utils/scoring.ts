@@ -1,7 +1,11 @@
 export type NivelRiesgo = 'bajo' | 'medio' | 'alto';
 
-export const formatConfianza = (valor: number | null | undefined): number => {
-  if (valor == null) return 0;
+// Devuelve el porcentaje 0–100, o null cuando no hay una predicción real del RF.
+// Un cliente sin historial cerrado con el tendero recibe la regla fija de negocio
+// (puntaje=50, nivel=medio, confianza=null): no hay confianza que reportar, así que
+// null NO debe colapsarse a 0% (eso sugeriría que el modelo está totalmente inseguro).
+export const formatConfianza = (valor: number | null | undefined): number | null => {
+  if (valor == null) return null;
   return valor <= 1 ? Math.round(valor * 100) : Math.round(valor);
 };
 
@@ -28,7 +32,7 @@ export const getRiesgoLabelCliente = (nivel: string | null | undefined): string 
 };
 
 export type ScoringML = {
-  confianza: number;
+  confianza: number | null;
   nivel_riesgo: string | null;
   puntaje: number | null;
 };

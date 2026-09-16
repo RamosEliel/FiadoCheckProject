@@ -40,7 +40,7 @@ export type UserData = {
   totalDeuda: number;
   fechaLimite: string;
   nivelRiesgo: string | null;
-  nivelConfianza: number;
+  nivelConfianza: number | null;
   nivelConfianzaLabel: string;
   nivelConfianzaColor: string;
   telefonoTienda: string;

@@ -147,14 +147,15 @@ export default function PerfilClienteScreen() {
               </View>
               <View style={styles.statCard}>
                 <Text style={styles.statLabel}>Perfil IA</Text>
-                <Text style={styles.statValue}>{perfil.puntaje ?? '--'}</Text>
                 <View style={[styles.riesgoBadge, { backgroundColor: getRiesgoColor(perfil.nivelRiesgo) + '20' }]}>
                   <Text style={[styles.riesgoBadgeText, { color: getRiesgoColor(perfil.nivelRiesgo) }]}>
                     Riesgo {formatNivelRiesgo(perfil.nivelRiesgo)}
                   </Text>
                 </View>
                 <Text style={[styles.statValueSmall, styles.confianzaValue]}>
-                  Confianza {perfil.nivelConfianza}%
+                  {perfil.nivelConfianza != null
+                    ? `Confianza ${perfil.nivelConfianza}%`
+                    : 'Sin historial suficiente'}
                 </Text>
               </View>
             </View>

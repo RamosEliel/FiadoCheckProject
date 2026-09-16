@@ -150,14 +150,6 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <MaterialIcons size={26} name="home" color={color} />,
         }}
       />
-      <Tabs.Screen
-        name="wallet"
-        options={{
-          title: 'Cartera',
-          href: !isTendero ? undefined : null,
-          tabBarIcon: ({ color }) => <MaterialIcons size={26} name="layers" color={color} />,
-        }}
-      />
 
       {/* ── Comunes ───────────────────────────────────────────────────── */}
       <Tabs.Screen
@@ -171,6 +163,7 @@ export default function TabLayout() {
       {/* Ocultamos pestañas técnicas que no queremos en el menú */}
       <Tabs.Screen name="transfer" options={{ href: null }} />
       <Tabs.Screen name="perfilCliente" options={{ href: null }} />
+      <Tabs.Screen name="wallet" options={{ href: null }} />
     </Tabs>
     )}
     <AppDialog

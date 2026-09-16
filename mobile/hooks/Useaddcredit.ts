@@ -19,7 +19,7 @@ export type RecomendacionIA = {
   nombre: string | null;
   limite_sugerido: number | null;
   nivel_riesgo: string | null;
-  confianza: number;
+  confianza: number | null;
   puntaje: number | null;
   total_creditos: number;
   total_deuda: number;

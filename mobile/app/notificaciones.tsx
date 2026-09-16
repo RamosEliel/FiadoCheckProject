@@ -1,63 +1,138 @@
-import { View, Text, TouchableOpacity, ScrollView, StatusBar, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, StatusBar, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useCallback, useState } from 'react';
-import { useFocusEffect, useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ChevronLeft } from 'lucide-react-native';
+import { useMemo } from 'react';
+import { useRouter } from 'expo-router';
+import { BellRing, CheckCheck, ChevronLeft, CloudOff } from 'lucide-react-native';
 import { HeaderIconButton } from '@/components/HeaderIconButton';
-import { notificacionesStyles as styles } from '@/constants/notificaciones.styles';
+import {
+  createNotificacionesStyles,
+  notificacionesTheme,
+} from '@/constants/notificaciones.styles';
 import { COLORS } from '@/constants/colors';
-import { useNotificaciones, Alerta } from '@/hooks/useNotificaciones';
-import { ErrorState } from '@/components/ErrorState';
+import { useNotificaciones } from '@/hooks/useNotificaciones';
+import {
+  NotificacionCard,
+  NotificacionesEmptyState,
+  NotificacionesSkeleton,
+} from '@/components/notificaciones';
 import { friendlyErrorMessage, clasificarError } from '@/utils/errorMessages';
 import { cerrarSesionYRedirigir } from '@/utils/session';
-
-const TIPO_COLOR: Record<Alerta['tipo'], string> = {
-  critica: '#E53935',
-  proxima: '#FFA000',
-  informativa: '#2196F3',
-};
-
-const TIPO_LABEL: Record<Alerta['tipo'], string> = {
-  critica: 'Crítica',
-  proxima: 'Próxima',
-  informativa: 'Informativa',
-};
+import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function NotificacionesScreen() {
   const router = useRouter();
-  const [token, setToken] = useState<string | null>(null);
-  const [esTendero, setEsTendero] = useState(false);
+  const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
+  const styles = useMemo(() => createNotificacionesStyles(scheme), [scheme]);
+  const theme = useMemo(() => notificacionesTheme(scheme), [scheme]);
 
-  useFocusEffect(
-    useCallback(() => {
-      AsyncStorage.getItem('token').then(setToken);
-      AsyncStorage.getItem('usuario').then((raw) => {
-        if (!raw) return;
-        try {
-          const usuario = JSON.parse(raw);
-          setEsTendero(Number(usuario.id_rol) === 1);
-        } catch {
-          setEsTendero(false);
+  const {
+    loading, refreshing, secciones, total, resumen,
+    esTendero, error, refetch, onRefresh, abrirAlerta,
+  } = useNotificaciones();
+
+  const subtitulo = loading
+    ? 'Cargando avisos...'
+    : !esTendero
+      ? 'Disponible pronto para clientes'
+      : error
+        ? 'No se pudo actualizar'
+        : total > 0
+          ? resumen
+          : 'Todo al día';
+
+  const renderContenido = () => {
+    if (loading) {
+      return (
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <NotificacionesSkeleton styles={styles} />
+        </ScrollView>
+      );
+    }
+
+    if (!esTendero) {
+      return (
+        <NotificacionesEmptyState
+          icon={BellRing}
+          title="Aún no hay avisos para ti"
+          message="Las notificaciones de cartera son para tenderos. Muy pronto también te avisaremos de tus propios créditos."
+          styles={styles}
+        />
+      );
+    }
+
+    if (error) {
+      return (
+        <NotificacionesEmptyState
+          icon={CloudOff}
+          title="No pudimos cargar tus avisos"
+          message={friendlyErrorMessage(error)}
+          styles={styles}
+          accent={theme.severity.critica.accent}
+          accentSoft={theme.severity.critica.soft}
+          action={
+            clasificarError(error) === 'sesion'
+              ? { label: 'Iniciar sesión', onPress: cerrarSesionYRedirigir }
+              : { label: 'Reintentar', onPress: refetch }
+          }
+        />
+      );
+    }
+
+    if (total === 0) {
+      return (
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.spinner} colors={[COLORS.primary]} />
+          }
+        >
+          <NotificacionesEmptyState
+            icon={CheckCheck}
+            title="Todo al día"
+            message="No tienes avisos pendientes. Te escribiremos aquí cuando un crédito esté por vencer o entre en mora."
+            styles={styles}
+          />
+        </ScrollView>
+      );
+    }
+
+    return (
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.spinner} colors={[COLORS.primary]} />
         }
-      });
-    }, [])
-  );
+      >
+        {secciones.map((seccion, index) => {
+          const tone = theme.severity[seccion.tipo];
+          return (
+            <View key={seccion.tipo}>
+              {index > 0 && <View style={styles.sectionSpacer} />}
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>{seccion.titulo}</Text>
+                <View style={[styles.sectionCount, { backgroundColor: tone.soft }]}>
+                  <Text style={[styles.sectionCountText, { color: tone.ink }]}>
+                    {seccion.alertas.length}
+                  </Text>
+                </View>
+              </View>
 
-  const { loading, alertas, error, refetch, marcarLeida } = useNotificaciones(token, esTendero);
-
-  useFocusEffect(
-    useCallback(() => {
-      if (token && esTendero) refetch(true);
-    }, [token, esTendero, refetch]),
-  );
-
-  const handleAlertaPress = (alerta: Alerta) => {
-    marcarLeida(alerta.id_alerta);
-    router.push({
-      pathname: '/perfilCliente',
-      params: { id: String(alerta.id_cliente), creditoId: String(alerta.id_credito) },
-    } as any);
+              {seccion.alertas.map((alerta) => (
+                <NotificacionCard
+                  key={alerta.id_alerta}
+                  alerta={alerta}
+                  styles={styles}
+                  theme={theme}
+                  onPress={abrirAlerta}
+                />
+              ))}
+            </View>
+          );
+        })}
+      </ScrollView>
+    );
   };
 
   return (
@@ -71,66 +146,14 @@ export default function NotificacionesScreen() {
           onPress={() => router.back()}
           style={styles.backBtn}
         />
-        <Text style={styles.headerTitle}>Notificaciones</Text>
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>Notificaciones</Text>
+          <Text style={styles.headerSubtitle}>{subtitulo}</Text>
+        </View>
         <View style={styles.headerSpacer} />
       </View>
 
-      {token === null || loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={COLORS.primary} size="large" />
-        </View>
-      ) : !esTendero ? (
-        <View style={styles.center}>
-          <Text style={styles.emptyText}>
-            Las notificaciones de cartera están disponibles para tenderos. Pronto agregaremos
-            notificaciones para clientes.
-          </Text>
-        </View>
-      ) : error ? (
-        <View style={styles.center}>
-          <ErrorState
-            tone="dark"
-            message={friendlyErrorMessage(error)}
-            primaryAction={
-              clasificarError(error) === 'sesion'
-                ? { label: 'Iniciar sesión', onPress: cerrarSesionYRedirigir }
-                : { label: 'Reintentar', onPress: refetch }
-            }
-          />
-        </View>
-      ) : alertas.length === 0 ? (
-        <View style={styles.center}>
-          <Text style={styles.emptyText}>No tienes notificaciones nuevas.</Text>
-        </View>
-      ) : (
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          {alertas.map((alerta) => (
-            <TouchableOpacity
-              key={alerta.id_alerta}
-              style={styles.card}
-              onPress={() => handleAlertaPress(alerta)}
-            >
-              <View style={[styles.cardStripe, { backgroundColor: TIPO_COLOR[alerta.tipo] }]} />
-              <View style={styles.cardBody}>
-                <View style={styles.cardTopRow}>
-                  <Text style={styles.cardCliente}>{alerta.nombre_cliente}</Text>
-                  <View style={[styles.cardBadge, { backgroundColor: TIPO_COLOR[alerta.tipo] }]}>
-                    <Text style={styles.cardBadgeText}>{TIPO_LABEL[alerta.tipo]}</Text>
-                  </View>
-                </View>
-                <Text style={styles.cardDetalle}>
-                  {alerta.dias_atraso > 0
-                    ? `${alerta.dias_atraso} días de atraso`
-                    : 'Próximo a vencer'}
-                </Text>
-                <Text style={styles.cardMonto}>
-                  Saldo pendiente: ${alerta.saldo_pendiente.toLocaleString()}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      )}
+      {renderContenido()}
     </SafeAreaView>
   );
 }

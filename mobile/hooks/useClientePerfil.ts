@@ -31,7 +31,7 @@ export type ClientePerfil = {
   estadoBadgeTipo: EstadoBadge;
   deudaActual: string;
   nivelRiesgo: string | null;
-  nivelConfianza: number;
+  nivelConfianza: number | null;
   puntaje: number | null;
   telefono: string;
   direccion: string;

@@ -43,12 +43,30 @@ const navigateFromNotificationData = (
   }
 };
 
+// El canal debe existir antes de que llegue el primer push: es el que declara
+// `defaultChannel` en el plugin expo-notifications de app.json.
+const ANDROID_CHANNEL_ID = 'default';
+
+const ensureAndroidNotificationChannel = async () => {
+  if (Platform.OS !== 'android') return;
+
+  await Notifications.setNotificationChannelAsync(ANDROID_CHANNEL_ID, {
+    name: 'Recordatorios FiadoCheck',
+    importance: Notifications.AndroidImportance.MAX,
+    lightColor: '#00D09E',
+  });
+};
+
 export const usePushNotificationListener = () => {
   const router = useRouter();
   const responseListener = useRef<Notifications.EventSubscription | null>(null);
 
   useEffect(() => {
     if (Platform.OS === 'web') return;
+
+    ensureAndroidNotificationChannel().catch((e) =>
+      console.error('Error creando el canal de notificaciones', e)
+    );
 
     Notifications.getLastNotificationResponseAsync().then((response) => {
       if (response?.notification.request.content.data) {
@@ -76,12 +94,7 @@ export const registerPushToken = async (authToken: string) => {
   if (Platform.OS === 'web') return;
 
   try {
-    if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync('default', {
-        name: 'default',
-        importance: Notifications.AndroidImportance.MAX,
-      });
-    }
+    await ensureAndroidNotificationChannel();
 
     if (!Device.isDevice) {
       console.log('[push] Omitido: no es un dispositivo físico (emulador/simulador).');

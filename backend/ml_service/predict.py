@@ -1,10 +1,13 @@
 import os
 import pickle
 import threading
+import traceback
 import numpy as np
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from features import (
+    check_db_connection,
     get_features_for_pair,
     get_limit_data,
     count_closed_creditos,
@@ -46,21 +49,56 @@ def _get_model():
     return _model_data
 
 
+def _fallo(mensaje: str, exc: Exception):
+    """Respuesta de error de /predict, con el detalle visible y registrado.
+
+    El traceback va a stdout para que quede en los logs del App Service, y el
+    cuerpo lleva tipo y mensaje de la excepción porque un 500 vacío no dice
+    nada al que llama. La clave `error` es la que mira callMLService en
+    backend/src/utils/mlScoring.js para tratar la respuesta como fallo.
+    """
+    print(f"[ML] {mensaje}: {type(exc).__name__}: {exc}", flush=True)
+    traceback.print_exc()
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": mensaje,
+            "tipo": type(exc).__name__,
+            "detalle": str(exc).strip(),
+        },
+    )
+
+
 @app.get("/health")
 def health():
     """Estado del microservicio.
 
-    Permite comprobar desde fuera si el servicio responde y si el modelo está
-    cargado, sin tener que recurrir a /docs ni provocar una predicción real.
+    Permite comprobar desde fuera si el servicio responde, si el modelo está
+    cargado y si la base responde de verdad, sin tener que recurrir a /docs ni
+    provocar una predicción real.
+
+    `db_configurada` solo dice que DATABASE_URL existe; `db_conectada` ejecuta
+    un SELECT 1 real, que es lo que distingue "la variable está puesta" de "la
+    base contesta".
     """
     state = load_state()
-    return {
-        "status": "ok",
+    model_data = _get_model()
+    db_ok, db_error = check_db_connection()
+
+    cuerpo = {
+        "status": "ok" if (model_data is not None and db_ok) else "degradado",
         "service": "fiadocheck-ml",
-        "modelo_cargado": _get_model() is not None,
+        "modelo_cargado": model_data is not None,
+        "modelo_num_features": (
+            getattr(model_data["model"], "n_features_in_", None) if model_data else None
+        ),
         "db_configurada": bool(os.environ.get("DATABASE_URL")),
+        "db_conectada": db_ok,
         "last_train_count": state.get("last_train_count", 0),
     }
+    if db_error:
+        cuerpo["db_error"] = db_error
+    return cuerpo
 
 
 class PredictRequest(BaseModel):
@@ -80,13 +118,39 @@ def predict(req: PredictRequest):
     if model_data is None:
         return {"error": "Modelo no entrenado. Ejecuta model.py primero."}
 
-    features = get_features_for_pair(req.id_cliente, req.id_tendero)
+    try:
+        features = get_features_for_pair(req.id_cliente, req.id_tendero)
+    except Exception as e:
+        return _fallo(
+            f"Error consultando el historial del par cliente={req.id_cliente} "
+            f"tendero={req.id_tendero}",
+            e,
+        )
+
     if features is None:
         return {"error": "No se encontraron créditos cerrados para este par cliente-tendero"}
 
-    X = np.array([features])
-    proba = model_data["model"].predict_proba(X)[0]
-    classes = model_data["label_encoder"].classes_
+    esperadas = getattr(model_data["model"], "n_features_in_", None)
+    if esperadas is not None and len(features) != esperadas:
+        # El modelo serializado y features.py se desincronizaron: casi siempre
+        # significa que modelo.pkl viene de un despliegue anterior al último
+        # cambio del conjunto de features. Mejor decirlo que dejar que
+        # predict_proba lance un error de forma difícil de leer.
+        return _fallo(
+            "modelo.pkl desactualizado respecto a features.py",
+            ValueError(
+                f"el modelo espera {esperadas} features y features.py devolvió "
+                f"{len(features)}; reentrena con model.py y vuelve a desplegar"
+            ),
+        )
+
+    try:
+        X = np.array([features])
+        proba = model_data["model"].predict_proba(X)[0]
+        classes = model_data["label_encoder"].classes_
+    except Exception as e:
+        return _fallo("Error ejecutando la predicción del Random Forest", e)
+
     confidence = float(np.max(proba))
 
     puntaje = round(100 * sum(GOODNESS_WEIGHTS.get(cls, 0.5) * p for cls, p in zip(classes, proba)))
@@ -99,7 +163,10 @@ def predict(req: PredictRequest):
     else:
         nivel_riesgo = "alto"
 
-    base, saldo_pendiente = get_limit_data(req.id_cliente, req.id_tendero)
+    try:
+        base, saldo_pendiente = get_limit_data(req.id_cliente, req.id_tendero)
+    except Exception as e:
+        return _fallo("Error calculando el límite sugerido", e)
 
     if nivel_riesgo == "bajo":
         factor = 1.5
@@ -147,11 +214,17 @@ def _retrain_in_background():
 
 @app.post("/ml/retrain")
 def retrain(req: RetrainRequest):
-    if not _should_retrain():
+    try:
+        debe_reentrenar = _should_retrain()
+        current_count = count_closed_creditos()
+    except Exception as e:
+        return _fallo("Error consultando el volumen de créditos cerrados", e)
+
+    if not debe_reentrenar:
         return {
             "status": "skipped",
             "message": "No se alcanzó el umbral del 20% de registros nuevos.",
-            "current_count": count_closed_creditos(),
+            "current_count": current_count,
             "last_train_count": load_state().get("last_train_count", 0),
         }
 

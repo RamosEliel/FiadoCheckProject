@@ -275,10 +275,14 @@ export default function AddCreditScreen() {
                         <View style={styles.scoreCircleWrap}>
                           <View style={[styles.scoreCircle, { borderColor: getRiesgoColor(scoring.nivel_riesgo) }]}>
                             <Text style={[styles.scoreCircleText, { color: getRiesgoColor(scoring.nivel_riesgo) }]}>
-                              {scoring.puntaje ?? 0}
+                              {scoring.confianza != null ? `${scoring.confianza}%` : 'N/D'}
                             </Text>
                           </View>
-                          <Text style={styles.scoreCircleHint}>Nivel de confianza: {scoring.confianza ?? 0}%</Text>
+                          <Text style={styles.scoreCircleHint}>
+                            {scoring.confianza != null
+                              ? 'Nivel de confianza'
+                              : 'Sin historial suficiente'}
+                          </Text>
                         </View>
                         <View style={styles.scoreInfoColumn}>
                           <View style={[styles.badgeRiesgo, { backgroundColor: getRiesgoColor(scoring.nivel_riesgo) + '20' }]}>

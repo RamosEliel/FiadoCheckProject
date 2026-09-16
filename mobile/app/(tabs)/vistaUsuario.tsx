@@ -107,7 +107,10 @@ const VistaUsuario = () => {
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>Perfil Crediticio IA</Text>
             <Text style={styles.riesgoResumen}>
-              Riesgo {formatNivelRiesgo(userData?.nivelRiesgo)} · Confianza {userData?.nivelConfianza ?? 0}%
+              Riesgo {formatNivelRiesgo(userData?.nivelRiesgo)}
+              {userData?.nivelConfianza != null
+                ? ` · Confianza ${userData.nivelConfianza}%`
+                : ' · Sin historial suficiente'}
             </Text>
             <View style={styles.progressWrap}>
               <View style={styles.progressTrack}>
