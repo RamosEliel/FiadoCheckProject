@@ -1,62 +1,53 @@
 # Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
 # More GitHub Actions for Azure: https://github.com/Azure/actions
+
 name: Build and deploy Node.js app to Azure Web App - fiadocheck-api
+
 on:
   push:
     branches:
       - develop
-    paths:
-      - 'backend/**'
-      - '!backend/ml_service/**'
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: read #This is required for actions/checkout
+
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Node.js version
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v3
         with:
           node-version: '22.x'
-
-      - name: Instalar dependencias
-        working-directory: backend
-        run: npm install --omit=dev
-
-      - name: Armar paquete limpio (sin ml_service, sin .env)
-        run: |
-          mkdir -p clean-api
-          rsync -av --exclude='ml_service' --exclude='.env' --exclude='node_modules' backend/ clean-api/
-          cp -r backend/node_modules clean-api/node_modules
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: node-app
-          path: clean-api
+          path: .
 
   deploy:
     runs-on: ubuntu-latest
     needs: build
     permissions:
-      id-token: write
-      contents: read
+      id-token: write #This is required for requesting the JWT
+      contents: read #This is required for actions/checkout
+
     steps:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
           name: node-app
-
+      
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_99C12A82EE6B4734A2CEFFE27A3FD4C1 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_4E57A2E4EB6C4569B96D5A5E7221C1B7 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_B50973E5A0A04BD2BB2DB9A77A507C3C }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_7A9024BDB2014AC7A7677BDF2697DEE9 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_A73A64F0C63140C585D21B28B09FAE38 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_19832F09E3A5458B8B209890C723D61A }}
 
       - name: 'Deploy to Azure Web App'
         id: deploy-to-webapp
