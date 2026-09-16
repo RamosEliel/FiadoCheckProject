@@ -39,9 +39,11 @@ Sistema_Fiado/
 │
 ├── mobile/                   # App Expo / React Native (expo-router)
 │   └── app/
-│       ├── (auth)/                  # login, registerTendero, registerClientes
+│       ├── (auth)/                  # login, registerChoice, registerTendero,
+│       │                            # registerClientes, TiendasAsociadas
 │       ├── (tabs)/                  # dashboard, clientes, pagos, wallet,
-│       │                            # vistaUsuario, perfilCliente, Asistenteia
+│       │                            # vistaUsuario, perfilCliente, Analitica,
+│       │                            # reportes, Asistenteia, profile
 │       ├── addcredit.tsx            # Nuevo crédito con recomendación IA
 │       ├── registerpayment.tsx      # Registro de abonos
 │       ├── creditoDetalle.tsx       # Detalle e historial del crédito
@@ -59,26 +61,65 @@ Sistema_Fiado/
 Registro y vinculación de clientes a un tendero mediante la tabla `tendero_cliente`. Búsqueda por nombre o cédula, filtros por estado (`mora`, `al_dia`, `sin_deuda`) y orden por deuda total. Cada tendero solo accede a su propia cartera.
 
 ### Créditos y abonos
-Registro de fiados con fecha límite, abonos parciales o totales y actualización transaccional del saldo. Al liquidarse un crédito, el estado pasa a `pagado` automáticamente y se dispara el reentrenamiento del modelo.
+Registro de fiados con fecha límite, abonos parciales o totales y actualización transaccional del saldo. Al liquidarse un crédito, el estado pasa a `pagado` automáticamente, se invalida la caché de scoring de ese par cliente–tendero y se dispara el reentrenamiento del modelo.
 
-### Scoring crediticio
-Cuatro variables de 25 puntos cada una — puntualidad, cumplimiento, historial y antigüedad — que suman un puntaje de 0 a 100.
+### Recomendación IA (Random Forest)
 
-| Nivel | Puntaje | Recomendación |
-|-------|---------|---------------|
-| bajo | ≥ 80 | aprobar |
-| medio | 50–79 | con precaución |
-| alto | < 50 | rechazar |
+El Random Forest es la **única fuente** de `nivel_riesgo`, `puntaje` (0–100, uso interno) y `confianza`. No hay un scoring paralelo por reglas de 25 puntos. La tabla `scoring` es solo una **caché** de la última predicción por par (cliente, tendero). Las features se calculan en cada llamada desde `creditos` / `abonos` / `clientes`, no se leen de esa tabla.
 
-El **límite sugerido** se calcula como `max(0, min(base × factor − saldo_pendiente, 300.000))`, donde `base` es el promedio de los últimos 3 créditos cerrados y el factor es 1.5 / 1.0 / 0.5 según el nivel. Un cliente sin historial recibe puntaje 50, nivel medio y límite de $50.000.
+**Cuándo hay predicción real:** el cliente debe estar registrado, vinculado a la tienda (`tendero_cliente` activo) y tener **al menos un crédito cerrado** (`pagado` o `vencido`) con ese tendero. Un crédito solo `vigente` no alcanza: no hay desenlace que el modelo pueda evaluar.
 
-### Predicción con Random Forest
-Microservicio Python independiente que consume las mismas features desde la tabla `scoring`. La etiqueta de entrenamiento se deriva del puntaje por reglas, no del `nivel_riesgo` almacenado, para evitar un bucle de realimentación.
+**Cliente nuevo o sin créditos cerrados** (regla fija, no se llama al RF):
 
-El reentrenamiento ocurre **por eventos**, no por tiempo: crédito pagado, mora superior a 30 días o scoring nuevo. El servicio verifica que el volumen de datos haya crecido al menos un 20% antes de reentrenar, y lo hace en segundo plano con *model swapping*: el modelo anterior sigue atendiendo peticiones mientras se entrena el nuevo.
+| Campo | Valor |
+|-------|--------|
+| nivel_riesgo | `medio` |
+| puntaje interno | 50 |
+| confianza | `null` (en la UI: “Sin historial suficiente”, no 0%) |
+| límite sugerido | $50.000 |
+
+**Etiqueta de entrenamiento** (desenlace real del crédito cerrado, no un umbral de features):
+
+- `bueno`: pagado y el último abono llegó dentro de `fecha_limite_pago`
+- `regular`: pagado pero el último abono llegó después del plazo
+- `malo`: el crédito quedó `vencido`
+
+**Features** (por par cliente–tendero, calculables antes de otorgar un crédito nuevo; no se usan monto ni plazo):
+
+- `num_creditos_previos_cerrados`
+- `ratio_pagados_a_tiempo_previo`
+- `dias_atraso_promedio_previo` (`vencido` cuenta como 31 días)
+- `antiguedad_meses`
+
+**Puntaje interno** (no se muestra en la app; el nivel de riesgo se deriva de él):
+
+```
+puntaje = round(100 * (P(bueno)*1.0 + P(regular)*0.5 + P(malo)*0.0))
+```
+
+| nivel_riesgo | puntaje | recomendación |
+|--------------|---------|---------------|
+| bajo | ≥ 80 | `aprobar` |
+| medio | 50–79 | `con_precaucion` |
+| alto | &lt; 50 | `rechazar` |
+
+`confianza` es la probabilidad máxima entre las tres clases (0–1). En la app se muestra como porcentaje.
+
+**En la interfaz** (perfil del cliente, nuevo crédito y vista del cliente) se muestran **nivel de riesgo** y **confianza**. El puntaje no se presenta al usuario.
+
+**Límite sugerido:** `max(0, min(base × factor − saldo_pendiente, 300.000))`, donde `base` es el promedio de los últimos 3 créditos cerrados y el factor es 1.5 / 1.0 / 0.5 según el nivel.
+
+El reentrenamiento ocurre **por eventos**, no por tiempo:
+
+1. Crédito pagado (`POST /api/creditos/:id/abonos` cuando el saldo llega a cero).
+2. Mora mayor a 30 días (`GET /api/creditos/:id`).
+
+El servicio verifica que el volumen de créditos cerrados haya crecido al menos un 20% antes de reentrenar, y lo hace en segundo plano con *model swapping*. Tras un reentrenamiento exitoso se invalida la caché (`confianza = NULL`) para forzar recálculo.
+
+Si el microservicio no responde y no hay predicción cacheada, el backend responde **503**.
 
 ### Alertas y notificaciones
-Alertas clasificadas en `critica`, `proxima` e `informativa` según el rango de mora. Notificaciones push vía Expo con enlace profundo a la pantalla correspondiente.
+Alertas clasificadas en `critica`, `proxima` e `informativa` según el rango de mora. Notificaciones push vía Expo con enlace profundo a la pantalla correspondiente. El icono de notificación en Android (`expo-notifications` en `app.json`) forma parte del build nativo: un cambio de logo exige un **nuevo development build**, no solo un reload de Metro.
 
 ### Asistente IA
 Chat integrado en la app que consulta la cartera en lenguaje natural ("¿quién me debe más?", "créditos vencidos") y ejecuta operaciones de escritura: vincular clientes, registrar créditos y pagos. Implementado como workflow de n8n al que el backend accede por proxy.
@@ -139,6 +180,8 @@ python predict.py                # levanta FastAPI en el puerto 8000
 
 El puerto se resuelve en este orden: `ML_PORT`, luego `PORT`, y por defecto `8000`. La variable `ML_PORT` existe para fijar el puerto en local sin interferir con `PORT`, que es la que inyecta Azure App Service.
 
+El microservicio **no carga** `backend/.env` completo (evitaría arrancar en el puerto 3000). Toma solo `DATABASE_URL` de ese archivo si no está ya definida. Opcionalmente se puede usar `backend/ml_service/.env`.
+
 Verificación rápida:
 
 ```bash
@@ -153,7 +196,7 @@ npm install
 npm run start      # Expo dev server
 ```
 
-Actualizar `mobile/config/config.ts` con la IP del backend en la red local.
+Actualizar `mobile/config/config.ts` con la URL del backend (IP local o Azure).
 
 ---
 
@@ -198,6 +241,8 @@ roles → usuario → sesiones
 
 ## API
 
+Prefijo: `/api`. Auth con `Bearer` salvo login y registros públicos.
+
 | Categoría | Endpoints |
 |-----------|-----------|
 | Auth | `POST /login`, `POST /logout`, `POST /registerTendero`, `POST /registerClientes`, `GET/PUT /profile`, `PUT /change-password`, `PUT /push-token` |
@@ -206,7 +251,7 @@ roles → usuario → sesiones
 | Clientes | `GET /`, `GET /:id`, `POST /`, `PUT /:id`, `GET /me`, `GET /me/historial` |
 | Créditos | `GET /`, `GET /:id`, `POST /`, `PATCH /:id`, `GET /cliente/:id`, `POST /:id/abonos`, `GET /:id/abonos` |
 | Pagos | `GET /pagos` |
-| Scoring | `GET /:id`, `POST /:id/calcular`, `GET /:id/recomendacion` |
+| Scoring | `GET /:id`, `GET /:id/recomendacion` (cálculo on-demand; no hay `POST /calcular`) |
 | Alertas | `GET /`, `PATCH /:id/leer` |
 | Analítica | `GET /indicadores`, `/pagos-diarios`, `/prediccion-flujo` |
 | Reportes | `GET /`, `GET /export/pdf` |
@@ -218,10 +263,12 @@ Documentación ampliada en [backend/README.md](backend/README.md).
 
 ## Despliegue
 
-GitHub Actions despliega automáticamente en Azure App Service:
+GitHub Actions despliega automáticamente en Azure App Service al hacer push a `develop` (si cambia `backend/` o `backend/ml_service/`):
 
-- `.github/workflows/develop_fiadocheck-api.yml` — API al hacer push a `develop`
+- `.github/workflows/develop_fiadocheck-api.yml` — API
 - `.github/workflows/develop_fiadocheck-ml.yml` — microservicio ML
+
+El login a Azure usa OIDC (`azure/login@v2`) y secrets `AZUREAPPSERVICE_CLIENTID_*`, `TENANTID_*` y `SUBSCRIPTIONID_*`. Si faltan, el job de deploy falla en “Login to Azure” aunque el build haya pasado. Para configurarlos una vez: `scripts/setup-azure-oidc-deploy.ps1` (requiere `az login` y `gh auth login`).
 
 Las variables de entorno se configuran como App Settings en el portal de Azure. A diferencia del entorno local, modificar una App Setting reinicia el contenedor automáticamente.
 

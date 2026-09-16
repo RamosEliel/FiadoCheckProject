@@ -263,36 +263,36 @@ tenderos 1──N alertas N──1 clientes, creditos
 
 ### Scoring Crediticio (IA)
 
+Fuente única: Random Forest (`ml_service/`). La tabla `scoring` es caché. No hay scoring por reglas ni `POST /calcular`: el cálculo es on-demand.
+
 | Método | Ruta | Descripción | Auth |
 |--------|------|-------------|------|
-| GET | `/api/scoring/:clienteId` | Ver scoring actual | Sí |
-| POST | `/api/scoring/:clienteId/calcular` | Recalcular scoring | Sí |
+| GET | `/api/scoring/:clienteId` | Predicción vigente o recálculo | Sí |
 | GET | `/api/scoring/:clienteId/recomendacion` | Recomendación de otorgamiento | Sí |
 
-**Cálculo de Scoring:**
+**Cuándo hay predicción RF:** cliente vinculado y con al menos un crédito cerrado (`pagado`/`vencido`) con ese tendero.
 
-El scoring se calcula basado en 4 variables (25 pts cada una):
+**Sin historial cerrado:** nivel `medio`, puntaje interno 50, `confianza` null, límite $50.000.
 
-| Variable | Descripción |
-|----------|-------------|
-| Puntualidad | Historial de pagos a tiempo vs vencidos |
-| Historial | Cantidad de créditos en el historial |
-| Frecuencia | Ratio de pagos realizados vs total fiado |
-| Antigüedad | Meses como cliente activo |
-
-**Niveles de riesgo:**
-- `bajo` (≥80 pts): Cliente excelente
-- `medio` (50-79 pts): Cliente aceptable
-- `alto` (<50 pts): Cliente de alto riesgo
+**Niveles de riesgo** (derivados del puntaje interno `0–100`):
+- `bajo` (≥80): `aprobar`
+- `medio` (50–79): `con_precaucion`
+- `alto` (&lt;50): `rechazar`
 
 **Recomendación:**
 ```json
 {
-  "recomendacion": "aprobar|con_precaucion|rechazar",
-  "mensaje": "El cliente tiene excelente historial...",
-  "scoring": { "puntaje": 85, "nivel_riesgo": "bajo", "limite_sugerido": 75000 }
+  "estado": "con_historial",
+  "recomendacion": "aprobar",
+  "mensaje": "El cliente tiene un excelente historial...",
+  "puntaje": 85,
+  "nivel_riesgo": "bajo",
+  "limite_sugerido": 75000,
+  "confianza": 0.87
 }
 ```
+
+En la app se muestran `nivel_riesgo` y `confianza` (porcentaje). El puntaje no se presenta al usuario.
 
 ---
 
