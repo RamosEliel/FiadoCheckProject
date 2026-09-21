@@ -111,9 +111,9 @@ router.post('/:clienteId/calcular', async (req, res) => {
       limiteSugerido = await calcularLimiteSugerido(pool, clienteId, idTendero, rf.nivel_riesgo);
       await pool.query(`
         UPDATE scoring
-        SET nivel_riesgo = $1, confianza = $2, limite_sugerido = $3
-        WHERE id_cliente = $4 AND id_tendero = $5
-      `, [rf.nivel_riesgo, rf.confianza, limiteSugerido, clienteId, idTendero]);
+        SET nivel_riesgo = $1, confianza = $2, limite_sugerido = $3, puntaje = $4, fecha_calculo = NOW()
+        WHERE id_cliente = $5 AND id_tendero = $6
+      `, [rf.nivel_riesgo, rf.confianza, limiteSugerido, rf.puntaje_rf, clienteId, idTendero]);
     } catch (mlErr) {
       console.error('Error guardando predicción ML en scoring:', mlErr.message);
     }
@@ -121,7 +121,7 @@ router.post('/:clienteId/calcular', async (req, res) => {
     res.json({
       message: 'Scoring calculado correctamente',
       id_cliente: parseInt(clienteId),
-      puntaje_total: calculo.puntajeTotal,
+      puntaje_total: rf ? rf.puntaje_rf : calculo.puntajeTotal,
       nivel_riesgo: rf ? rf.nivel_riesgo : calculo.nivelRiesgo,
       limite_sugerido: limiteSugerido,
       desglose: {
@@ -142,20 +142,15 @@ router.post('/:clienteId/calcular', async (req, res) => {
 // tabla respalda el ON CONFLICT.
 async function upsertScoring(clienteId, idTendero, calculo) {
   await pool.query(`
-    INSERT INTO scoring (id_cliente, id_tendero, nivel_riesgo, pts_puntualidad, pts_historial,
-                         pts_cumplimiento, pts_antiguedad, limite_sugerido, confianza)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NULL)
+    INSERT INTO scoring (id_cliente, id_tendero, nivel_riesgo, limite_sugerido, confianza, puntaje)
+    VALUES ($1, $2, $3, $4, NULL, $5)
     ON CONFLICT (id_cliente, id_tendero) DO UPDATE SET
       nivel_riesgo = EXCLUDED.nivel_riesgo,
-      pts_puntualidad = EXCLUDED.pts_puntualidad,
-      pts_historial = EXCLUDED.pts_historial,
-      pts_cumplimiento = EXCLUDED.pts_cumplimiento,
-      pts_antiguedad = EXCLUDED.pts_antiguedad,
       limite_sugerido = EXCLUDED.limite_sugerido,
+      puntaje = EXCLUDED.puntaje,
       fecha_calculo = NOW(),
       confianza = NULL
-  `, [clienteId, idTendero, calculo.nivelRiesgo, calculo.ptsPuntualidad, calculo.ptsHistorial,
-      calculo.ptsCumplimiento, calculo.ptsAntiguedad, calculo.limiteSugerido]);
+  `, [clienteId, idTendero, calculo.nivelRiesgo, calculo.limiteSugerido, calculo.puntajeTotal]);
 }
 
 // GET /api/scoring/:clienteId/recomendacion

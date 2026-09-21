@@ -1,14 +1,15 @@
 function calcularPuntaje(row, options = {}) {
+  if (options.sinHistorialCrediticio) return 50;
+  if (row.puntaje != null && row.puntaje !== '') {
+    return parseInt(row.puntaje, 10);
+  }
+
   const sum =
     (row.pts_puntualidad || 0) +
     (row.pts_cumplimiento || 0) +
     (row.pts_historial || 0) +
     (row.pts_antiguedad || 0);
 
-  // Cliente sin créditos con este tendero: puntaje neutral por reglas de negocio
-  if (options.sinHistorialCrediticio) return 50;
-
-  // Fallback legacy: pts en 0 y nivel medio antes de sobrescritura ML
   if (sum === 0 && row.nivel_riesgo === 'medio') return 50;
 
   return sum;

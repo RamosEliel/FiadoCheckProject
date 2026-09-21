@@ -6,6 +6,7 @@ from contextlib import contextmanager
 
 from psycopg2 import pool as pgpool
 from dotenv import dotenv_values, load_dotenv
+from datetime import date, datetime
 from psycopg2.extras import RealDictCursor
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -82,52 +83,118 @@ def _close_pool():
         _pool = None
 
 
-def get_features(id_cliente: int, id_tendero=None):
-    """Devuelve [pts_puntualidad, pts_historial, pts_cumplimiento, pts_antiguedad, puntaje_calc].
-    El puntaje se calcula como suma de las 4 variables (ya no se almacena en BD).
+def _as_date(value):
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    return date.fromisoformat(str(value)[:10])
 
-    El scoring es por par (cliente, tendero): un mismo cliente tiene un historial
-    distinto en cada tienda. id_tendero es opcional solo para no romper si un
-    backend antiguo aún no lo envía; en ese caso se toma la fila más reciente,
-    que puede ser la de otro tendero.
+
+def _months_between(start, end):
+    start_d = _as_date(start)
+    end_d = _as_date(end)
+    if not start_d or not end_d:
+        return 0
+    months = (end_d.year - start_d.year) * 12 + (end_d.month - start_d.month)
+    return max(0, months)
+
+
+def _label_and_atraso(estado, fecha_limite, ultimo_abono):
+    """Etiqueta real del desenlace y días de atraso del crédito."""
+    limite = _as_date(fecha_limite)
+    abono = _as_date(ultimo_abono)
+    if estado == "vencido":
+        return "malo", 31
+    if estado == "pagado":
+        if abono is None or limite is None or abono <= limite:
+            return "bueno", 0
+        return "regular", (abono - limite).days
+    return None, 0
+
+
+def _fetch_closed_credits(id_cliente=None, id_tendero=None, only_cuaderno_real=False):
+    filtros = ["c.estado IN ('pagado', 'vencido')"]
+    params = []
+    if id_cliente is not None:
+        filtros.append("c.id_cliente = %s")
+        params.append(str(id_cliente))
+    if id_tendero is not None:
+        filtros.append("c.id_tendero = %s")
+        params.append(str(id_tendero))
+    if only_cuaderno_real:
+        filtros.append("c.descripcion LIKE '[cuaderno-real]%%'")
+
+    sql = f"""
+        SELECT
+            c.id_credito,
+            c.id_cliente,
+            c.id_tendero,
+            c.estado,
+            c.fecha_credito,
+            c.fecha_limite_pago,
+            cl.created_at AS cliente_created_at,
+            (
+                SELECT MAX(a.fecha_abono)
+                FROM abonos a
+                WHERE a.id_credito = c.id_credito
+            ) AS ultimo_abono
+        FROM creditos c
+        JOIN clientes cl ON cl.id_cliente = c.id_cliente
+        WHERE {' AND '.join(filtros)}
+        ORDER BY c.id_cliente, c.id_tendero, c.fecha_credito, c.id_credito
     """
     with get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            if id_tendero is not None:
+            cur.execute(sql, params)
+            return cur.fetchall()
+
+
+def _features_from_previos(previos, cliente_created_at, as_of):
+    n = len(previos)
+    if n == 0:
+        ratio = 0.0
+        atraso_prom = 0.0
+    else:
+        buenos = sum(1 for p in previos if p["label"] == "bueno")
+        ratio = buenos / n
+        atraso_prom = sum(p["dias_atraso"] for p in previos) / n
+    return [
+        float(n),
+        float(ratio),
+        float(atraso_prom),
+        float(_months_between(cliente_created_at, as_of)),
+    ]
+
+
+def get_features(id_cliente, id_tendero=None):
+    """Features calculables ANTES de un crédito nuevo, por par (cliente, tendero).
+
+    [num_creditos_previos_cerrados, ratio_pagados_a_tiempo_previo,
+     dias_atraso_promedio_previo, antiguedad_meses]
+    """
+    rows = _fetch_closed_credits(id_cliente=id_cliente, id_tendero=id_tendero)
+    created = rows[0]["cliente_created_at"] if rows else None
+    if created is None:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
                 cur.execute(
-                    """
-                    SELECT pts_puntualidad, pts_historial, pts_cumplimiento, pts_antiguedad
-                    FROM scoring
-                    WHERE id_cliente = %s AND id_tendero = %s
-                    ORDER BY fecha_calculo DESC
-                    LIMIT 1
-                    """,
-                    (str(id_cliente), str(id_tendero)),
-                )
-            else:
-                cur.execute(
-                    """
-                    SELECT pts_puntualidad, pts_historial, pts_cumplimiento, pts_antiguedad
-                    FROM scoring
-                    WHERE id_cliente = %s
-                    ORDER BY fecha_calculo DESC
-                    LIMIT 1
-                    """,
+                    "SELECT created_at FROM clientes WHERE id_cliente = %s",
                     (str(id_cliente),),
                 )
-            row = cur.fetchone()
+                found = cur.fetchone()
+                if not found:
+                    return None
+                created = found[0]
 
-    if not row:
-        return None
-
-    puntaje = row["pts_puntualidad"] + row["pts_historial"] + row["pts_cumplimiento"] + row["pts_antiguedad"]
-    return [
-        row["pts_puntualidad"],
-        row["pts_historial"],
-        row["pts_cumplimiento"],
-        row["pts_antiguedad"],
-        puntaje,
-    ]
+    previos = []
+    for row in rows:
+        label, atraso = _label_and_atraso(row["estado"], row["fecha_limite_pago"], row["ultimo_abono"])
+        if label:
+            previos.append({"label": label, "dias_atraso": atraso})
+    return _features_from_previos(previos, created, date.today())
 
 
 def get_limit_data(id_cliente: int, id_tendero=None):
@@ -175,26 +242,55 @@ def get_limit_data(id_cliente: int, id_tendero=None):
     return base, saldo_pendiente
 
 
-def fetch_all_scoring():
-    """Devuelve filas con las 4 variables + nivel_riesgo. El puntaje se recalcula en model.py."""
-    with get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT pts_puntualidad, pts_historial, pts_cumplimiento, pts_antiguedad, nivel_riesgo
-                FROM scoring
-                """
+def fetch_training_rows(only_cuaderno_real=True):
+    """Una fila por crédito cerrado: features (sin fuga del propio crédito) + etiqueta real."""
+    rows = _fetch_closed_credits(only_cuaderno_real=only_cuaderno_real)
+    if not rows and only_cuaderno_real:
+        rows = _fetch_closed_credits(only_cuaderno_real=False)
+
+    grouped = {}
+    for row in rows:
+        key = (str(row["id_cliente"]), str(row["id_tendero"]))
+        grouped.setdefault(key, []).append(row)
+
+    samples = []
+    for pair_rows in grouped.values():
+        previos = []
+        for row in pair_rows:
+            label, atraso = _label_and_atraso(
+                row["estado"], row["fecha_limite_pago"], row["ultimo_abono"]
             )
-            rows = cur.fetchall()
-    return rows
+            if not label:
+                continue
+            features = _features_from_previos(
+                previos, row["cliente_created_at"], row["fecha_credito"]
+            )
+            samples.append({"features": features, "label": label, "id_credito": row["id_credito"]})
+            previos.append({"label": label, "dias_atraso": atraso})
+    return samples
+
+
+def fetch_all_scoring():
+    """Compatibilidad: mismo contrato que usaba model.py (features + etiqueta)."""
+    return [(s["features"][0], s["features"][1], s["features"][2], s["features"][3], s["label"])
+            for s in fetch_training_rows()]
 
 
 def count_scoring_records() -> int:
     with get_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT COUNT(*) FROM scoring")
-            row = cur.fetchone()
-    return row[0]
+            cur.execute(
+                """
+                SELECT COUNT(*) FROM creditos
+                WHERE estado IN ('pagado', 'vencido')
+                  AND descripcion LIKE '[cuaderno-real]%%'
+                """
+            )
+            n = cur.fetchone()[0]
+            if n:
+                return n
+            cur.execute("SELECT COUNT(*) FROM creditos WHERE estado IN ('pagado', 'vencido')")
+            return cur.fetchone()[0]
 
 
 def load_state() -> dict:

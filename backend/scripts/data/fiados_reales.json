@@ -1,0 +1,3908 @@
+{
+  "meta": {
+    "generado": "2026-09-21",
+    "referencia_hoy": "2026-09-21",
+    "fuentes": [
+      "WhatsApp Unknown 2026-09-21 at 13.13.10.zip",
+      "WhatsApp Unknown 2026-09-21 at 13.12.54.zip",
+      "WhatsApp Unknown 2026-09-21 at 13.12.18.zip"
+    ],
+    "esquema_fiadocheck": {
+      "creditos": [
+        "id_credito",
+        "id_cliente",
+        "id_tendero",
+        "monto_total",
+        "saldo_pendiente",
+        "descripcion",
+        "fecha_credito",
+        "fecha_limite_pago",
+        "estado",
+        "created_at"
+      ],
+      "abonos": [
+        "id_abono",
+        "id_credito",
+        "id_cliente",
+        "monto",
+        "fecha_abono",
+        "created_at"
+      ],
+      "clientes": [
+        "id_cliente",
+        "nombre_completo",
+        "telefono",
+        "direccion",
+        "estado",
+        "created_at"
+      ],
+      "estados_bd": [
+        "vigente",
+        "pagado",
+        "vencido"
+      ],
+      "nota_atrasado": "En FiadoCheck no existe estado 'atrasado'. estado_negocio=atrasado se mapea a estado='vigente' con fecha_limite_pago ya vencida y menos de 30 días (vencido si supera 30 días)."
+    },
+    "reglas_inferencia": {
+      "fecha_limite_pago": "Si no aparece: día 16 o último día del mes del crédito (se alterna por cuenta).",
+      "fecha_pago": "Si no aparece y el crédito se considera saldado: fecha entre julio y agosto 2026.",
+      "antiguedad": "Si no aparece: meses entre created_at inferido (por volumen de fiado) y 2026-09-21.",
+      "agrupacion": "Una fila de creditos por ciclo (mes) del cliente, no una fila por cada renglón del cuaderno. Los renglones van en line_items."
+    }
+  },
+  "tenderos": [
+    {
+      "id_tendero": 901,
+      "nombre_tienda": "Tienda cuaderno (zip 13.13.10)",
+      "fuente": "WhatsApp Unknown 2026-09-21 at 13.13.10.zip"
+    },
+    {
+      "id_tendero": 902,
+      "nombre_tienda": "Tienda cartones (zip 13.12.54)",
+      "fuente": "WhatsApp Unknown 2026-09-21 at 13.12.54.zip"
+    },
+    {
+      "id_tendero": 903,
+      "nombre_tienda": "Tienda cuaderno espiral (zip 13.12.18)",
+      "fuente": "WhatsApp Unknown 2026-09-21 at 13.12.18.zip"
+    }
+  ],
+  "clientes": [
+    {
+      "id_cliente": 2001,
+      "id_tendero": 901,
+      "nombre_completo": "Pancrando",
+      "telefono": null,
+      "direccion": null,
+      "estado": "activo",
+      "created_at": "2025-11-03 09:00:00",
+      "antiguedad_meses": 10,
+      "antiguedad_origen": "inferida_por_volumen_de_fiado",
+      "notas": "Cuenta larga; total anotado 210.200"
+    },
+    {
+      "id_cliente": 2002,
+      "id_tendero": 901,
+      "nombre_completo": "Firulata",
+      "telefono": null,
+      "direccion": null,
+      "estado": "activo",
+      "created_at": "2025-10-12 09:00:00",
+      "antiguedad_meses": 11,
+      "antiguedad_origen": "inferida_por_volumen_de_fiado",
+      "notas": "Saldo anotado 196.700"
+    },
+    {
+      "id_cliente": 2003,
+      "id_tendero": 901,
+      "nombre_completo": "Yoncarlos",
+      "telefono": null,
+      "direccion": null,
+      "estado": "activo",
+      "created_at": "2026-01-20 09:00:00",
+      "antiguedad_meses": 8,
+      "antiguedad_origen": "inferida_por_volumen_de_fiado",
+      "notas": "Fecha explícita 15 julio"
+    },
+    {
+      "id_cliente": 2004,
+      "id_tendero": 901,
+      "nombre_completo": "Elio",
+      "telefono": null,
+      "direccion": null,
+      "estado": "activo",
+      "created_at": "2026-03-08 09:00:00",
+      "antiguedad_meses": 6,
+      "antiguedad_origen": "inferida_por_volumen_de_fiado",
+      "notas": "Fecha explícita 7 de agosto"
+    },
+    {
+      "id_cliente": 2005,
+      "id_tendero": 901,
+      "nombre_completo": "Eduvar",
+      "telefono": null,
+      "direccion": null,
+      "estado": "activo",
+      "created_at": "2026-05-14 09:00:00",
+      "antiguedad_meses": 4,
+      "antiguedad_origen": "inferida_por_volumen_de_fiado",
+      "notas": ""
+    },
+    {
+      "id_cliente": 2006,
+      "id_tendero": 902,
+      "nombre_completo": "Tito",
+      "telefono": null,
+      "direccion": null,
+      "estado": "activo",
+      "created_at": "2025-12-01 09:00:00",
+      "antiguedad_meses": 9,
+      "antiguedad_origen": "inferida_por_volumen_de_fiado",
+      "notas": "Cartón 'Tito Agosto'"
+    },
+    {
+      "id_cliente": 2007,
+      "id_tendero": 902,
+      "nombre_completo": "Cliente cartón 1",
+      "telefono": null,
+      "direccion": null,
+      "estado": "activo",
+      "created_at": "2026-06-10 09:00:00",
+      "antiguedad_meses": 3,
+      "antiguedad_origen": "inferida_por_volumen_de_fiado",
+      "notas": "Sin nombre en el cartón"
+    },
+    {
+      "id_cliente": 2008,
+      "id_tendero": 902,
+      "nombre_completo": "Cliente cartón 2",
+      "telefono": null,
+      "direccion": null,
+      "estado": "activo",
+      "created_at": "2026-04-22 09:00:00",
+      "antiguedad_meses": 5,
+      "antiguedad_origen": "inferida_por_volumen_de_fiado",
+      "notas": "Cartón dos columnas"
+    },
+    {
+      "id_cliente": 2009,
+      "id_tendero": 902,
+      "nombre_completo": "Cliente cartón 3",
+      "telefono": null,
+      "direccion": null,
+      "estado": "activo",
+      "created_at": "2026-02-18 09:00:00",
+      "antiguedad_meses": 7,
+      "antiguedad_origen": "inferida_por_volumen_de_fiado",
+      "notas": "Cartón denso, abono 10.000"
+    },
+    {
+      "id_cliente": 2010,
+      "id_tendero": 902,
+      "nombre_completo": "Cliente cartón 4",
+      "telefono": null,
+      "direccion": null,
+      "estado": "activo",
+      "created_at": "2026-05-02 09:00:00",
+      "antiguedad_meses": 4,
+      "antiguedad_origen": "inferida_por_volumen_de_fiado",
+      "notas": ""
+    },
+    {
+      "id_cliente": 2011,
+      "id_tendero": 903,
+      "nombre_completo": "Dimax",
+      "telefono": null,
+      "direccion": null,
+      "estado": "activo",
+      "created_at": "2026-06-01 09:00:00",
+      "antiguedad_meses": 3,
+      "antiguedad_origen": "inferida_por_volumen_de_fiado",
+      "notas": ""
+    },
+    {
+      "id_cliente": 2012,
+      "id_tendero": 903,
+      "nombre_completo": "Alexis",
+      "telefono": null,
+      "direccion": null,
+      "estado": "activo",
+      "created_at": "2025-09-15 09:00:00",
+      "antiguedad_meses": 12,
+      "antiguedad_origen": "inferida_por_volumen_de_fiado",
+      "notas": ""
+    },
+    {
+      "id_cliente": 2013,
+      "id_tendero": 903,
+      "nombre_completo": "Isaias",
+      "telefono": null,
+      "direccion": null,
+      "estado": "activo",
+      "created_at": "2026-03-11 09:00:00",
+      "antiguedad_meses": 6,
+      "antiguedad_origen": "inferida_por_volumen_de_fiado",
+      "notas": ""
+    },
+    {
+      "id_cliente": 2014,
+      "id_tendero": 903,
+      "nombre_completo": "Licho",
+      "telefono": null,
+      "direccion": null,
+      "estado": "activo",
+      "created_at": "2026-04-04 09:00:00",
+      "antiguedad_meses": 5,
+      "antiguedad_origen": "inferida_por_volumen_de_fiado",
+      "notas": ""
+    },
+    {
+      "id_cliente": 2015,
+      "id_tendero": 903,
+      "nombre_completo": "Beto",
+      "telefono": null,
+      "direccion": null,
+      "estado": "activo",
+      "created_at": "2026-07-01 09:00:00",
+      "antiguedad_meses": 2,
+      "antiguedad_origen": "inferida_por_volumen_de_fiado",
+      "notas": ""
+    },
+    {
+      "id_cliente": 2016,
+      "id_tendero": 903,
+      "nombre_completo": "Chavela",
+      "telefono": null,
+      "direccion": null,
+      "estado": "activo",
+      "created_at": "2025-12-20 09:00:00",
+      "antiguedad_meses": 9,
+      "antiguedad_origen": "inferida_por_volumen_de_fiado",
+      "notas": ""
+    },
+    {
+      "id_cliente": 2017,
+      "id_tendero": 903,
+      "nombre_completo": "Carolay",
+      "telefono": null,
+      "direccion": null,
+      "estado": "activo",
+      "created_at": "2026-02-09 09:00:00",
+      "antiguedad_meses": 7,
+      "antiguedad_origen": "inferida_por_volumen_de_fiado",
+      "notas": ""
+    },
+    {
+      "id_cliente": 2018,
+      "id_tendero": 903,
+      "nombre_completo": "Cachaca",
+      "telefono": null,
+      "direccion": null,
+      "estado": "activo",
+      "created_at": "2026-05-30 09:00:00",
+      "antiguedad_meses": 4,
+      "antiguedad_origen": "inferida_por_volumen_de_fiado",
+      "notas": ""
+    },
+    {
+      "id_cliente": 2019,
+      "id_tendero": 903,
+      "nombre_completo": "Daniel",
+      "telefono": null,
+      "direccion": null,
+      "estado": "activo",
+      "created_at": "2026-01-05 09:00:00",
+      "antiguedad_meses": 8,
+      "antiguedad_origen": "inferida_por_volumen_de_fiado",
+      "notas": ""
+    },
+    {
+      "id_cliente": 2020,
+      "id_tendero": 903,
+      "nombre_completo": "Fabian",
+      "telefono": null,
+      "direccion": null,
+      "estado": "activo",
+      "created_at": "2025-08-01 09:00:00",
+      "antiguedad_meses": 13,
+      "antiguedad_origen": "inferida_por_volumen_de_fiado",
+      "notas": ""
+    },
+    {
+      "id_cliente": 2021,
+      "id_tendero": 903,
+      "nombre_completo": "Compa",
+      "telefono": null,
+      "direccion": null,
+      "estado": "activo",
+      "created_at": "2026-06-15 09:00:00",
+      "antiguedad_meses": 3,
+      "antiguedad_origen": "inferida_por_volumen_de_fiado",
+      "notas": ""
+    },
+    {
+      "id_cliente": 2022,
+      "id_tendero": 903,
+      "nombre_completo": "Viviana",
+      "telefono": null,
+      "direccion": null,
+      "estado": "activo",
+      "created_at": "2025-11-28 09:00:00",
+      "antiguedad_meses": 10,
+      "antiguedad_origen": "inferida_por_volumen_de_fiado",
+      "notas": "Muchas líneas, algunas en rojo"
+    },
+    {
+      "id_cliente": 2023,
+      "id_tendero": 903,
+      "nombre_completo": "Cerdo",
+      "telefono": null,
+      "direccion": null,
+      "estado": "activo",
+      "created_at": "2026-01-18 09:00:00",
+      "antiguedad_meses": 8,
+      "antiguedad_origen": "inferida_por_volumen_de_fiado",
+      "notas": "Muchos tachados (ciclos pagados) + saldo rojo"
+    },
+    {
+      "id_cliente": 2024,
+      "id_tendero": 903,
+      "nombre_completo": "Flaca zapateria",
+      "telefono": null,
+      "direccion": null,
+      "estado": "activo",
+      "created_at": "2025-10-05 09:00:00",
+      "antiguedad_meses": 11,
+      "antiguedad_origen": "inferida_por_volumen_de_fiado",
+      "notas": "Abono 50.000 anotado"
+    },
+    {
+      "id_cliente": 2025,
+      "id_tendero": 903,
+      "nombre_completo": "Jose",
+      "telefono": null,
+      "direccion": null,
+      "estado": "activo",
+      "created_at": "2025-09-20 09:00:00",
+      "antiguedad_meses": 12,
+      "antiguedad_origen": "inferida_por_volumen_de_fiado",
+      "notas": ""
+    },
+    {
+      "id_cliente": 2026,
+      "id_tendero": 903,
+      "nombre_completo": "Efrain",
+      "telefono": null,
+      "direccion": null,
+      "estado": "activo",
+      "created_at": "2026-06-08 09:00:00",
+      "antiguedad_meses": 3,
+      "antiguedad_origen": "inferida_por_volumen_de_fiado",
+      "notas": "Abonos/saldos tachados"
+    },
+    {
+      "id_cliente": 2027,
+      "id_tendero": 903,
+      "nombre_completo": "Lenis",
+      "telefono": null,
+      "direccion": null,
+      "estado": "activo",
+      "created_at": "2025-11-02 09:00:00",
+      "antiguedad_meses": 10,
+      "antiguedad_origen": "inferida_por_volumen_de_fiado",
+      "notas": "Varios subtotales tachados"
+    },
+    {
+      "id_cliente": 2028,
+      "id_tendero": 903,
+      "nombre_completo": "Eileen Monaco",
+      "telefono": null,
+      "direccion": null,
+      "estado": "activo",
+      "created_at": "2026-04-17 09:00:00",
+      "antiguedad_meses": 5,
+      "antiguedad_origen": "inferida_por_volumen_de_fiado",
+      "notas": ""
+    },
+    {
+      "id_cliente": 2029,
+      "id_tendero": 903,
+      "nombre_completo": "Neque",
+      "telefono": null,
+      "direccion": null,
+      "estado": "activo",
+      "created_at": "2025-07-20 09:00:00",
+      "antiguedad_meses": 14,
+      "antiguedad_origen": "inferida_por_volumen_de_fiado",
+      "notas": ""
+    },
+    {
+      "id_cliente": 2030,
+      "id_tendero": 903,
+      "nombre_completo": "Kelly",
+      "telefono": null,
+      "direccion": null,
+      "estado": "activo",
+      "created_at": "2026-03-03 09:00:00",
+      "antiguedad_meses": 6,
+      "antiguedad_origen": "inferida_por_volumen_de_fiado",
+      "notas": ""
+    },
+    {
+      "id_cliente": 2031,
+      "id_tendero": 903,
+      "nombre_completo": "Delio",
+      "telefono": null,
+      "direccion": null,
+      "estado": "activo",
+      "created_at": "2026-07-12 09:00:00",
+      "antiguedad_meses": 2,
+      "antiguedad_origen": "inferida_por_volumen_de_fiado",
+      "notas": ""
+    },
+    {
+      "id_cliente": 2032,
+      "id_tendero": 903,
+      "nombre_completo": "Susana",
+      "telefono": null,
+      "direccion": null,
+      "estado": "activo",
+      "created_at": "2025-08-14 09:00:00",
+      "antiguedad_meses": 13,
+      "antiguedad_origen": "inferida_por_volumen_de_fiado",
+      "notas": ""
+    },
+    {
+      "id_cliente": 2033,
+      "id_tendero": 903,
+      "nombre_completo": "Parra",
+      "telefono": null,
+      "direccion": null,
+      "estado": "activo",
+      "created_at": "2026-06-20 09:00:00",
+      "antiguedad_meses": 3,
+      "antiguedad_origen": "inferida_por_volumen_de_fiado",
+      "notas": ""
+    },
+    {
+      "id_cliente": 2034,
+      "id_tendero": 903,
+      "nombre_completo": "Negro",
+      "telefono": null,
+      "direccion": null,
+      "estado": "activo",
+      "created_at": "2026-02-28 09:00:00",
+      "antiguedad_meses": 7,
+      "antiguedad_origen": "inferida_por_volumen_de_fiado",
+      "notas": ""
+    },
+    {
+      "id_cliente": 2035,
+      "id_tendero": 903,
+      "nombre_completo": "Constanza",
+      "telefono": null,
+      "direccion": null,
+      "estado": "activo",
+      "created_at": "2026-05-11 09:00:00",
+      "antiguedad_meses": 4,
+      "antiguedad_origen": "inferida_por_volumen_de_fiado",
+      "notas": ""
+    },
+    {
+      "id_cliente": 2036,
+      "id_tendero": 903,
+      "nombre_completo": "Rubi",
+      "telefono": null,
+      "direccion": null,
+      "estado": "activo",
+      "created_at": "2026-07-05 09:00:00",
+      "antiguedad_meses": 2,
+      "antiguedad_origen": "inferida_por_volumen_de_fiado",
+      "notas": ""
+    }
+  ],
+  "creditos": [
+    {
+      "id_credito": 5001,
+      "id_cliente": 2001,
+      "id_tendero": 901,
+      "monto_total": 168330,
+      "saldo_pendiente": 0,
+      "descripcion": "Fiado julio Pancrando (columna izquierda; total cuaderno 210200)",
+      "fecha_credito": "2026-07-03",
+      "fecha_limite_pago": "2026-07-16",
+      "fecha_limite_pago_origen": "inferida_16_del_mes",
+      "estado": "pagado",
+      "estado_negocio": "pagado",
+      "created_at": "2026-07-03 10:00:00",
+      "fuente_foto": "zip1/19.38.30.jpeg",
+      "line_items": [
+        {
+          "monto": 3000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 1500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 1630,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 9300,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 13400,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 10200,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 18500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 25000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 7400,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 19000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 19500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 7500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 4500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 3500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 20400,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 1500,
+          "descripcion": "fiado"
+        }
+      ],
+      "fecha_pago": "2026-07-14",
+      "fecha_pago_origen": "inferida_julio_agosto"
+    },
+    {
+      "id_credito": 5002,
+      "id_cliente": 2001,
+      "id_tendero": 901,
+      "monto_total": 179200,
+      "saldo_pendiente": 179200,
+      "descripcion": "Fiado agosto Pancrando (columna derecha, saldo abierto)",
+      "fecha_credito": "2026-08-02",
+      "fecha_limite_pago": "2026-08-31",
+      "fecha_limite_pago_origen": "inferida_fin_de_mes",
+      "estado": "vigente",
+      "estado_negocio": "atrasado",
+      "created_at": "2026-08-02 10:00:00",
+      "fuente_foto": "zip1/19.38.30.jpeg",
+      "line_items": [
+        {
+          "monto": 6000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 6400,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 8600,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 7800,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 7600,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 17600,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 8500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 9400,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 18000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 10000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 8000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 7600,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 14000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2400,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 7200,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 19500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 6000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 14600,
+          "descripcion": "fiado"
+        }
+      ],
+      "fecha_pago": null,
+      "fecha_pago_origen": null
+    },
+    {
+      "id_credito": 5003,
+      "id_cliente": 2001,
+      "id_tendero": 901,
+      "monto_total": 66900,
+      "saldo_pendiente": 66900,
+      "descripcion": "Cargos extra al pie de página Pancrando",
+      "fecha_credito": "2026-08-18",
+      "fecha_limite_pago": "2026-08-31",
+      "fecha_limite_pago_origen": "inferida_fin_de_mes",
+      "estado": "vigente",
+      "estado_negocio": "atrasado",
+      "created_at": "2026-08-18 10:00:00",
+      "fuente_foto": "zip1/19.38.30.jpeg",
+      "line_items": [
+        {
+          "monto": 7100,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 6600,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 11500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 5000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 19700,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 8000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 9000,
+          "descripcion": "fiado"
+        }
+      ],
+      "fecha_pago": null,
+      "fecha_pago_origen": null
+    },
+    {
+      "id_credito": 5004,
+      "id_cliente": 2002,
+      "id_tendero": 901,
+      "monto_total": 528400,
+      "saldo_pendiente": 228400,
+      "descripcion": "Firulata julio (columna izquierda)",
+      "fecha_credito": "2026-07-05",
+      "fecha_limite_pago": "2026-07-31",
+      "fecha_limite_pago_origen": "inferida_fin_de_mes",
+      "estado": "vencido",
+      "estado_negocio": "vencido",
+      "created_at": "2026-07-05 10:00:00",
+      "fuente_foto": "zip1/19.38.30 (1).jpeg",
+      "line_items": [
+        {
+          "monto": 16500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 800,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 196700,
+          "descripcion": "saldo arrastre"
+        },
+        {
+          "monto": 50000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 10500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 21700,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 4700,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 6200,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 24000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 17500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 6000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 6800,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2400,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 4300,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 11800,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 6800,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 8300,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 12000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 29000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 6200,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 6300,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 20300,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 7000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 14000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 10400,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 12000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 4700,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 9000,
+          "descripcion": "fiado"
+        }
+      ],
+      "fecha_pago": null,
+      "fecha_pago_origen": null
+    },
+    {
+      "id_credito": 5005,
+      "id_cliente": 2002,
+      "id_tendero": 901,
+      "monto_total": 58300,
+      "saldo_pendiente": 58300,
+      "descripcion": "Firulata agosto (columna derecha, abierto)",
+      "fecha_credito": "2026-08-04",
+      "fecha_limite_pago": "2026-08-16",
+      "fecha_limite_pago_origen": "inferida_16_del_mes",
+      "estado": "vencido",
+      "estado_negocio": "vencido",
+      "created_at": "2026-08-04 10:00:00",
+      "fuente_foto": "zip1/19.38.30 (1).jpeg",
+      "line_items": [
+        {
+          "monto": 3000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 4300,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 11000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 11200,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 10900,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 17900,
+          "descripcion": "fiado"
+        }
+      ],
+      "fecha_pago": null,
+      "fecha_pago_origen": null
+    },
+    {
+      "id_credito": 5006,
+      "id_cliente": 2003,
+      "id_tendero": 901,
+      "monto_total": 482800,
+      "saldo_pendiente": 417800,
+      "descripcion": "Yoncarlos desde 15 julio",
+      "fecha_credito": "2026-07-15",
+      "fecha_limite_pago": "2026-07-31",
+      "fecha_limite_pago_origen": "inferida_fin_de_mes",
+      "estado": "vencido",
+      "estado_negocio": "vencido",
+      "created_at": "2026-07-15 10:00:00",
+      "fuente_foto": "zip1/19.38.30 (2).jpeg",
+      "line_items": [
+        {
+          "monto": 800,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 12000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 5000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 4000,
+          "descripcion": "musita"
+        },
+        {
+          "monto": 11000,
+          "descripcion": "hueso"
+        },
+        {
+          "monto": 1000,
+          "descripcion": "papa"
+        },
+        {
+          "monto": 104700,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 9800,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 3000,
+          "descripcion": "digit"
+        },
+        {
+          "monto": 20000,
+          "descripcion": "boleta"
+        },
+        {
+          "monto": 1600,
+          "descripcion": "gelatina"
+        },
+        {
+          "monto": 7600,
+          "descripcion": "hueso"
+        },
+        {
+          "monto": 3000,
+          "descripcion": "agua"
+        },
+        {
+          "monto": 50000,
+          "descripcion": "cargador"
+        },
+        {
+          "monto": 1000,
+          "descripcion": "plata"
+        },
+        {
+          "monto": 1500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 10000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 60000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 5000,
+          "descripcion": "plata"
+        },
+        {
+          "monto": 500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 7000,
+          "descripcion": "plata"
+        },
+        {
+          "monto": 17800,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 10000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 100000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 5000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 9000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 1700,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 4000,
+          "descripcion": "colgate"
+        },
+        {
+          "monto": 2700,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 7700,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 6000,
+          "descripcion": "pagado anotado"
+        },
+        {
+          "monto": 400,
+          "descripcion": "fiado"
+        }
+      ],
+      "fecha_pago": null,
+      "fecha_pago_origen": "cuaderno"
+    },
+    {
+      "id_credito": 5007,
+      "id_cliente": 2004,
+      "id_tendero": 901,
+      "monto_total": 64000,
+      "saldo_pendiente": 0,
+      "descripcion": "Elio 7 de agosto",
+      "fecha_credito": "2026-08-07",
+      "fecha_limite_pago": "2026-08-16",
+      "fecha_limite_pago_origen": "inferida_16_del_mes",
+      "estado": "pagado",
+      "estado_negocio": "pagado",
+      "created_at": "2026-08-07 10:00:00",
+      "fuente_foto": "zip1/19.38.30 (3).jpeg",
+      "line_items": [
+        {
+          "monto": 2000,
+          "descripcion": "ampolletas"
+        },
+        {
+          "monto": 1000,
+          "descripcion": "cigarros"
+        },
+        {
+          "monto": 2000,
+          "descripcion": "ampolletas"
+        },
+        {
+          "monto": 2700,
+          "descripcion": "cigarros"
+        },
+        {
+          "monto": 2000,
+          "descripcion": "campo"
+        },
+        {
+          "monto": 5000,
+          "descripcion": "muestra violeta"
+        },
+        {
+          "monto": 1400,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 1400,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 1400,
+          "descripcion": "cigarro"
+        },
+        {
+          "monto": 1000,
+          "descripcion": "cafe"
+        },
+        {
+          "monto": 12000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 1700,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 1000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 4500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 1000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 3500,
+          "descripcion": "espinaza"
+        },
+        {
+          "monto": 6000,
+          "descripcion": "cigarros"
+        },
+        {
+          "monto": 1400,
+          "descripcion": "cigarro"
+        }
+      ],
+      "fecha_pago": "2026-08-14",
+      "fecha_pago_origen": "inferida_julio_agosto"
+    },
+    {
+      "id_credito": 5008,
+      "id_cliente": 2005,
+      "id_tendero": 901,
+      "monto_total": 353700,
+      "saldo_pendiente": 353700,
+      "descripcion": "Eduvar — arroz, colgate y plata",
+      "fecha_credito": "2026-08-10",
+      "fecha_limite_pago": "2026-08-31",
+      "fecha_limite_pago_origen": "inferida_fin_de_mes",
+      "estado": "vigente",
+      "estado_negocio": "atrasado",
+      "created_at": "2026-08-10 10:00:00",
+      "fuente_foto": "zip1/19.38.31.jpeg",
+      "line_items": [
+        {
+          "monto": 4000,
+          "descripcion": "colgate"
+        },
+        {
+          "monto": 77000,
+          "descripcion": "arroz"
+        },
+        {
+          "monto": 1700,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 1000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 250000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 1000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 8000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 7000,
+          "descripcion": "plata"
+        }
+      ],
+      "fecha_pago": null,
+      "fecha_pago_origen": null
+    },
+    {
+      "id_credito": 5009,
+      "id_cliente": 2006,
+      "id_tendero": 902,
+      "monto_total": 606800,
+      "saldo_pendiente": 306800,
+      "descripcion": "Tito agosto (cartón nominado)",
+      "fecha_credito": "2026-08-01",
+      "fecha_limite_pago": "2026-08-16",
+      "fecha_limite_pago_origen": "inferida_16_del_mes",
+      "estado": "vencido",
+      "estado_negocio": "vencido",
+      "created_at": "2026-08-01 10:00:00",
+      "fuente_foto": "zip2/18.09.48.jpeg",
+      "line_items": [
+        {
+          "monto": 49500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 13500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 168000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 28200,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 127000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 20000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 130000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 20600,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 50000,
+          "descripcion": "fiado"
+        }
+      ],
+      "fecha_pago": null,
+      "fecha_pago_origen": null
+    },
+    {
+      "id_credito": 5010,
+      "id_cliente": 2007,
+      "id_tendero": 902,
+      "monto_total": 323500,
+      "saldo_pendiente": 0,
+      "descripcion": "Cartón sin nombre (4 montos)",
+      "fecha_credito": "2026-07-08",
+      "fecha_limite_pago": "2026-07-31",
+      "fecha_limite_pago_origen": "inferida_fin_de_mes",
+      "estado": "pagado",
+      "estado_negocio": "pagado",
+      "created_at": "2026-07-08 10:00:00",
+      "fuente_foto": "zip2/18.09.47.jpeg",
+      "line_items": [
+        {
+          "monto": 268000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 24000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 19000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 12500,
+          "descripcion": "fiado"
+        }
+      ],
+      "fecha_pago": "2026-07-30",
+      "fecha_pago_origen": "inferida_julio_agosto"
+    },
+    {
+      "id_credito": 5011,
+      "id_cliente": 2008,
+      "id_tendero": 902,
+      "monto_total": 220000,
+      "saldo_pendiente": 0,
+      "descripcion": "Cartón 2 columna izquierda julio",
+      "fecha_credito": "2026-07-12",
+      "fecha_limite_pago": "2026-07-16",
+      "fecha_limite_pago_origen": "inferida_16_del_mes",
+      "estado": "pagado",
+      "estado_negocio": "pagado",
+      "created_at": "2026-07-12 10:00:00",
+      "fuente_foto": "zip2/18.09.47 (1).jpeg",
+      "line_items": [
+        {
+          "monto": 25600,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 18500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 29300,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 3000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 14300,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 24700,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 13500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 26500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 14300,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 19800,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 28500,
+          "descripcion": "fiado"
+        }
+      ],
+      "fecha_pago": "2026-07-15",
+      "fecha_pago_origen": "inferida_julio_agosto"
+    },
+    {
+      "id_credito": 5012,
+      "id_cliente": 2008,
+      "id_tendero": 902,
+      "monto_total": 116500,
+      "saldo_pendiente": 116500,
+      "descripcion": "Cartón 2 columna derecha agosto",
+      "fecha_credito": "2026-08-06",
+      "fecha_limite_pago": "2026-08-31",
+      "fecha_limite_pago_origen": "inferida_fin_de_mes",
+      "estado": "vigente",
+      "estado_negocio": "atrasado",
+      "created_at": "2026-08-06 10:00:00",
+      "fuente_foto": "zip2/18.09.47 (1).jpeg",
+      "line_items": [
+        {
+          "monto": 12900,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 22000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 3900,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 15300,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 4100,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 1800,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 23200,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 3100,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 4100,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 26100,
+          "descripcion": "fiado"
+        }
+      ],
+      "fecha_pago": null,
+      "fecha_pago_origen": null
+    },
+    {
+      "id_credito": 5013,
+      "id_cliente": 2009,
+      "id_tendero": 902,
+      "monto_total": 191700,
+      "saldo_pendiente": 0,
+      "descripcion": "Cartón 3 julio",
+      "fecha_credito": "2026-07-04",
+      "fecha_limite_pago": "2026-07-31",
+      "fecha_limite_pago_origen": "inferida_fin_de_mes",
+      "estado": "pagado",
+      "estado_negocio": "pagado",
+      "created_at": "2026-07-04 10:00:00",
+      "fuente_foto": "zip2/18.09.48 (1).jpeg",
+      "line_items": [
+        {
+          "monto": 7700,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 13000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 20000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 6200,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2300,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 26900,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 19000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 17600,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2300,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 10000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 23000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 700,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 5000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 18500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 19500,
+          "descripcion": "fiado"
+        }
+      ],
+      "fecha_pago": "2026-07-25",
+      "fecha_pago_origen": "cuaderno"
+    },
+    {
+      "id_credito": 5014,
+      "id_cliente": 2009,
+      "id_tendero": 902,
+      "monto_total": 297900,
+      "saldo_pendiente": 297900,
+      "descripcion": "Cartón 3 agosto (incluye 89.600 en rojo)",
+      "fecha_credito": "2026-08-03",
+      "fecha_limite_pago": "2026-08-16",
+      "fecha_limite_pago_origen": "inferida_16_del_mes",
+      "estado": "vencido",
+      "estado_negocio": "vencido",
+      "created_at": "2026-08-03 10:00:00",
+      "fuente_foto": "zip2/18.09.48 (1).jpeg",
+      "line_items": [
+        {
+          "monto": 10000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 28000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 15700,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 4700,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 27200,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 20900,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 26300,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 1000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 8300,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 29300,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 89000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 21000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 5500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 11000,
+          "descripcion": "fiado"
+        }
+      ],
+      "fecha_pago": null,
+      "fecha_pago_origen": null
+    },
+    {
+      "id_credito": 5015,
+      "id_cliente": 2010,
+      "id_tendero": 902,
+      "monto_total": 681400,
+      "saldo_pendiente": 281400,
+      "descripcion": "Cartón 4 (montos altos)",
+      "fecha_credito": "2026-08-08",
+      "fecha_limite_pago": "2026-08-31",
+      "fecha_limite_pago_origen": "inferida_fin_de_mes",
+      "estado": "vigente",
+      "estado_negocio": "atrasado",
+      "created_at": "2026-08-08 10:00:00",
+      "fuente_foto": "zip2/18.09.48 (2).jpeg",
+      "line_items": [
+        {
+          "monto": 300000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 94000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 26600,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 26900,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 35300,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 20000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 68600,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 58400,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 51600,
+          "descripcion": "fiado"
+        }
+      ],
+      "fecha_pago": null,
+      "fecha_pago_origen": null
+    },
+    {
+      "id_credito": 5016,
+      "id_cliente": 2011,
+      "id_tendero": 903,
+      "monto_total": 55000,
+      "saldo_pendiente": 0,
+      "descripcion": "Dimax = 55.000",
+      "fecha_credito": "2026-07-10",
+      "fecha_limite_pago": "2026-07-16",
+      "fecha_limite_pago_origen": "inferida_16_del_mes",
+      "estado": "pagado",
+      "estado_negocio": "pagado",
+      "created_at": "2026-07-10 10:00:00",
+      "fuente_foto": "zip3/18.09.28.jpeg",
+      "line_items": [
+        {
+          "monto": 55000,
+          "descripcion": "saldo anotado"
+        }
+      ],
+      "fecha_pago": "2026-07-16",
+      "fecha_pago_origen": "inferida_julio_agosto"
+    },
+    {
+      "id_credito": 5017,
+      "id_cliente": 2012,
+      "id_tendero": 903,
+      "monto_total": 300000,
+      "saldo_pendiente": 300000,
+      "descripcion": "Alexis = 300.000",
+      "fecha_credito": "2026-07-10",
+      "fecha_limite_pago": "2026-07-31",
+      "fecha_limite_pago_origen": "inferida_fin_de_mes",
+      "estado": "vencido",
+      "estado_negocio": "vencido",
+      "created_at": "2026-07-10 10:00:00",
+      "fuente_foto": "zip3/18.09.28.jpeg",
+      "line_items": [
+        {
+          "monto": 300000,
+          "descripcion": "saldo anotado"
+        }
+      ],
+      "fecha_pago": null,
+      "fecha_pago_origen": null
+    },
+    {
+      "id_credito": 5018,
+      "id_cliente": 2013,
+      "id_tendero": 903,
+      "monto_total": 66000,
+      "saldo_pendiente": 0,
+      "descripcion": "Isaias suma de cargos",
+      "fecha_credito": "2026-08-05",
+      "fecha_limite_pago": "2026-08-16",
+      "fecha_limite_pago_origen": "inferida_16_del_mes",
+      "estado": "pagado",
+      "estado_negocio": "pagado",
+      "created_at": "2026-08-05 10:00:00",
+      "fuente_foto": "zip3/18.09.28.jpeg",
+      "line_items": [
+        {
+          "monto": 8000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2900,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 3000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 1800,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2800,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 3000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 11500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 4300,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 3000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2200,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 4500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 1500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 1500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 1000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 700,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 800,
+          "descripcion": "fiado"
+        }
+      ],
+      "fecha_pago": "2026-08-14",
+      "fecha_pago_origen": "inferida_julio_agosto"
+    },
+    {
+      "id_credito": 5019,
+      "id_cliente": 2014,
+      "id_tendero": 903,
+      "monto_total": 48600,
+      "saldo_pendiente": 48600,
+      "descripcion": "Licho suma de cargos",
+      "fecha_credito": "2026-08-06",
+      "fecha_limite_pago": "2026-08-31",
+      "fecha_limite_pago_origen": "inferida_fin_de_mes",
+      "estado": "vigente",
+      "estado_negocio": "atrasado",
+      "created_at": "2026-08-06 10:00:00",
+      "fuente_foto": "zip3/18.09.28.jpeg",
+      "line_items": [
+        {
+          "monto": 4000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 5000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 6000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 4500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 1500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 3500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 4200,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 3000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2800,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 3500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 3500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 7100,
+          "descripcion": "fiado"
+        }
+      ],
+      "fecha_pago": null,
+      "fecha_pago_origen": null
+    },
+    {
+      "id_credito": 5020,
+      "id_cliente": 2015,
+      "id_tendero": 903,
+      "monto_total": 44600,
+      "saldo_pendiente": 0,
+      "descripcion": "Beto = 44.600",
+      "fecha_credito": "2026-08-09",
+      "fecha_limite_pago": "2026-08-16",
+      "fecha_limite_pago_origen": "inferida_16_del_mes",
+      "estado": "pagado",
+      "estado_negocio": "pagado",
+      "created_at": "2026-08-09 10:00:00",
+      "fuente_foto": "zip3/18.09.28.jpeg",
+      "line_items": [
+        {
+          "monto": 44600,
+          "descripcion": "saldo anotado"
+        }
+      ],
+      "fecha_pago": "2026-08-15",
+      "fecha_pago_origen": "inferida_julio_agosto"
+    },
+    {
+      "id_credito": 5021,
+      "id_cliente": 2016,
+      "id_tendero": 903,
+      "monto_total": 98800,
+      "saldo_pendiente": 48800,
+      "descripcion": "Chavela 98.800 - abono 50.000 = 48.800",
+      "fecha_credito": "2026-07-20",
+      "fecha_limite_pago": "2026-07-31",
+      "fecha_limite_pago_origen": "inferida_fin_de_mes",
+      "estado": "vencido",
+      "estado_negocio": "vencido",
+      "created_at": "2026-07-20 10:00:00",
+      "fuente_foto": "zip3/18.09.28.jpeg",
+      "line_items": [
+        {
+          "monto": 68800,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 7500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 5000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 5000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 5000,
+          "descripcion": "fiado"
+        }
+      ],
+      "fecha_pago": null,
+      "fecha_pago_origen": "cuaderno"
+    },
+    {
+      "id_credito": 5022,
+      "id_cliente": 2017,
+      "id_tendero": 903,
+      "monto_total": 123000,
+      "saldo_pendiente": 123000,
+      "descripcion": "Carolay = 123.000",
+      "fecha_credito": "2026-08-02",
+      "fecha_limite_pago": "2026-08-16",
+      "fecha_limite_pago_origen": "inferida_16_del_mes",
+      "estado": "vencido",
+      "estado_negocio": "vencido",
+      "created_at": "2026-08-02 10:00:00",
+      "fuente_foto": "zip3/18.09.28.jpeg",
+      "line_items": [
+        {
+          "monto": 123000,
+          "descripcion": "saldo anotado"
+        }
+      ],
+      "fecha_pago": null,
+      "fecha_pago_origen": null
+    },
+    {
+      "id_credito": 5023,
+      "id_cliente": 2018,
+      "id_tendero": 903,
+      "monto_total": 30000,
+      "saldo_pendiente": 30000,
+      "descripcion": "Cachaca saldo vigente 20.000+10.000 (tachado previo)",
+      "fecha_credito": "2026-08-11",
+      "fecha_limite_pago": "2026-08-31",
+      "fecha_limite_pago_origen": "inferida_fin_de_mes",
+      "estado": "vigente",
+      "estado_negocio": "atrasado",
+      "created_at": "2026-08-11 10:00:00",
+      "fuente_foto": "zip3/18.09.28.jpeg",
+      "line_items": [
+        {
+          "monto": 20000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 10000,
+          "descripcion": "fiado"
+        }
+      ],
+      "fecha_pago": null,
+      "fecha_pago_origen": null
+    },
+    {
+      "id_credito": 5024,
+      "id_cliente": 2019,
+      "id_tendero": 903,
+      "monto_total": 183700,
+      "saldo_pendiente": 0,
+      "descripcion": "Daniel = 183.700",
+      "fecha_credito": "2026-07-22",
+      "fecha_limite_pago": "2026-07-16",
+      "fecha_limite_pago_origen": "inferida_16_del_mes",
+      "estado": "pagado",
+      "estado_negocio": "pagado",
+      "created_at": "2026-07-22 10:00:00",
+      "fuente_foto": "zip3/18.09.28.jpeg",
+      "line_items": [
+        {
+          "monto": 183700,
+          "descripcion": "saldo anotado"
+        }
+      ],
+      "fecha_pago": "2026-08-01",
+      "fecha_pago_origen": "inferida_julio_agosto"
+    },
+    {
+      "id_credito": 5025,
+      "id_cliente": 2020,
+      "id_tendero": 903,
+      "monto_total": 420800,
+      "saldo_pendiente": 420800,
+      "descripcion": "Fabian cuenta larga",
+      "fecha_credito": "2026-07-06",
+      "fecha_limite_pago": "2026-07-31",
+      "fecha_limite_pago_origen": "inferida_fin_de_mes",
+      "estado": "vencido",
+      "estado_negocio": "vencido",
+      "created_at": "2026-07-06 10:00:00",
+      "fuente_foto": "zip3/18.09.28 (1).jpeg",
+      "line_items": [
+        {
+          "monto": 349300,
+          "descripcion": "saldo arrastre"
+        },
+        {
+          "monto": 14800,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 7000,
+          "descripcion": "coca cola"
+        },
+        {
+          "monto": 3500,
+          "descripcion": "coca cola"
+        },
+        {
+          "monto": 3500,
+          "descripcion": "coca cola"
+        },
+        {
+          "monto": 4500,
+          "descripcion": "trululu"
+        },
+        {
+          "monto": 3500,
+          "descripcion": "coca cola"
+        },
+        {
+          "monto": 7000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 7000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 15700,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 3000,
+          "descripcion": "agua"
+        }
+      ],
+      "fecha_pago": null,
+      "fecha_pago_origen": null
+    },
+    {
+      "id_credito": 5026,
+      "id_cliente": 2021,
+      "id_tendero": 903,
+      "monto_total": 156800,
+      "saldo_pendiente": 76800,
+      "descripcion": "Compa",
+      "fecha_credito": "2026-08-04",
+      "fecha_limite_pago": "2026-08-16",
+      "fecha_limite_pago_origen": "inferida_16_del_mes",
+      "estado": "vencido",
+      "estado_negocio": "vencido",
+      "created_at": "2026-08-04 10:00:00",
+      "fuente_foto": "zip3/18.09.28 (2).jpeg",
+      "line_items": [
+        {
+          "monto": 151800,
+          "descripcion": "saldo"
+        },
+        {
+          "monto": 5000,
+          "descripcion": "fiado"
+        }
+      ],
+      "fecha_pago": null,
+      "fecha_pago_origen": null
+    },
+    {
+      "id_credito": 5027,
+      "id_cliente": 2022,
+      "id_tendero": 903,
+      "monto_total": 137600,
+      "saldo_pendiente": 0,
+      "descripcion": "Viviana julio",
+      "fecha_credito": "2026-07-02",
+      "fecha_limite_pago": "2026-07-16",
+      "fecha_limite_pago_origen": "inferida_16_del_mes",
+      "estado": "pagado",
+      "estado_negocio": "pagado",
+      "created_at": "2026-07-02 10:00:00",
+      "fuente_foto": "zip3/18.09.29.jpeg",
+      "line_items": [
+        {
+          "monto": 20000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 5600,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 5000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 4500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 3700,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 3600,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 1600,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 4000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 4000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 3000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 5700,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 7500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2100,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 4000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 3000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 3000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 10000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 7200,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 3000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 7700,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 4700,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2800,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 1900,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 5000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 9000,
+          "descripcion": "fiado"
+        }
+      ],
+      "fecha_pago": "2026-07-14",
+      "fecha_pago_origen": "inferida_julio_agosto"
+    },
+    {
+      "id_credito": 5028,
+      "id_cliente": 2022,
+      "id_tendero": 903,
+      "monto_total": 129300,
+      "saldo_pendiente": 129300,
+      "descripcion": "Viviana agosto",
+      "fecha_credito": "2026-08-05",
+      "fecha_limite_pago": "2026-08-31",
+      "fecha_limite_pago_origen": "inferida_fin_de_mes",
+      "estado": "vigente",
+      "estado_negocio": "atrasado",
+      "created_at": "2026-08-05 10:00:00",
+      "fuente_foto": "zip3/18.09.29.jpeg",
+      "line_items": [
+        {
+          "monto": 2000,
+          "descripcion": "chocolatina"
+        },
+        {
+          "monto": 2000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 1800,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 4500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 6800,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 4700,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 7500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 1800,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 8500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 5000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 3400,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 4000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 7200,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 11000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 3000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 5500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 4600,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 16000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 5000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 5000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 4000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 8000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 5600,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2400,
+          "descripcion": "fiado"
+        }
+      ],
+      "fecha_pago": null,
+      "fecha_pago_origen": null
+    },
+    {
+      "id_credito": 5029,
+      "id_cliente": 2023,
+      "id_tendero": 903,
+      "monto_total": 295600,
+      "saldo_pendiente": 0,
+      "descripcion": "Cerdo ciclos tachados julio",
+      "fecha_credito": "2026-07-07",
+      "fecha_limite_pago": "2026-07-31",
+      "fecha_limite_pago_origen": "inferida_fin_de_mes",
+      "estado": "pagado",
+      "estado_negocio": "pagado",
+      "created_at": "2026-07-07 10:00:00",
+      "fuente_foto": "zip3/18.09.29 (1).jpeg",
+      "line_items": [
+        {
+          "monto": 20600,
+          "descripcion": "fiado (tachado/pagado)"
+        },
+        {
+          "monto": 30400,
+          "descripcion": "fiado (tachado/pagado)"
+        },
+        {
+          "monto": 20000,
+          "descripcion": "fiado (tachado/pagado)"
+        },
+        {
+          "monto": 12000,
+          "descripcion": "fiado (tachado/pagado)"
+        },
+        {
+          "monto": 5400,
+          "descripcion": "fiado (tachado/pagado)"
+        },
+        {
+          "monto": 36700,
+          "descripcion": "fiado (tachado/pagado)"
+        },
+        {
+          "monto": 14300,
+          "descripcion": "fiado (tachado/pagado)"
+        },
+        {
+          "monto": 35800,
+          "descripcion": "fiado (tachado/pagado)"
+        },
+        {
+          "monto": 14500,
+          "descripcion": "fiado (tachado/pagado)"
+        },
+        {
+          "monto": 8400,
+          "descripcion": "fiado (tachado/pagado)"
+        },
+        {
+          "monto": 18400,
+          "descripcion": "fiado (tachado/pagado)"
+        },
+        {
+          "monto": 35500,
+          "descripcion": "fiado (tachado/pagado)"
+        },
+        {
+          "monto": 14700,
+          "descripcion": "fiado (tachado/pagado)"
+        },
+        {
+          "monto": 5800,
+          "descripcion": "fiado (tachado/pagado)"
+        },
+        {
+          "monto": 2600,
+          "descripcion": "fiado (tachado/pagado)"
+        },
+        {
+          "monto": 20500,
+          "descripcion": "fiado (tachado/pagado)"
+        }
+      ],
+      "fecha_pago": "2026-07-28",
+      "fecha_pago_origen": "cuaderno"
+    },
+    {
+      "id_credito": 5030,
+      "id_cliente": 2023,
+      "id_tendero": 903,
+      "monto_total": 177800,
+      "saldo_pendiente": 177800,
+      "descripcion": "Cerdo saldo vigente (rojo/azul reciente)",
+      "fecha_credito": "2026-08-12",
+      "fecha_limite_pago": "2026-08-16",
+      "fecha_limite_pago_origen": "inferida_16_del_mes",
+      "estado": "vencido",
+      "estado_negocio": "vencido",
+      "created_at": "2026-08-12 10:00:00",
+      "fuente_foto": "zip3/18.09.29 (1).jpeg",
+      "line_items": [
+        {
+          "monto": 55500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 21000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 19000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 19000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 17100,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 33000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 13200,
+          "descripcion": "fiado"
+        }
+      ],
+      "fecha_pago": null,
+      "fecha_pago_origen": null
+    },
+    {
+      "id_credito": 5031,
+      "id_cliente": 2024,
+      "id_tendero": 903,
+      "monto_total": 480400,
+      "saldo_pendiente": 385900,
+      "descripcion": "Flaca 2a patería",
+      "fecha_credito": "2026-07-09",
+      "fecha_limite_pago": "2026-07-16",
+      "fecha_limite_pago_origen": "inferida_16_del_mes",
+      "estado": "vencido",
+      "estado_negocio": "vencido",
+      "created_at": "2026-07-09 10:00:00",
+      "fuente_foto": "zip3/18.09.29 (2).jpeg",
+      "line_items": [
+        {
+          "monto": 200000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 6000,
+          "descripcion": "coca cola"
+        },
+        {
+          "monto": 6000,
+          "descripcion": "coca cola"
+        },
+        {
+          "monto": 1500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 4800,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 9500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 4500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 1400,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 3400,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 19700,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 10400,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 7100,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 25000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 12300,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 14800,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 14600,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 15000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 8000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 10000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 23900,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 8000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 19800,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 4100,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 12500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 18600,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 17500,
+          "descripcion": "fiado"
+        }
+      ],
+      "fecha_pago": null,
+      "fecha_pago_origen": "cuaderno"
+    },
+    {
+      "id_credito": 5032,
+      "id_cliente": 2025,
+      "id_tendero": 903,
+      "monto_total": 627200,
+      "saldo_pendiente": 427200,
+      "descripcion": "Jose",
+      "fecha_credito": "2026-07-03",
+      "fecha_limite_pago": "2026-07-31",
+      "fecha_limite_pago_origen": "inferida_fin_de_mes",
+      "estado": "vencido",
+      "estado_negocio": "vencido",
+      "created_at": "2026-07-03 10:00:00",
+      "fuente_foto": "zip3/18.09.30.jpeg",
+      "line_items": [
+        {
+          "monto": 2000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 20000,
+          "descripcion": "nari"
+        },
+        {
+          "monto": 6000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 20000,
+          "descripcion": "nari"
+        },
+        {
+          "monto": 150000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 6000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 5000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 30000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 40000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 22500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 52400,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 10000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 30000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 6000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 10000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 60000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 10000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 25000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 4000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 20000,
+          "descripcion": "nari"
+        },
+        {
+          "monto": 20000,
+          "descripcion": "nari"
+        },
+        {
+          "monto": 300,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 40000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 6000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 30000,
+          "descripcion": "fiado"
+        }
+      ],
+      "fecha_pago": null,
+      "fecha_pago_origen": null
+    },
+    {
+      "id_credito": 5033,
+      "id_cliente": 2026,
+      "id_tendero": 903,
+      "monto_total": 66400,
+      "saldo_pendiente": 61900,
+      "descripcion": "Efrain",
+      "fecha_credito": "2026-08-01",
+      "fecha_limite_pago": "2026-08-16",
+      "fecha_limite_pago_origen": "inferida_16_del_mes",
+      "estado": "vencido",
+      "estado_negocio": "vencido",
+      "created_at": "2026-08-01 10:00:00",
+      "fuente_foto": "zip3/18.09.30.jpeg",
+      "line_items": [
+        {
+          "monto": 30000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 16000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 5000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 8800,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 1600,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 5000,
+          "descripcion": "fiado"
+        }
+      ],
+      "fecha_pago": null,
+      "fecha_pago_origen": "cuaderno"
+    },
+    {
+      "id_credito": 5034,
+      "id_cliente": 2027,
+      "id_tendero": 903,
+      "monto_total": 497500,
+      "saldo_pendiente": 0,
+      "descripcion": "Lenis julio (subtotales tachados)",
+      "fecha_credito": "2026-07-05",
+      "fecha_limite_pago": "2026-07-16",
+      "fecha_limite_pago_origen": "inferida_16_del_mes",
+      "estado": "pagado",
+      "estado_negocio": "pagado",
+      "created_at": "2026-07-05 10:00:00",
+      "fuente_foto": "zip3/18.09.30 (1).jpeg",
+      "line_items": [
+        {
+          "monto": 15200,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 25600,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 11800,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 17400,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 14100,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 15100,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 97200,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 16300,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 8500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 14600,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 25400,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 65300,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 8500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 18500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 12200,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 15400,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 16300,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 15500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 84600,
+          "descripcion": "fiado"
+        }
+      ],
+      "fecha_pago": "2026-07-15",
+      "fecha_pago_origen": "cuaderno"
+    },
+    {
+      "id_credito": 5035,
+      "id_cliente": 2027,
+      "id_tendero": 903,
+      "monto_total": 257300,
+      "saldo_pendiente": 257300,
+      "descripcion": "Lenis agosto",
+      "fecha_credito": "2026-08-07",
+      "fecha_limite_pago": "2026-08-31",
+      "fecha_limite_pago_origen": "inferida_fin_de_mes",
+      "estado": "vigente",
+      "estado_negocio": "atrasado",
+      "created_at": "2026-08-07 10:00:00",
+      "fuente_foto": "zip3/18.09.30 (1).jpeg",
+      "line_items": [
+        {
+          "monto": 37000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 14600,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2400,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 6200,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 65400,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 26700,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 16300,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 8600,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 19200,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 23000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 17700,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 10700,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 9500,
+          "descripcion": "fiado"
+        }
+      ],
+      "fecha_pago": null,
+      "fecha_pago_origen": null
+    },
+    {
+      "id_credito": 5036,
+      "id_cliente": 2028,
+      "id_tendero": 903,
+      "monto_total": 145600,
+      "saldo_pendiente": 80600,
+      "descripcion": "Eileen Monaco (tachados previos omitidos)",
+      "fecha_credito": "2026-08-13",
+      "fecha_limite_pago": "2026-08-16",
+      "fecha_limite_pago_origen": "inferida_16_del_mes",
+      "estado": "vencido",
+      "estado_negocio": "vencido",
+      "created_at": "2026-08-13 10:00:00",
+      "fuente_foto": "zip3/18.09.30 (2).jpeg",
+      "line_items": [
+        {
+          "monto": 6500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 40300,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 29500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 21000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 22800,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 25500,
+          "descripcion": "fiado"
+        }
+      ],
+      "fecha_pago": null,
+      "fecha_pago_origen": null
+    },
+    {
+      "id_credito": 5037,
+      "id_cliente": 2029,
+      "id_tendero": 903,
+      "monto_total": 218300,
+      "saldo_pendiente": 74600,
+      "descripcion": "Neque (cuenta densa; se usan subtotales del cuaderno)",
+      "fecha_credito": "2026-07-01",
+      "fecha_limite_pago": "2026-07-31",
+      "fecha_limite_pago_origen": "inferida_fin_de_mes",
+      "estado": "vencido",
+      "estado_negocio": "vencido",
+      "created_at": "2026-07-01 10:00:00",
+      "fuente_foto": "zip3/18.09.30 (3).jpeg",
+      "line_items": [
+        {
+          "monto": 143700,
+          "descripcion": "subtotal anotado"
+        },
+        {
+          "monto": 74600,
+          "descripcion": "subtotal anotado"
+        }
+      ],
+      "fecha_pago": null,
+      "fecha_pago_origen": null
+    },
+    {
+      "id_credito": 5038,
+      "id_cliente": 2030,
+      "id_tendero": 903,
+      "monto_total": 374200,
+      "saldo_pendiente": 374200,
+      "descripcion": "Kelly",
+      "fecha_credito": "2026-08-03",
+      "fecha_limite_pago": "2026-08-16",
+      "fecha_limite_pago_origen": "inferida_16_del_mes",
+      "estado": "vencido",
+      "estado_negocio": "vencido",
+      "created_at": "2026-08-03 10:00:00",
+      "fuente_foto": "zip3/18.09.30 (4).jpeg",
+      "line_items": [
+        {
+          "monto": 229900,
+          "descripcion": "saldo arrastre"
+        },
+        {
+          "monto": 21600,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 29000,
+          "descripcion": "cafe"
+        },
+        {
+          "monto": 45000,
+          "descripcion": "arroz"
+        },
+        {
+          "monto": 5000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 12500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 22200,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 7500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 1500,
+          "descripcion": "fiado"
+        }
+      ],
+      "fecha_pago": null,
+      "fecha_pago_origen": null
+    },
+    {
+      "id_credito": 5039,
+      "id_cliente": 2031,
+      "id_tendero": 903,
+      "monto_total": 23800,
+      "saldo_pendiente": 0,
+      "descripcion": "Delio (margen de página Kelly)",
+      "fecha_credito": "2026-08-14",
+      "fecha_limite_pago": "2026-08-31",
+      "fecha_limite_pago_origen": "inferida_fin_de_mes",
+      "estado": "pagado",
+      "estado_negocio": "pagado",
+      "created_at": "2026-08-14 10:00:00",
+      "fuente_foto": "zip3/18.09.30 (4).jpeg",
+      "line_items": [
+        {
+          "monto": 15000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 4800,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 4000,
+          "descripcion": "fiado"
+        }
+      ],
+      "fecha_pago": "2026-08-25",
+      "fecha_pago_origen": "inferida_julio_agosto"
+    },
+    {
+      "id_credito": 5040,
+      "id_cliente": 2032,
+      "id_tendero": 903,
+      "monto_total": 381200,
+      "saldo_pendiente": 0,
+      "descripcion": "Susana julio",
+      "fecha_credito": "2026-07-08",
+      "fecha_limite_pago": "2026-07-16",
+      "fecha_limite_pago_origen": "inferida_16_del_mes",
+      "estado": "pagado",
+      "estado_negocio": "pagado",
+      "created_at": "2026-07-08 10:00:00",
+      "fuente_foto": "zip3/18.09.30 (5).jpeg",
+      "line_items": [
+        {
+          "monto": 27800,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 19000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 17000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 13000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 10300,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 5700,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 14800,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 12000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 14000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 14000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 3800,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2600,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 34700,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 17000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 12700,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 4000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 39700,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 5400,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 25400,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 24200,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 13300,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 1800,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 10000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 3500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 3500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 9000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 18500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 4500,
+          "descripcion": "fiado"
+        }
+      ],
+      "fecha_pago": "2026-07-16",
+      "fecha_pago_origen": "inferida_julio_agosto"
+    },
+    {
+      "id_credito": 5041,
+      "id_cliente": 2032,
+      "id_tendero": 903,
+      "monto_total": 288300,
+      "saldo_pendiente": 238300,
+      "descripcion": "Susana agosto",
+      "fecha_credito": "2026-08-02",
+      "fecha_limite_pago": "2026-08-31",
+      "fecha_limite_pago_origen": "inferida_fin_de_mes",
+      "estado": "vigente",
+      "estado_negocio": "atrasado",
+      "created_at": "2026-08-02 10:00:00",
+      "fuente_foto": "zip3/18.09.30 (5).jpeg",
+      "line_items": [
+        {
+          "monto": 10300,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 9000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 14600,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 15500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 8000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 6000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 30800,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2600,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 22900,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 51900,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 5100,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 6000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 14700,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 13900,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 10000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2700,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 7400,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 15000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 21800,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 5600,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 10000,
+          "descripcion": "fiado"
+        }
+      ],
+      "fecha_pago": null,
+      "fecha_pago_origen": null
+    },
+    {
+      "id_credito": 5042,
+      "id_cliente": 2033,
+      "id_tendero": 903,
+      "monto_total": 30700,
+      "saldo_pendiente": 0,
+      "descripcion": "Parra (columna derecha de Susana)",
+      "fecha_credito": "2026-08-09",
+      "fecha_limite_pago": "2026-08-16",
+      "fecha_limite_pago_origen": "inferida_16_del_mes",
+      "estado": "pagado",
+      "estado_negocio": "pagado",
+      "created_at": "2026-08-09 10:00:00",
+      "fuente_foto": "zip3/18.09.30 (5).jpeg",
+      "line_items": [
+        {
+          "monto": 1000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 1000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 15000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 8200,
+          "descripcion": "fiado"
+        }
+      ],
+      "fecha_pago": "2026-08-16",
+      "fecha_pago_origen": "inferida_julio_agosto"
+    },
+    {
+      "id_credito": 5043,
+      "id_cliente": 2034,
+      "id_tendero": 903,
+      "monto_total": 347100,
+      "saldo_pendiente": 347100,
+      "descripcion": "Negro",
+      "fecha_credito": "2026-08-06",
+      "fecha_limite_pago": "2026-08-31",
+      "fecha_limite_pago_origen": "inferida_fin_de_mes",
+      "estado": "vigente",
+      "estado_negocio": "atrasado",
+      "created_at": "2026-08-06 10:00:00",
+      "fuente_foto": "zip3/18.09.31.jpeg",
+      "line_items": [
+        {
+          "monto": 250000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 3500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 21900,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 17100,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 16100,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 3400,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 18000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 17100,
+          "descripcion": "fiado"
+        }
+      ],
+      "fecha_pago": null,
+      "fecha_pago_origen": null
+    },
+    {
+      "id_credito": 5044,
+      "id_cliente": 2035,
+      "id_tendero": 903,
+      "monto_total": 96300,
+      "saldo_pendiente": 56300,
+      "descripcion": "Constanza",
+      "fecha_credito": "2026-08-15",
+      "fecha_limite_pago": "2026-08-16",
+      "fecha_limite_pago_origen": "inferida_16_del_mes",
+      "estado": "vencido",
+      "estado_negocio": "vencido",
+      "created_at": "2026-08-15 10:00:00",
+      "fuente_foto": "zip3/18.09.31 (1).jpeg",
+      "line_items": [
+        {
+          "monto": 63700,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 4700,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 6500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 400,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 7500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 6500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2500,
+          "descripcion": "fiado"
+        }
+      ],
+      "fecha_pago": null,
+      "fecha_pago_origen": null
+    },
+    {
+      "id_credito": 5045,
+      "id_cliente": 2036,
+      "id_tendero": 903,
+      "monto_total": 85400,
+      "saldo_pendiente": 85400,
+      "descripcion": "Rubí (tinta roja, cuenta reciente)",
+      "fecha_credito": "2026-08-18",
+      "fecha_limite_pago": "2026-08-31",
+      "fecha_limite_pago_origen": "inferida_fin_de_mes",
+      "estado": "vigente",
+      "estado_negocio": "atrasado",
+      "created_at": "2026-08-18 10:00:00",
+      "fuente_foto": "zip3/18.09.31 (2).jpeg",
+      "line_items": [
+        {
+          "monto": 2500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 1000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 5000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 5500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 3500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 12000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 3500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 7900,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 6000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 3800,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 8000,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 4700,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 5900,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 2500,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 6100,
+          "descripcion": "fiado"
+        },
+        {
+          "monto": 3500,
+          "descripcion": "fiado"
+        }
+      ],
+      "fecha_pago": null,
+      "fecha_pago_origen": null
+    }
+  ],
+  "abonos": [
+    {
+      "id_abono": 8001,
+      "id_credito": 5001,
+      "id_cliente": 2001,
+      "monto": 168330,
+      "fecha_abono": "2026-07-14",
+      "fecha_abono_origen": "inferida_julio_agosto",
+      "created_at": "2026-07-14 16:00:00"
+    },
+    {
+      "id_abono": 8002,
+      "id_credito": 5004,
+      "id_cliente": 2002,
+      "monto": 300000,
+      "fecha_abono": "2026-07-28",
+      "fecha_abono_origen": "inferida_julio_agosto",
+      "created_at": "2026-07-28 16:00:00"
+    },
+    {
+      "id_abono": 8003,
+      "id_credito": 5006,
+      "id_cliente": 2003,
+      "monto": 59000,
+      "fecha_abono": "2026-07-20",
+      "fecha_abono_origen": "cuaderno_total_parcial",
+      "created_at": "2026-07-20 16:00:00"
+    },
+    {
+      "id_abono": 8004,
+      "id_credito": 5006,
+      "id_cliente": 2003,
+      "monto": 6000,
+      "fecha_abono": "2026-08-05",
+      "fecha_abono_origen": "anotacion_pagado",
+      "created_at": "2026-08-05 16:00:00"
+    },
+    {
+      "id_abono": 8005,
+      "id_credito": 5007,
+      "id_cliente": 2004,
+      "monto": 65000,
+      "fecha_abono": "2026-08-14",
+      "fecha_abono_origen": "inferida_julio_agosto",
+      "created_at": "2026-08-14 16:00:00"
+    },
+    {
+      "id_abono": 8006,
+      "id_credito": 5009,
+      "id_cliente": 2006,
+      "monto": 300000,
+      "fecha_abono": "2026-08-12",
+      "fecha_abono_origen": "inferida_julio_agosto",
+      "created_at": "2026-08-12 16:00:00"
+    },
+    {
+      "id_abono": 8007,
+      "id_credito": 5010,
+      "id_cliente": 2007,
+      "monto": 323500,
+      "fecha_abono": "2026-07-30",
+      "fecha_abono_origen": "inferida_julio_agosto",
+      "created_at": "2026-07-30 16:00:00"
+    },
+    {
+      "id_abono": 8008,
+      "id_credito": 5011,
+      "id_cliente": 2008,
+      "monto": 220000,
+      "fecha_abono": "2026-07-15",
+      "fecha_abono_origen": "inferida_julio_agosto",
+      "created_at": "2026-07-15 16:00:00"
+    },
+    {
+      "id_abono": 8009,
+      "id_credito": 5013,
+      "id_cliente": 2009,
+      "monto": 10000,
+      "fecha_abono": "2026-07-18",
+      "fecha_abono_origen": "cuaderno_=10000",
+      "created_at": "2026-07-18 16:00:00"
+    },
+    {
+      "id_abono": 8010,
+      "id_credito": 5013,
+      "id_cliente": 2009,
+      "monto": 182000,
+      "fecha_abono": "2026-07-25",
+      "fecha_abono_origen": "inferida_julio_agosto",
+      "created_at": "2026-07-25 16:00:00"
+    },
+    {
+      "id_abono": 8011,
+      "id_credito": 5015,
+      "id_cliente": 2010,
+      "monto": 400000,
+      "fecha_abono": "2026-08-20",
+      "fecha_abono_origen": "inferida_julio_agosto",
+      "created_at": "2026-08-20 16:00:00"
+    },
+    {
+      "id_abono": 8012,
+      "id_credito": 5016,
+      "id_cliente": 2011,
+      "monto": 55000,
+      "fecha_abono": "2026-07-16",
+      "fecha_abono_origen": "inferida_julio_agosto",
+      "created_at": "2026-07-16 16:00:00"
+    },
+    {
+      "id_abono": 8013,
+      "id_credito": 5018,
+      "id_cliente": 2013,
+      "monto": 66000,
+      "fecha_abono": "2026-08-14",
+      "fecha_abono_origen": "inferida_julio_agosto",
+      "created_at": "2026-08-14 16:00:00"
+    },
+    {
+      "id_abono": 8014,
+      "id_credito": 5020,
+      "id_cliente": 2015,
+      "monto": 44600,
+      "fecha_abono": "2026-08-15",
+      "fecha_abono_origen": "inferida_julio_agosto",
+      "created_at": "2026-08-15 16:00:00"
+    },
+    {
+      "id_abono": 8015,
+      "id_credito": 5021,
+      "id_cliente": 2016,
+      "monto": 50000,
+      "fecha_abono": "2026-08-08",
+      "fecha_abono_origen": "cuaderno_abono_50000",
+      "created_at": "2026-08-08 16:00:00"
+    },
+    {
+      "id_abono": 8016,
+      "id_credito": 5024,
+      "id_cliente": 2019,
+      "monto": 183700,
+      "fecha_abono": "2026-08-01",
+      "fecha_abono_origen": "inferida_julio_agosto",
+      "created_at": "2026-08-01 16:00:00"
+    },
+    {
+      "id_abono": 8017,
+      "id_credito": 5026,
+      "id_cliente": 2021,
+      "monto": 80000,
+      "fecha_abono": "2026-08-16",
+      "fecha_abono_origen": "inferida_julio_agosto",
+      "created_at": "2026-08-16 16:00:00"
+    },
+    {
+      "id_abono": 8018,
+      "id_credito": 5027,
+      "id_cliente": 2022,
+      "monto": 137600,
+      "fecha_abono": "2026-07-14",
+      "fecha_abono_origen": "inferida_julio_agosto",
+      "created_at": "2026-07-14 16:00:00"
+    },
+    {
+      "id_abono": 8019,
+      "id_credito": 5029,
+      "id_cliente": 2023,
+      "monto": 295600,
+      "fecha_abono": "2026-07-28",
+      "fecha_abono_origen": "tachado_en_cuaderno",
+      "created_at": "2026-07-28 16:00:00"
+    },
+    {
+      "id_abono": 8020,
+      "id_credito": 5031,
+      "id_cliente": 2024,
+      "monto": 50000,
+      "fecha_abono": "2026-08-10",
+      "fecha_abono_origen": "cuaderno_abono_50000",
+      "created_at": "2026-08-10 16:00:00"
+    },
+    {
+      "id_abono": 8021,
+      "id_credito": 5031,
+      "id_cliente": 2024,
+      "monto": 14500,
+      "fecha_abono": "2026-08-18",
+      "fecha_abono_origen": "rojo_posible_abono",
+      "created_at": "2026-08-18 16:00:00"
+    },
+    {
+      "id_abono": 8022,
+      "id_credito": 5031,
+      "id_cliente": 2024,
+      "monto": 30000,
+      "fecha_abono": "2026-08-22",
+      "fecha_abono_origen": "rojo_posible_abono",
+      "created_at": "2026-08-22 16:00:00"
+    },
+    {
+      "id_abono": 8023,
+      "id_credito": 5032,
+      "id_cliente": 2025,
+      "monto": 200000,
+      "fecha_abono": "2026-07-16",
+      "fecha_abono_origen": "inferida_julio_agosto",
+      "created_at": "2026-07-16 16:00:00"
+    },
+    {
+      "id_abono": 8024,
+      "id_credito": 5033,
+      "id_cliente": 2026,
+      "monto": 4500,
+      "fecha_abono": "2026-08-09",
+      "fecha_abono_origen": "cuaderno_abono_sando",
+      "created_at": "2026-08-09 16:00:00"
+    },
+    {
+      "id_abono": 8025,
+      "id_credito": 5034,
+      "id_cliente": 2027,
+      "monto": 497500,
+      "fecha_abono": "2026-07-15",
+      "fecha_abono_origen": "tachado_en_cuaderno",
+      "created_at": "2026-07-15 16:00:00"
+    },
+    {
+      "id_abono": 8026,
+      "id_credito": 5036,
+      "id_cliente": 2028,
+      "monto": 65000,
+      "fecha_abono": "2026-08-16",
+      "fecha_abono_origen": "inferida_julio_agosto",
+      "created_at": "2026-08-16 16:00:00"
+    },
+    {
+      "id_abono": 8027,
+      "id_credito": 5037,
+      "id_cliente": 2029,
+      "monto": 143700,
+      "fecha_abono": "2026-07-16",
+      "fecha_abono_origen": "inferida_julio_agosto",
+      "created_at": "2026-07-16 16:00:00"
+    },
+    {
+      "id_abono": 8028,
+      "id_credito": 5039,
+      "id_cliente": 2031,
+      "monto": 23800,
+      "fecha_abono": "2026-08-25",
+      "fecha_abono_origen": "inferida_julio_agosto",
+      "created_at": "2026-08-25 16:00:00"
+    },
+    {
+      "id_abono": 8029,
+      "id_credito": 5040,
+      "id_cliente": 2032,
+      "monto": 381200,
+      "fecha_abono": "2026-07-16",
+      "fecha_abono_origen": "inferida_julio_agosto",
+      "created_at": "2026-07-16 16:00:00"
+    },
+    {
+      "id_abono": 8030,
+      "id_credito": 5041,
+      "id_cliente": 2032,
+      "monto": 50000,
+      "fecha_abono": "2026-08-20",
+      "fecha_abono_origen": "inferida_julio_agosto",
+      "created_at": "2026-08-20 16:00:00"
+    },
+    {
+      "id_abono": 8031,
+      "id_credito": 5042,
+      "id_cliente": 2033,
+      "monto": 30700,
+      "fecha_abono": "2026-08-16",
+      "fecha_abono_origen": "inferida_julio_agosto",
+      "created_at": "2026-08-16 16:00:00"
+    },
+    {
+      "id_abono": 8032,
+      "id_credito": 5044,
+      "id_cliente": 2035,
+      "monto": 40000,
+      "fecha_abono": "2026-08-16",
+      "fecha_abono_origen": "inferida_julio_agosto",
+      "created_at": "2026-08-16 16:00:00"
+    }
+  ],
+  "resumen": {
+    "clientes": 36,
+    "creditos": 45,
+    "abonos": 32,
+    "por_estado_negocio": {
+      "pagado": 15,
+      "atrasado": 12,
+      "vencido": 18
+    },
+    "por_estado_bd": {
+      "pagado": 15,
+      "vigente": 12,
+      "vencido": 18
+    },
+    "monto_total_creditos": 10526730,
+    "saldo_pendiente_total": 6050800
+  }
+}

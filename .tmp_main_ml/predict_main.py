@@ -1,4 +1,4 @@
-import os
+﻿import os
 import pickle
 import threading
 import numpy as np
@@ -58,46 +58,38 @@ def health():
 
 
 class PredictRequest(BaseModel):
-    id_cliente: int | str
+    id_cliente: int
     # El scoring es por par (cliente, tendero). Opcional para tolerar un backend
-    # antiguo durante un despliegue escalonado; sin él se usan solo créditos del cliente.
-    id_tendero: int | str | None = None
+    # antiguo durante un despliegue escalonado; sin él se usa la fila más reciente.
+    id_tendero: int | None = None
 
 
 class RetrainRequest(BaseModel):
     evento: str = "manual"
 
 
-def compute_prediction(id_cliente, id_tendero=None):
-    """Predicción RF para un par (cliente, tendero). None si no hay modelo o cliente."""
+@app.post("/predict")
+def predict(req: PredictRequest):
     model_data = _get_model()
     if model_data is None:
-        return None
+        return {"error": "Modelo no entrenado. Ejecuta model.py primero."}
 
-    features = get_features(id_cliente, id_tendero)
+    features = get_features(req.id_cliente, req.id_tendero)
     if features is None:
-        return None
+        return {"error": "No se encontraron datos de scoring para este cliente"}
 
     X = np.array([features])
+    pred = model_data["model"].predict(X)[0]
     proba = model_data["model"].predict_proba(X)[0]
     confidence = float(np.max(proba))
 
-    le = model_data["label_encoder"]
-    pesos = {"bueno": 1.0, "regular": 0.5, "malo": 0.0, "bajo": 1.0, "medio": 0.5, "alto": 0.0}
-    score = 0.0
-    for i, cls_idx in enumerate(model_data["model"].classes_):
-        nombre = le.inverse_transform([cls_idx])[0]
-        score += float(proba[i]) * pesos.get(nombre, 0.0)
-    puntaje_rf = max(0, min(100, round(100 * score)))
+    nivel_riesgo = model_data["label_encoder"].inverse_transform([pred])[0]
 
-    if puntaje_rf >= 80:
-        nivel_riesgo = "bajo"
-    elif puntaje_rf >= 50:
-        nivel_riesgo = "medio"
-    else:
-        nivel_riesgo = "alto"
+    base_scores = {"bajo": 85, "medio": 55, "alto": 25}
+    puntaje_rf = int(base_scores.get(nivel_riesgo, 50) * confidence)
+    puntaje_rf = max(0, min(100, puntaje_rf))
 
-    base, saldo_pendiente = get_limit_data(id_cliente, id_tendero)
+    base, saldo_pendiente = get_limit_data(req.id_cliente, req.id_tendero)
 
     if nivel_riesgo == "bajo":
         factor = 1.5
@@ -108,8 +100,6 @@ def compute_prediction(id_cliente, id_tendero=None):
 
     limite = base * factor - saldo_pendiente
     limite = max(0.0, min(limite, 300000.0))
-    if limite == 0 and base == 0:
-        limite = 50000.0
 
     return {
         "nivel_riesgo": nivel_riesgo,
@@ -117,18 +107,6 @@ def compute_prediction(id_cliente, id_tendero=None):
         "limite_sugerido": float(limite),
         "confianza": round(confidence, 4),
     }
-
-
-@app.post("/predict")
-def predict(req: PredictRequest):
-    model_data = _get_model()
-    if model_data is None:
-        return {"error": "Modelo no entrenado. Ejecuta model.py primero."}
-
-    result = compute_prediction(req.id_cliente, req.id_tendero)
-    if result is None:
-        return {"error": "No se encontraron datos de scoring para este cliente"}
-    return result
 
 
 def _should_retrain() -> bool:

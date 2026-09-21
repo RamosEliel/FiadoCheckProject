@@ -32,7 +32,7 @@ Sistema_Fiado/
 │   ├── ml_service/           # Microservicio Python (FastAPI)
 │   │   ├── model.py                 # Entrenamiento del Random Forest
 │   │   ├── predict.py               # /predict y /ml/retrain
-│   │   ├── features.py              # Extracción de features y estado
+│   │   ├── features.py              # Features desde creditos/abonos y estado
 │   │   └── test_ml.py               # Verificación sin curl
 │   ├── postman/              # Colecciones de pruebas (ver sección Pruebas)
 │   └── scripts/              # Seeds y migraciones SQL
@@ -61,8 +61,8 @@ Registro y vinculación de clientes a un tendero mediante la tabla `tendero_clie
 ### Créditos y abonos
 Registro de fiados con fecha límite, abonos parciales o totales y actualización transaccional del saldo. Al liquidarse un crédito, el estado pasa a `pagado` automáticamente y se dispara el reentrenamiento del modelo.
 
-### Scoring crediticio
-Cuatro variables de 25 puntos cada una — puntualidad, cumplimiento, historial y antigüedad — que suman un puntaje de 0 a 100.
+### Scoring y recomendación IA
+La única fuente de `nivel_riesgo`, `puntaje` y `confianza` es el Random Forest. La tabla `scoring` guarda la última predicción por par (cliente, tendero). Un cliente sin créditos con ese tendero recibe puntaje 50, nivel medio, recomendación `con_precaucion` y límite de $50.000, sin llamar al modelo.
 
 | Nivel | Puntaje | Recomendación |
 |-------|---------|---------------|
@@ -70,12 +70,33 @@ Cuatro variables de 25 puntos cada una — puntualidad, cumplimiento, historial 
 | medio | 50–79 | con precaución |
 | alto | < 50 | rechazar |
 
-El **límite sugerido** se calcula como `max(0, min(base × factor − saldo_pendiente, 300.000))`, donde `base` es el promedio de los últimos 3 créditos cerrados y el factor es 1.5 / 1.0 / 0.5 según el nivel. Un cliente sin historial recibe puntaje 50, nivel medio y límite de $50.000.
+El **límite sugerido** es `max(0, min(base × factor − saldo_pendiente, 300.000))`, donde `base` es el promedio de los últimos 3 créditos cerrados y el factor es 1.5 / 1.0 / 0.5 según el nivel.
 
 ### Predicción con Random Forest
-Microservicio Python independiente que consume las mismas features desde la tabla `scoring`. La etiqueta de entrenamiento se deriva del puntaje por reglas, no del `nivel_riesgo` almacenado, para evitar un bucle de realimentación.
+Microservicio Python (`backend/ml_service/`) que lee `creditos`, `abonos` y `clientes` directo. Entrena con créditos **cerrados** (`pagado` o `vencido`): una fila por crédito.
 
-El reentrenamiento ocurre **por eventos**, no por tiempo: crédito pagado, mora superior a 30 días o scoring nuevo. El servicio verifica que el volumen de datos haya crecido al menos un 20% antes de reentrenar, y lo hace en segundo plano con *model swapping*: el modelo anterior sigue atendiendo peticiones mientras se entrena el nuevo.
+**Features** (calculables antes de otorgar un crédito nuevo; no usan monto ni plazo del crédito que se está evaluando):
+
+- `num_creditos_previos_cerrados`
+- `ratio_pagados_a_tiempo_previo`
+- `dias_atraso_promedio_previo` (`vencido` cuenta 31 días)
+- `antiguedad_meses` (registro del cliente hasta la fecha del crédito, en entrenamiento)
+
+**Etiqueta** (desenlace observado):
+
+- `bueno`: pagado y el último abono llegó dentro de `fecha_limite_pago`
+- `regular`: pagado con el último abono después del plazo
+- `malo`: el crédito quedó `vencido`
+
+`POST /predict` responde `nivel_riesgo` (`bajo` / `medio` / `alto`), `puntaje_rf` (0–100), `confianza` (0–1, probabilidad máxima entre las tres clases) y `limite_sugerido`. El puntaje pondera las probabilidades del bosque:
+
+```
+puntaje = round(100 × (P(bueno)×1.0 + P(regular)×0.5 + P(malo)×0.0))
+```
+
+El nivel de riesgo es el bucket de ese puntaje (tabla de arriba).
+
+El reentrenamiento ocurre **por eventos**, no por tiempo: crédito pagado o mora superior a 30 días. El servicio verifica que el volumen de créditos cerrados haya crecido al menos un 20% antes de reentrenar, y lo hace en segundo plano con *model swapping*: el modelo anterior sigue atendiendo peticiones mientras se entrena el nuevo. Entrenamiento inicial: `python model.py` (genera `modelo.pkl` y `ml_state.json`).
 
 ### Alertas y notificaciones
 Alertas clasificadas en `critica`, `proxima` e `informativa` según el rango de mora. Notificaciones push vía Expo con enlace profundo a la pantalla correspondiente.

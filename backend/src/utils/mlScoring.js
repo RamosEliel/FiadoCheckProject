@@ -13,12 +13,12 @@ async function callMLService(clienteId, idTendero) {
   return json;
 }
 
-async function persistMLPrediction(pool, clienteId, idTendero, nivelRiesgo, confianza, limiteSugerido) {
+async function persistMLPrediction(pool, clienteId, idTendero, nivelRiesgo, confianza, limiteSugerido, puntaje) {
   await pool.query(`
     UPDATE scoring
-    SET nivel_riesgo = $1, confianza = $2, limite_sugerido = $3
-    WHERE id_cliente = $4 AND id_tendero = $5
-  `, [nivelRiesgo, confianza, limiteSugerido, clienteId, idTendero]);
+    SET nivel_riesgo = $1, confianza = $2, limite_sugerido = $3, puntaje = $4, fecha_calculo = NOW()
+    WHERE id_cliente = $5 AND id_tendero = $6
+  `, [nivelRiesgo, confianza, limiteSugerido, puntaje ?? null, clienteId, idTendero]);
 }
 
 /**
@@ -39,12 +39,13 @@ async function syncMLPrediction(pool, clienteId, scoringRow, idTendero, options 
   try {
     const rf = await callMLService(clienteId, idTendero);
     const limiteSugerido = await calcularLimiteSugerido(pool, clienteId, idTendero, rf.nivel_riesgo);
-    await persistMLPrediction(pool, clienteId, idTendero, rf.nivel_riesgo, rf.confianza, limiteSugerido);
+    await persistMLPrediction(pool, clienteId, idTendero, rf.nivel_riesgo, rf.confianza, limiteSugerido, rf.puntaje_rf);
     return {
       ...scoringRow,
       nivel_riesgo: rf.nivel_riesgo,
       confianza: rf.confianza,
       limite_sugerido: limiteSugerido,
+      puntaje: rf.puntaje_rf,
     };
   } catch (mlErr) {
     console.error('Error sincronizando predicción ML:', mlErr.message);
