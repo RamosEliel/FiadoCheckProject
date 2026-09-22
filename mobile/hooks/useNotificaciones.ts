@@ -54,6 +54,7 @@ export type Alerta = {
   saldo_pendiente: number;
   leida: boolean;
   created_at: string;
+  detalle?: string;
 };
 
 /** Alerta enriquecida con los textos ya formateados para la vista. */
@@ -121,7 +122,7 @@ export const useNotificaciones = () => {
   );
 
   const fetchAlertas = useCallback(async (silent = false) => {
-    if (!token || !esTendero) {
+    if (!token) {
       setLoading(false);
       return;
     }
@@ -129,7 +130,8 @@ export const useNotificaciones = () => {
     try {
       if (!silent) setLoading(true);
       setError(null);
-      const res = await fetchWithTimeout(`${API_URL}/alertas`, {
+      const ruta = esTendero ? '/alertas' : '/recordatorios/me';
+      const res = await fetchWithTimeout(`${API_URL}${ruta}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -164,34 +166,51 @@ export const useNotificaciones = () => {
     setRefreshing(false);
   }, [fetchAlertas]);
 
-  const marcarLeida = useCallback(async (idAlerta: number) => {
+  const marcarLeida = useCallback(async (alerta: Alerta) => {
     if (!token) return;
-    setAlertas(prev => prev.filter(a => a.id_alerta !== idAlerta));
+    setAlertas(prev => prev.filter(a => a.id_alerta !== alerta.id_alerta));
     try {
-      await fetchWithTimeout(`${API_URL}/alertas/${idAlerta}/leer`, {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      if (esTendero) {
+        await fetchWithTimeout(`${API_URL}/alertas/${alerta.id_alerta}/leer`, {
+          method: 'PATCH',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      } else {
+        await fetchWithTimeout(`${API_URL}/recordatorios/${alerta.id_credito}/leer`, {
+          method: 'PATCH',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ tipo: alerta.tipo }),
+        });
+      }
     } catch {
-      // Si falla, se recarga la lista para reflejar el estado real.
       fetchAlertas();
     }
-  }, [token, fetchAlertas]);
+  }, [token, esTendero, fetchAlertas]);
 
   const abrirAlerta = useCallback((alerta: Alerta) => {
-    marcarLeida(alerta.id_alerta);
+    marcarLeida(alerta);
+    if (esTendero) {
+      router.push({
+        pathname: '/perfilCliente',
+        params: { id: String(alerta.id_cliente), creditoId: String(alerta.id_credito) },
+      } as any);
+      return;
+    }
     router.push({
-      pathname: '/perfilCliente',
-      params: { id: String(alerta.id_cliente), creditoId: String(alerta.id_credito) },
+      pathname: '/creditoDetalle',
+      params: { id: String(alerta.id_credito) },
     } as any);
-  }, [marcarLeida, router]);
+  }, [marcarLeida, esTendero, router]);
 
   // El backend ya devuelve las alertas ordenadas por prioridad; aquí solo se
   // agrupan por tipo para darles jerarquía visual en la lista.
   const secciones = useMemo<SeccionAlertas[]>(() => {
     const vistas: AlertaVista[] = alertas.map(a => ({
       ...a,
-      detalle: detalleAlerta(a.dias_atraso),
+      detalle: a.detalle || detalleAlerta(a.dias_atraso),
       saldoFormateado: formatCOP(a.saldo_pendiente),
       tiempo: tiempoRelativo(a.created_at),
       enMora: a.dias_atraso > 0,

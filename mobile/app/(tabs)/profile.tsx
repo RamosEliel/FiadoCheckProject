@@ -19,7 +19,7 @@ import { CONFIG } from '@/config/config';
 import { clearTenderoSeleccionado } from '@/hooks/Usetiendasasociadas';
 import { COLORS } from '@/constants/colors';
 import { profileStyles as styles } from '@/constants/profile.styles';
-import { ChevronLeft, Bell, User, ShieldCheck, LogOut, Camera } from 'lucide-react-native';
+import { ChevronLeft, Bell, User, ShieldCheck, LogOut, Camera, Banknote, BarChart2, LineChart } from 'lucide-react-native';
 import { HeaderIconButton } from '@/components/HeaderIconButton';
 
 const DEFAULT_AVATAR = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
@@ -372,7 +372,7 @@ export default function ProfileScreen() {
           onPress={() => router.back()}
           style={styles.backBtn}
         />
-        <Text style={styles.headerTitle}>Perfil</Text>
+        <Text style={styles.headerTitle}>{Number(user?.id_rol) === 1 ? 'Más' : 'Perfil'}</Text>
         <HeaderIconButton
           icon={Bell}
           label="Avisos"
@@ -454,6 +454,38 @@ export default function ProfileScreen() {
           </View>
           <Text style={styles.menuText}>Cambiar Contraseña</Text>
         </TouchableOpacity>
+
+        {Number(user?.id_rol) === 1 && (
+          <>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => router.push('/(tabs)/pagos' as any)}
+            >
+              <View style={[styles.iconContainer, { backgroundColor: '#BFEBC4' }]}>
+                <Banknote size={24} color={COLORS.primary} />
+              </View>
+              <Text style={styles.menuText}>Historial de pagos</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => router.push('/(tabs)/reportes' as any)}
+            >
+              <View style={[styles.iconContainer, { backgroundColor: '#BFEBC4' }]}>
+                <BarChart2 size={24} color={COLORS.primary} />
+              </View>
+              <Text style={styles.menuText}>Reportes</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => router.push('/(tabs)/Analitica' as any)}
+            >
+              <View style={[styles.iconContainer, { backgroundColor: '#BFEBC4' }]}>
+                <LineChart size={24} color={COLORS.primary} />
+              </View>
+              <Text style={styles.menuText}>Análisis</Text>
+            </TouchableOpacity>
+          </>
+        )}
 
         <TouchableOpacity
           style={styles.menuItem}

@@ -1,8 +1,8 @@
 import { View, Text, ScrollView, StatusBar, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMemo } from 'react';
-import { useRouter } from 'expo-router';
-import { BellRing, CheckCheck, ChevronLeft, CloudOff } from 'lucide-react-native';
+import { usePathname, useRouter } from 'expo-router';
+import { CheckCheck, ChevronLeft, CloudOff } from 'lucide-react-native';
 import { HeaderIconButton } from '@/components/HeaderIconButton';
 import {
   createNotificacionesStyles,
@@ -21,24 +21,24 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function NotificacionesScreen() {
   const router = useRouter();
+  const pathname = usePathname();
+  const esPestaña = pathname.includes('avisos');
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const styles = useMemo(() => createNotificacionesStyles(scheme), [scheme]);
   const theme = useMemo(() => notificacionesTheme(scheme), [scheme]);
 
   const {
     loading, refreshing, secciones, total, resumen,
-    esTendero, error, refetch, onRefresh, abrirAlerta,
+    error, refetch, onRefresh, abrirAlerta,
   } = useNotificaciones();
 
   const subtitulo = loading
     ? 'Cargando avisos...'
-    : !esTendero
-      ? 'Disponible pronto para clientes'
-      : error
-        ? 'No se pudo actualizar'
-        : total > 0
-          ? resumen
-          : 'Todo al día';
+    : error
+      ? 'No se pudo actualizar'
+      : total > 0
+        ? resumen
+        : 'Todo al día';
 
   const renderContenido = () => {
     if (loading) {
@@ -46,17 +46,6 @@ export default function NotificacionesScreen() {
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <NotificacionesSkeleton styles={styles} />
         </ScrollView>
-      );
-    }
-
-    if (!esTendero) {
-      return (
-        <NotificacionesEmptyState
-          icon={BellRing}
-          title="Aún no hay avisos para ti"
-          message="Las notificaciones de cartera son para tenderos. Muy pronto también te avisaremos de tus propios créditos."
-          styles={styles}
-        />
       );
     }
 
@@ -140,12 +129,16 @@ export default function NotificacionesScreen() {
       <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
 
       <View style={styles.header}>
-        <HeaderIconButton
-          icon={ChevronLeft}
-          label="Volver"
-          onPress={() => router.back()}
-          style={styles.backBtn}
-        />
+        {esPestaña ? (
+          <View style={styles.headerSpacer} />
+        ) : (
+          <HeaderIconButton
+            icon={ChevronLeft}
+            label="Volver"
+            onPress={() => router.back()}
+            style={styles.backBtn}
+          />
+        )}
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>Notificaciones</Text>
           <Text style={styles.headerSubtitle}>{subtitulo}</Text>

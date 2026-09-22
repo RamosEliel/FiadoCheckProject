@@ -41,7 +41,7 @@ Sistema_Fiado/
 │   └── app/
 │       ├── (auth)/                  # login, registerChoice, registerTendero,
 │       │                            # registerClientes, TiendasAsociadas
-│       ├── (tabs)/                  # dashboard, clientes, pagos, wallet,
+│       ├── (tabs)/                  # dashboard, clientes, pagos,
 │       │                            # vistaUsuario, perfilCliente, Analitica,
 │       │                            # reportes, Asistenteia, profile
 │       ├── addcredit.tsx            # Nuevo crédito con recomendación IA

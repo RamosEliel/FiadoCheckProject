@@ -33,7 +33,7 @@ export function NotificacionCard({ alerta, styles, theme, onPress }: Props) {
       activeOpacity={0.85}
       accessibilityRole="button"
       accessibilityLabel={`Alerta ${TIPO_LABEL[alerta.tipo]} de ${alerta.nombre_cliente}`}
-      accessibilityHint={`${alerta.detalle}. Saldo pendiente ${alerta.saldoFormateado}. Abre el perfil del cliente.`}
+      accessibilityHint={`${alerta.detalle}. Saldo pendiente ${alerta.saldoFormateado}.`}
     >
       <View style={[styles.cardStripe, { backgroundColor: tone.accent }]} />
 

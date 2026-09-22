@@ -2,7 +2,7 @@ import { Tabs, useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { Banknote, Bot, BarChart2, LineChart } from 'lucide-react-native';
+import { Bot } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { HapticTab } from '@/components/haptic-tab';
@@ -89,13 +89,12 @@ export default function TabLayout() {
         },
       }}>
 
-      {/* ── Solo para Tenderos ─────────────────────────────────────── */}
       <Tabs.Screen
         name="dashboard"
         options={{
-          title: 'Movs',
+          title: 'Inicio',
           href: isTendero ? undefined : null,
-          tabBarIcon: ({ color }) => <MaterialIcons size={26} name="bar-chart" color={color} />,
+          tabBarIcon: ({ color }) => <MaterialIcons size={26} name="home" color={color} />,
         }}
       />
       <Tabs.Screen
@@ -104,31 +103,6 @@ export default function TabLayout() {
           title: 'Clientes',
           href: isTendero ? undefined : null,
           tabBarIcon: ({ color }) => <MaterialIcons size={26} name="people" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="pagos"
-        options={{
-          title: 'Pagos',
-          href: isTendero ? undefined : null,
-          tabBarIcon: ({ color }) => <Banknote size={24} color={color} strokeWidth={2} />,
-        }}
-      />
-      {/* ── NUEVO: Reportes (SCRUM-46) ─────────────────────────────── */}
-      <Tabs.Screen
-        name="reportes"
-        options={{
-          title: 'Reportes',
-          href: isTendero ? undefined : null,
-          tabBarIcon: ({ color }) => <BarChart2 size={24} color={color} strokeWidth={2} />,
-        }}
-      />
-      <Tabs.Screen
-        name="Analitica"
-        options={{
-          title: 'Análisis',
-          href: isTendero ? undefined : null,
-          tabBarIcon: ({ color }) => <LineChart size={24} color={color} strokeWidth={2} />,
         }}
       />
       <Tabs.Screen
@@ -141,7 +115,6 @@ export default function TabLayout() {
         }}
       />
 
-      {/* ── Solo para Clientes ────────────────────────────────────────── */}
       <Tabs.Screen
         name="vistaUsuario"
         options={{
@@ -150,20 +123,36 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <MaterialIcons size={26} name="home" color={color} />,
         }}
       />
-
-      {/* ── Comunes ───────────────────────────────────────────────────── */}
+      <Tabs.Screen
+        name="avisos"
+        options={{
+          title: 'Avisos',
+          href: !isTendero ? undefined : null,
+          tabBarIcon: ({ color }) => <MaterialIcons size={26} name="notifications-none" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="tiendas"
+        options={{
+          title: 'Tiendas',
+          href: !isTendero ? undefined : null,
+          tabBarIcon: ({ color }) => <MaterialIcons size={26} name="storefront" color={color} />,
+        }}
+      />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Perfil',
-          tabBarIcon: ({ color }) => <MaterialIcons size={26} name="person-outline" color={color} />,
+          title: isTendero ? 'Más' : 'Perfil',
+          tabBarIcon: ({ color }) => (
+            <MaterialIcons size={26} name={isTendero ? 'apps' : 'person-outline'} color={color} />
+          ),
         }}
       />
 
-      {/* Ocultamos pestañas técnicas que no queremos en el menú */}
-      <Tabs.Screen name="transfer" options={{ href: null }} />
+      <Tabs.Screen name="pagos" options={{ href: null }} />
+      <Tabs.Screen name="reportes" options={{ href: null }} />
+      <Tabs.Screen name="Analitica" options={{ href: null }} />
       <Tabs.Screen name="perfilCliente" options={{ href: null }} />
-      <Tabs.Screen name="wallet" options={{ href: null }} />
     </Tabs>
     )}
     <AppDialog

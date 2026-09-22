@@ -11,6 +11,8 @@ import { useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import { Bell } from 'lucide-react-native';
+import { HeaderIconButton } from '@/components/HeaderIconButton';
 import { vistaUsuarioStyles as styles } from '@/constants/vistaUsuario.styles';
 import { COLORS } from '@/constants/colors';
 import { useVistaUsuario } from '@/hooks/useVistaUsuario';
@@ -70,12 +72,21 @@ const VistaUsuario = () => {
       {/* Header sobre fondo verde */}
       <View style={{ backgroundColor: COLORS.primary }}>
         <View style={styles.header}>
-          <Text style={styles.welcomeText}>
-            Hola, {userData?.nombreUsuario || 'Usuario'}
-          </Text>
-          <Text style={styles.welcomeSub}>
-            {userData?.nombreTienda || 'Sin tienda asociada'}
-          </Text>
+          <View style={styles.headerText}>
+            <Text style={styles.welcomeText}>
+              Hola, {userData?.nombreUsuario || 'Usuario'}
+            </Text>
+            <Text style={styles.welcomeSub}>
+              {userData?.nombreTienda || 'Sin tienda asociada'}
+            </Text>
+          </View>
+          <HeaderIconButton
+            icon={Bell}
+            label="Avisos"
+            onPress={() => router.push('/notificaciones' as any)}
+            color={COLORS.primary}
+            iconSize={18}
+          />
         </View>
       </View>
 

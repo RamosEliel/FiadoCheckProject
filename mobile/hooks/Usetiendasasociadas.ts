@@ -96,9 +96,10 @@ export const useTiendasAsociadas = () => {
     try {
       const lista = await fetchTiendasConDeuda(authToken);
       setTiendas(lista);
-      if (lista.length === 1) {
-        setTiendaSeleccionada(lista[0]);
-      }
+      const actual = await getTenderoSeleccionado();
+      const match = actual ? lista.find((t) => t.id === actual.id) : null;
+      if (match) setTiendaSeleccionada(match);
+      else if (lista.length === 1) setTiendaSeleccionada(lista[0]);
     } catch (err: any) {
       Alert.alert('Error', friendlyErrorMessage(err.message));
       setTiendas([]);
