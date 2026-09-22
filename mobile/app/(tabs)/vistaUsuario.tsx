@@ -140,7 +140,9 @@ const VistaUsuario = () => {
               {userData?.nivelConfianzaLabel}
             </Text>
             <Text style={styles.motivationalText}>
-              Paga A Tiempo Para Mantener Tu Crédito
+              {userData?.enMora
+                ? 'Tienes saldo vencido. Paga para recuperar tu perfil.'
+                : 'Paga A Tiempo Para Mantener Tu Crédito'}
             </Text>
           </View>
 

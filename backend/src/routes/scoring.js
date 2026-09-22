@@ -3,6 +3,7 @@ const pool = require('../config/database');
 const authMiddleware = require('../middleware/auth');
 const { getOrComputeScoring } = require('../utils/mlScoring');
 const { CLIENTE_NUEVO_SCORING, mapScoringRow, queryTotalesCreditos, queryCreditosHistorico, queryCreditosCerrados } = require('../utils/scoringUtils');
+const { marcarCreditosVencidos } = require('../utils/creditosMora');
 
 const router = express.Router();
 router.use(authMiddleware);
@@ -20,6 +21,8 @@ router.get('/:clienteId', async (req, res) => {
     if (verifica.rows.length === 0) {
       return res.status(404).json({ error: 'Cliente no encontrado' });
     }
+
+    await marcarCreditosVencidos(pool, { idCliente: clienteId, idTendero });
 
     const creditosCerrados = await queryCreditosCerrados(pool, clienteId, idTendero);
     const sinHistorialCrediticio = creditosCerrados === 0;
@@ -82,6 +85,8 @@ router.get('/:clienteId/recomendacion', async (req, res) => {
       });
     }
 
+    await marcarCreditosVencidos(pool, { idCliente: clienteId, idTendero });
+
     const creditosHistorico = await queryCreditosHistorico(pool, clienteId, idTendero);
     // El RF solo puede predecir sobre créditos CERRADOS. Un cliente con crédito(s)
     // únicamente vigentes (creditosHistorico > 0 pero 0 cerrados) no tiene ningún
@@ -103,6 +108,7 @@ router.get('/:clienteId/recomendacion', async (req, res) => {
     }
 
     const totales = await queryTotalesCreditos(pool, clienteId, idTendero);
+    const enMora = (totales.creditos_vencidos || 0) > 0;
 
     let recomendacion;
     let mensaje;
@@ -113,6 +119,9 @@ router.get('/:clienteId/recomendacion', async (req, res) => {
     } else if (sinCreditoTienda) {
       recomendacion = 'con_precaucion';
       mensaje = `El cliente tiene ${creditosHistorico} crédito(s) en curso contigo, pero ninguno se ha cerrado todavía, así que aún no hay historial de pago para evaluar. Se aplica un límite base de $${mapped.limite_sugerido.toLocaleString('es-CO')} mientras tanto.`;
+    } else if (enMora) {
+      recomendacion = mapped.nivel_riesgo === 'alto' ? 'rechazar' : 'con_precaucion';
+      mensaje = `El cliente tiene ${totales.creditos_vencidos} crédito(s) en mora y $${totales.total_deuda.toLocaleString('es-CO')} pendientes. No se recomienda otorgar más fiado hasta regularizar el saldo, aunque el historial cerrado del modelo sea favorable.`;
     } else if (mapped.nivel_riesgo === 'bajo') {
       recomendacion = 'aprobar';
       mensaje = `El cliente tiene un excelente historial con ${mapped.puntaje} puntos. Es muy recomendable aprobar nuevos créditos.`;

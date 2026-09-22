@@ -140,7 +140,8 @@ def predict(req: PredictRequest):
             "modelo.pkl desactualizado respecto a features.py",
             ValueError(
                 f"el modelo espera {esperadas} features y features.py devolvió "
-                f"{len(features)}; reentrena con model.py y vuelve a desplegar"
+                f"{len(features)}; reentrena con python model.py (ahora el RF "
+                f"incluye libro abierto: mora y saldo actual) y vuelve a desplegar"
             ),
         )
 

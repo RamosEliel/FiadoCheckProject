@@ -5,6 +5,7 @@ const { validateBody, validateQuery, validateParams, rules } = require('../middl
 const { triggerMLRetrain } = require('../utils/mlTrigger');
 const { invalidateScoring } = require('../utils/mlScoring');
 const { todayBusinessKey } = require('../utils/dateUtils');
+const { marcarCreditosVencidos } = require('../utils/creditosMora');
 const creditsController = require('../modules/creditos/credits.controller');
 
 const router = express.Router();
@@ -18,6 +19,8 @@ router.get('/', validateQuery([
   try {
     const { clienteId, estado } = req.query;
     const idTendero = req.user.id_tendero;
+
+    await marcarCreditosVencidos(pool, { idTendero });
 
     let query = `
       SELECT cr.*, cl.nombre_completo as nombre_cliente, cl.telefono
@@ -106,6 +109,10 @@ router.get('/:id', async (req, res) => {
     const { id } = req.params;
     const idTendero = req.user.id_tendero;
     const idUsuario = req.user.id_usuario;
+
+    if (idTendero) {
+      await marcarCreditosVencidos(pool, { idTendero });
+    }
 
     const credito = await pool.query(`
       SELECT cr.*, cl.nombre_completo as nombre_cliente, cl.telefono, cl.direccion,

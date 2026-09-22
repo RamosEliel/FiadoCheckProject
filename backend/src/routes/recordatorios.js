@@ -2,6 +2,7 @@ const express = require('express');
 const pool = require('../config/database');
 const authMiddleware = require('../middleware/auth');
 const { validateParams, validateBody, rules } = require('../middlewares/validateBody');
+const { marcarCreditosVencidos } = require('../utils/creditosMora');
 
 const router = express.Router();
 router.use(authMiddleware);
@@ -65,6 +66,7 @@ router.get('/me', async (req, res) => {
     }
 
     await asegurarTablaLeidos();
+    await marcarCreditosVencidos(pool, { idCliente });
 
     const creditos = await pool.query(`
       SELECT cr.id_credito, cr.id_cliente, cr.monto_total, cr.saldo_pendiente,

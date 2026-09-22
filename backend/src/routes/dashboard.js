@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../config/database');
 const authMiddleware = require('../middleware/auth');
+const { marcarCreditosVencidos } = require('../utils/creditosMora');
 
 const router = express.Router();
 router.use(authMiddleware);
@@ -22,6 +23,8 @@ router.get('/', async (req, res) => {
     if (!idTendero) {
       return res.status(403).json({ error: 'No tienes permisos para acceder al dashboard' });
     }
+
+    await marcarCreditosVencidos(pool, { idTendero });
 
     // Cartera total
     const carteraResult = await pool.query(`

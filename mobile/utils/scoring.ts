@@ -23,7 +23,11 @@ export const formatNivelRiesgo = (nivel: string | null | undefined): string => {
   return value.charAt(0).toUpperCase() + value.slice(1);
 };
 
-export const getRiesgoLabelCliente = (nivel: string | null | undefined): string => {
+export const getRiesgoLabelCliente = (
+  nivel: string | null | undefined,
+  enMora = false,
+): string => {
+  if (enMora) return 'Mejora Tus Pagos';
   switch (nivel?.toLowerCase()) {
     case 'bajo': return '¡Excelente Cliente!';
     case 'medio': return 'Buen Cliente';

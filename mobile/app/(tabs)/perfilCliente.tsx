@@ -157,6 +157,11 @@ export default function PerfilClienteScreen() {
                     ? `Confianza ${perfil.nivelConfianza}%`
                     : 'Sin historial suficiente'}
                 </Text>
+                {perfil.estadoBadgeTipo === 'mora' ? (
+                  <Text style={[styles.statValueSmall, styles.confianzaValue]}>
+                    En mora: no tratar como riesgo bajo
+                  </Text>
+                ) : null}
               </View>
             </View>
 

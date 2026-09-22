@@ -43,6 +43,7 @@ export type UserData = {
   nivelConfianza: number | null;
   nivelConfianzaLabel: string;
   nivelConfianzaColor: string;
+  enMora: boolean;
   telefonoTienda: string;
 };
 
@@ -78,11 +79,12 @@ export const useVistaUsuario = (token: string | null) => {
       }
       const user = await meRes.json();
       const scoringML = mapScoringML(user.scoring ?? {});
+      const enMora = (user.totales?.creditos_vencidos ?? 0) > 0;
 
       const nivelConfianza = scoringML.confianza;
       const nivelRiesgo = scoringML.nivel_riesgo;
-      const nivelConfianzaLabel = getRiesgoLabelCliente(nivelRiesgo);
-      const nivelConfianzaColor = getRiesgoColor(nivelRiesgo);
+      const nivelConfianzaLabel = getRiesgoLabelCliente(nivelRiesgo, enMora);
+      const nivelConfianzaColor = getRiesgoColor(enMora ? 'alto' : nivelRiesgo);
 
       let telefonoTienda = user.tienda?.telefono || '';
       telefonoTienda = telefonoTienda.replace(/\s/g, '');
@@ -100,6 +102,7 @@ export const useVistaUsuario = (token: string | null) => {
         nivelConfianza,
         nivelConfianzaLabel,
         nivelConfianzaColor,
+        enMora,
         telefonoTienda,
       });
 

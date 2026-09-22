@@ -84,12 +84,12 @@ El Random Forest es la **única fuente** de `nivel_riesgo`, `puntaje` (0–100, 
 - `regular`: pagado pero el último abono llegó después del plazo
 - `malo`: el crédito quedó `vencido`
 
-**Features** (por par cliente–tendero, calculables antes de otorgar un crédito nuevo; no se usan monto ni plazo):
+**Features** (por par cliente–tendero, calculables antes de otorgar un crédito nuevo; no se usan monto ni plazo del crédito que se está decidiendo):
 
-- `num_creditos_previos_cerrados`
-- `ratio_pagados_a_tiempo_previo`
-- `dias_atraso_promedio_previo` (`vencido` cuenta como 31 días)
-- `antiguedad_meses`
+- Historial cerrado: `num_creditos_previos_cerrados`, `ratio_pagados_a_tiempo_previo`, `dias_atraso_promedio_previo` (`vencido` cuenta como 31 días), `antiguedad_meses`
+- Libro abierto (cartera de hoy / en T): `num_creditos_abiertos`, `num_abiertos_en_mora`, `dias_atraso_max_abierto`, `saldo_abierto`, `ratio_saldo_en_mora`
+
+Tras cambiar las features hay que **reentrenar**: `python model.py` en `backend/ml_service` (invalida la caché de `scoring`).
 
 **Puntaje interno** (no se muestra en la app; el nivel de riesgo se deriva de él):
 

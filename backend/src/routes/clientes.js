@@ -3,6 +3,7 @@ const pool = require('../config/database');
 const authMiddleware = require('../middleware/auth');
 const { CLIENTE_NUEVO_SCORING, mapScoringRow, queryCreditosCerrados } = require('../utils/scoringUtils');
 const { getOrComputeScoring } = require('../utils/mlScoring');
+const { marcarCreditosVencidos } = require('../utils/creditosMora');
 
 const router = express.Router();
 router.use(authMiddleware);
@@ -316,6 +317,8 @@ router.get('/me', async (req, res) => {
     const idCliente = cliente.rows[0].id_cliente;
     const idTendero = cliente.rows[0].id_tendero;
 
+    await marcarCreditosVencidos(pool, { idCliente, idTendero });
+
     const totales = await pool.query(`
       SELECT COALESCE(SUM(saldo_pendiente), 0) as total_deuda,
              COUNT(*) as total_creditos,
@@ -387,6 +390,8 @@ router.get('/:id', async (req, res) => {
     if (cliente.rows.length === 0) {
       return res.status(404).json({ error: 'Cliente no encontrado' });
     }
+
+    await marcarCreditosVencidos(pool, { idCliente: id, idTendero });
 
     const totales = await pool.query(`
       SELECT COALESCE(SUM(saldo_pendiente), 0) as total_deuda,
