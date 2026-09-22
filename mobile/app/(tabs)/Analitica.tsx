@@ -3,6 +3,7 @@ import {
   View,
   Text,
   TouchableOpacity,
+  Pressable,
   StatusBar,
   TextInput,
   ScrollView,
@@ -12,124 +13,27 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useFocusEffect, useRouter, useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Svg, { G, Line, Rect } from 'react-native-svg';
-import { Bell, Calendar, ChevronLeft, ChevronRight, Search } from 'lucide-react-native';
+import { Bell, ChevronLeft, ChevronRight, Search } from 'lucide-react-native';
 import { HeaderIconButton } from '@/components/HeaderIconButton';
+import { WeeklyPaymentsChart } from '@/components/analitica/WeeklyPaymentsChart';
+import { CarteraDistribution } from '@/components/analitica/CarteraDistribution';
+import { hapticLight } from '@/components/chat/haptic';
 import { analiticaStyles as styles } from '@/constants/Analitica.styles';
 import { COLORS } from '@/constants/colors';
 import {
   useAnalitica,
-  CHART_WEEKS,
-  type PagoSemanal,
+  totalPagosMes,
+  totalEsperadoMes,
+  cumplimientoMesPct,
+  carteraTotal,
 } from '@/hooks/Useanalitica';
-
-const CHART_HEIGHT = 150;
-const CHART_PADDING_BOTTOM = 18;
-const BAR_GREEN = '#7EDDAF';
-const BAR_BLUE = '#5B9BD5';
-
-type BarChartProps = {
-  data: PagoSemanal[];
-  width: number;
-  yMax: number;
-  yTicks: number[];
-  empty?: boolean;
-};
-
-const Y_LABEL_OFFSET = 6;
-
-function BarChart({ data, width, yMax, yTicks, empty }: BarChartProps) {
-  const plotHeight = CHART_HEIGHT - CHART_PADDING_BOTTOM;
-  const plotWidth = Math.max(width - 38, 200);
-  const groupWidth = plotWidth / 4;
-  const barWidth = 10;
-  const gap = 4;
-
-  const scaleY = (value: number) =>
-    yMax <= 0 ? plotHeight : plotHeight - (Math.min(value, yMax) / yMax) * plotHeight;
-
-  const formatTick = (value: number) =>
-    value >= 1000 ? `${value / 1000}k` : String(value);
-
-  return (
-    <View style={styles.chartBody}>
-      <View style={[styles.chartYAxis, { height: CHART_HEIGHT }]}>
-        {yTicks.map((tick) => (
-          <Text
-            key={tick}
-            style={[
-              styles.chartYLabel,
-              { top: scaleY(tick) - Y_LABEL_OFFSET },
-            ]}
-          >
-            {formatTick(tick)}
-          </Text>
-        ))}
-      </View>
-
-      <View style={styles.chartPlot}>
-        <Svg width={plotWidth} height={CHART_HEIGHT}>
-          {yTicks.map((tick) => {
-            const y = scaleY(tick);
-            return (
-              <Line
-                key={`grid-${tick}`}
-                x1={0}
-                y1={y}
-                x2={plotWidth}
-                y2={y}
-                stroke="#B8D4E8"
-                strokeWidth={1}
-                strokeDasharray="4 4"
-              />
-            );
-          })}
-
-          {data.map((item, index) => {
-            const groupX = index * groupWidth + groupWidth / 2;
-            const greenH = plotHeight - scaleY(item.pagos);
-            const blueH = plotHeight - scaleY(item.esperado);
-            const greenX = groupX - barWidth - gap / 2;
-            const blueX = groupX + gap / 2;
-
-            return (
-              <G key={item.semana}>
-                <Rect
-                  x={greenX}
-                  y={scaleY(item.pagos)}
-                  width={barWidth}
-                  height={Math.max(greenH, item.pagos > 0 ? 2 : 0)}
-                  rx={3}
-                  fill={BAR_GREEN}
-                />
-                <Rect
-                  x={blueX}
-                  y={scaleY(item.esperado)}
-                  width={barWidth}
-                  height={Math.max(blueH, item.esperado > 0 ? 2 : 0)}
-                  rx={3}
-                  fill={BAR_BLUE}
-                />
-              </G>
-            );
-          })}
-        </Svg>
-
-        {empty && (
-          <View style={styles.chartEmptyOverlay} pointerEvents="none">
-            <Text style={styles.chartEmptyText}>Sin pagos este mes</Text>
-          </View>
-        )}
-      </View>
-    </View>
-  );
-}
 
 export default function AnaliticaScreen() {
   const router = useRouter();
   const { clienteId, nombre } = useLocalSearchParams<{ clienteId?: string; nombre?: string }>();
   const [token, setToken] = useState<string | null>(null);
   const [isTendero, setIsTendero] = useState<boolean | null>(null);
+  const [moraExpanded, setMoraExpanded] = useState(false);
   const { width } = useWindowDimensions();
 
   useFocusEffect(
@@ -216,6 +120,10 @@ export default function AnaliticaScreen() {
     }, [token, isTendero, refetch]),
   );
 
+  useEffect(() => {
+    setMoraExpanded(false);
+  }, [cliente?.id]);
+
   if (isTendero === null) {
     return (
       <SafeAreaView style={styles.safe}>
@@ -232,6 +140,13 @@ export default function AnaliticaScreen() {
     .map((w) => w[0])
     .join('')
     .toUpperCase();
+
+  const pagosMes = totalPagosMes(pagosSemanales);
+  const esperadoMes = totalEsperadoMes(pagosSemanales);
+  const cumplimiento = cumplimientoMesPct(pagosSemanales);
+  const totalCartera = carteraTotal(distribucion);
+  const mora17 = distribucion.find((d) => d.label === 'Mora 1 - 7 Días');
+  const moraMas7 = distribucion.find((d) => d.label === 'Mora +7 Días');
 
   return (
     <>
@@ -325,107 +240,92 @@ export default function AnaliticaScreen() {
                   <View style={styles.kpiIconSquareGreen}>
                     <Text style={styles.kpiIconSymbol}>↗</Text>
                   </View>
-                  <Text style={styles.kpiLabel}>Recuperado (año {anio})</Text>
+                  <Text style={styles.kpiLabel}>Recuperado</Text>
+                  <Text style={styles.kpiSubtitle}>Abonos del año {anio}</Text>
                   <Text style={styles.kpiValueGreen}>{formatMoneda(recuperado)}</Text>
                 </View>
 
                 <View style={styles.kpiDivider} />
 
-                <View style={styles.kpiItem}>
+                <Pressable
+                  style={styles.kpiItem}
+                  onPress={() => {
+                    hapticLight();
+                    setMoraExpanded((v) => !v);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Mora porcentual, tocar para detalle"
+                  accessibilityState={{ expanded: moraExpanded }}
+                >
                   <View style={styles.kpiIconSquareRed}>
                     <Text style={styles.kpiIconSymbol}>↘</Text>
                   </View>
                   <Text style={styles.kpiLabel}>Mora %</Text>
+                  <Text style={styles.kpiSubtitle}>Cartera actual</Text>
                   <Text style={styles.kpiValueRed}>{moraPorcentaje} %</Text>
-                </View>
+                </Pressable>
               </View>
+
+              {moraExpanded && (
+                <View style={styles.kpiExpand}>
+                  <View style={styles.kpiExpandRow}>
+                    <Text style={styles.kpiExpandLabel}>Mora 1-7 días</Text>
+                    <Text style={styles.kpiExpandValue}>
+                      {mora17?.pct ?? 0}% · {formatMoneda(mora17?.monto ?? 0)}
+                    </Text>
+                  </View>
+                  <View style={styles.kpiExpandRow}>
+                    <Text style={styles.kpiExpandLabel}>Mora +7 días</Text>
+                    <Text style={styles.kpiExpandValue}>
+                      {moraMas7?.pct ?? 0}% · {formatMoneda(moraMas7?.monto ?? 0)}
+                    </Text>
+                  </View>
+                  <View style={styles.kpiExpandRow}>
+                    <Text style={styles.kpiExpandLabel}>Total cartera</Text>
+                    <Text style={styles.kpiExpandValue}>{formatMoneda(totalCartera)}</Text>
+                  </View>
+                </View>
+              )}
 
               <View style={styles.chartCard}>
                 <View style={styles.chartHeader}>
                   <Text style={styles.chartTitle}>{chartTitle}</Text>
-                  <View style={styles.chartActions}>
-                    <TouchableOpacity
-                      style={[
-                        styles.chartActionBtn,
-                        !puedeRetrocederMes && styles.chartActionBtnDisabled,
-                      ]}
-                      onPress={retrocederMes}
-                      disabled={!puedeRetrocederMes}
-                      activeOpacity={0.7}
-                    >
-                      <ChevronLeft size={14} color={COLORS.white} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[
-                        styles.chartActionBtn,
-                        !puedeAvanzarMes && styles.chartActionBtnDisabled,
-                      ]}
-                      onPress={avanzarMes}
-                      disabled={!puedeAvanzarMes}
-                      activeOpacity={0.7}
-                    >
-                      <Calendar size={14} color={COLORS.white} />
-                      <Text style={styles.chartActionBtnText}>Avanzar Mes</Text>
-                    </TouchableOpacity>
-                  </View>
                 </View>
 
-                <View style={styles.chartLegend}>
-                  <View style={styles.legendItem}>
-                    <View style={[styles.legendDot, { backgroundColor: BAR_GREEN }]} />
-                    <Text style={styles.legendText}>Pagos</Text>
-                  </View>
-                  <View style={styles.legendItem}>
-                    <View style={[styles.legendDot, { backgroundColor: BAR_BLUE }]} />
-                    <Text style={styles.legendText}>Esperado</Text>
-                  </View>
-                </View>
-
-                <BarChart
+                <WeeklyPaymentsChart
                   key={cliente.id}
                   data={pagosSemanales}
                   width={width - 80}
                   yMax={chartScale.yMax}
                   yTicks={chartScale.yTicks}
                   empty={sinPagosMes}
-                />
-
-                <View style={styles.chartXAxis}>
-                  {CHART_WEEKS.map((week) => (
-                    <Text key={week} style={styles.chartXLabel}>
-                      {week}
-                    </Text>
-                  ))}
-                </View>
-              </View>
-
-              <View style={styles.distSection}>
-                <Text style={styles.distTitle}>Distribucion De Cartera</Text>
-                <Text style={styles.distSubtitle}>
-                  Saldo pendiente actual (no depende del mes)
-                </Text>
-
-                {distribucion.map((item) => (
-                  <View key={item.label} style={styles.distRow}>
-                    <View style={[styles.distBadge, { backgroundColor: item.color }]}>
-                      <Text style={styles.distBadgeText}>{item.pct}%</Text>
-                    </View>
-                    <View style={styles.distTrack}>
-                      {item.pct > 0 ? (
-                        <View
-                          style={[
-                            styles.distFill,
-                            { width: `${item.pct}%`, backgroundColor: item.color },
-                          ]}
-                        />
+                  emptyMessage="Sin movimiento este mes"
+                  belowLegend={
+                    <View style={styles.chipsRow}>
+                      <View style={styles.chip}>
+                        <Text style={styles.chipText}>Cobrado: {formatMoneda(pagosMes)}</Text>
+                      </View>
+                      <View style={styles.chip}>
+                        <Text style={styles.chipText}>Esperado: {formatMoneda(esperadoMes)}</Text>
+                      </View>
+                      <View style={styles.chip}>
+                        <Text style={styles.chipText}>
+                          {esperadoMes === 0
+                            ? 'Sin vencimientos este mes'
+                            : `Cumplimiento: ${cumplimiento ?? 0}%`}
+                        </Text>
+                      </View>
+                      {esperadoMes > 0 && pagosMes === 0 ? (
+                        <View style={styles.chip}>
+                          <Text style={styles.chipText}>Aún no hay pagos registrados</Text>
+                        </View>
                       ) : null}
-                      <Text style={styles.distLabel}>
-                        {item.label} - {formatMoneda(item.monto)}
-                      </Text>
                     </View>
-                  </View>
-                ))}
+                  }
+                />
               </View>
+
+              <CarteraDistribution items={distribucion} formatMoneda={formatMoneda} />
             </View>
           ) : (
             <View style={styles.emptyState}>

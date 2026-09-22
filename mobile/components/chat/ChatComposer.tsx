@@ -10,6 +10,7 @@ type Props = {
   onSend: () => void;
   loading: boolean;
   placeholder: string;
+  /** Padding bajo el pill. Con teclado abierto debe ser chico (8–12), no el inset de home. */
   bottomInset: number;
 };
 

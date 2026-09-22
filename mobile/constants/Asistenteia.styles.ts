@@ -11,7 +11,12 @@ export const asistenteIAStyles = StyleSheet.create({
     backgroundColor: COLORS.bg,
     borderTopLeftRadius: 36,
     borderTopRightRadius: 36,
+  },
+  bodyInner: {
+    flex: 1,
     overflow: 'hidden',
+    borderTopLeftRadius: 36,
+    borderTopRightRadius: 36,
   },
   chat: {
     flex: 1,

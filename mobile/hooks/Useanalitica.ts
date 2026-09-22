@@ -3,6 +3,19 @@ import { Alert } from 'react-native';
 import { router } from 'expo-router';
 import { CONFIG } from '@/config/config';
 import { friendlyErrorMessage } from '@/utils/errorMessages';
+import {
+  totalPagosMes,
+  totalEsperadoMes,
+  cumplimientoMesPct,
+  carteraTotal,
+} from '@/utils/analiticaDerived';
+
+export {
+  totalPagosMes,
+  totalEsperadoMes,
+  cumplimientoMesPct,
+  carteraTotal,
+};
 
 const API_URL = CONFIG.API_URL;
 

@@ -1,12 +1,14 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Keyboard,
   KeyboardAvoidingView,
   ListRenderItem,
   Platform,
   StatusBar,
+  View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, router, useFocusEffect } from 'expo-router';
@@ -25,10 +27,13 @@ import { asistenteIAStyles as styles } from '@/constants/Asistenteia.styles';
 import { COLORS } from '@/constants/colors';
 import { SUGERENCIAS_INICIALES, useAsistenteIA } from '@/hooks/Useasistenteia';
 
+const IOS_HEADER_OFFSET = 64;
+
 export default function AsistenteIAScreen() {
   const insets = useSafeAreaInsets();
   const [token, setToken] = useState<string | null>(null);
   const [idTendero, setIdTendero] = useState('');
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -74,6 +79,26 @@ export default function AsistenteIAScreen() {
     retryLast,
   } = useAsistenteIA(token ?? '', idTendero);
 
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const onShow = (e: { endCoordinates: { height: number } }) => {
+      setKeyboardHeight(e.endCoordinates.height);
+      requestAnimationFrame(() => {
+        scrollRef.current?.scrollToEnd({ animated: true });
+      });
+    };
+    const onHide = () => setKeyboardHeight(0);
+
+    const showSub = Keyboard.addListener(showEvent, onShow);
+    const hideSub = Keyboard.addListener(hideEvent, onHide);
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [scrollRef]);
+
   const hasUserMessage = mensajes.some((msg) => msg.tipo === 'usuario');
   const listData = hasUserMessage
     ? mensajes.filter((msg) => msg.id !== 'welcome-chips' && msg.id !== 'welcome-bot')
@@ -81,7 +106,10 @@ export default function AsistenteIAScreen() {
   const welcomeOpciones =
     mensajes.find((msg) => msg.tipo === 'sugerencias')?.opciones ?? SUGERENCIAS_INICIALES;
 
-  const composerBottom = 12 + (Platform.OS === 'android' ? Math.min(insets.bottom, 12) : 0);
+  const keyboardOpen = keyboardHeight > 0;
+  const composerBottom = keyboardOpen
+    ? 8
+    : 12 + (Platform.OS === 'android' ? Math.min(insets.bottom, 12) : 0);
 
   const confirmNewChat = () => {
     if (!hasUserMessage) return;
@@ -155,42 +183,49 @@ export default function AsistenteIAScreen() {
         <KeyboardAvoidingView
           style={styles.body}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={0}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? IOS_HEADER_OFFSET : 0}
         >
-          {actionBanner?.visible ? <ActionBanner mensaje={actionBanner.mensaje} /> : null}
+          <View
+            style={[
+              styles.bodyInner,
+              Platform.OS === 'android' ? { paddingBottom: keyboardHeight } : null,
+            ]}
+          >
+            {actionBanner?.visible ? <ActionBanner mensaje={actionBanner.mensaje} /> : null}
 
-          <FlatList
-            ref={scrollRef}
-            style={styles.chat}
-            data={listData}
-            keyExtractor={(item) => item.id}
-            renderItem={renderItem}
-            contentContainerStyle={styles.chatContent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="interactive"
-            extraData={loading}
-            onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
-            ListHeaderComponent={
-              hasUserMessage ? null : (
-                <WelcomeState
-                  opciones={welcomeOpciones}
-                  onSelect={handleSugerencia}
-                  disabled={loading}
-                />
-              )
-            }
-            ListFooterComponent={loading ? <TypingIndicator /> : null}
-          />
+            <FlatList
+              ref={scrollRef}
+              style={styles.chat}
+              data={listData}
+              keyExtractor={(item) => item.id}
+              renderItem={renderItem}
+              contentContainerStyle={styles.chatContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="interactive"
+              extraData={loading}
+              onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
+              ListHeaderComponent={
+                hasUserMessage ? null : (
+                  <WelcomeState
+                    opciones={welcomeOpciones}
+                    onSelect={handleSugerencia}
+                    disabled={loading}
+                  />
+                )
+              }
+              ListFooterComponent={loading ? <TypingIndicator /> : null}
+            />
 
-          <ChatComposer
-            value={input}
-            onChange={setInput}
-            onSend={handleEnviar}
-            loading={loading}
-            placeholder={placeholder}
-            bottomInset={composerBottom}
-          />
+            <ChatComposer
+              value={input}
+              onChange={setInput}
+              onSend={handleEnviar}
+              loading={loading}
+              placeholder={placeholder}
+              bottomInset={composerBottom}
+            />
+          </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </>

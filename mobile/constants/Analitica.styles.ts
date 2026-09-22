@@ -37,8 +37,8 @@ export const analiticaStyles = StyleSheet.create({
   body: {
     flex: 1,
     backgroundColor: COLORS.bg,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    borderTopLeftRadius: 36,
+    borderTopRightRadius: 36,
   },
   bodyContent: {
     padding: 20,
@@ -161,7 +161,7 @@ export const analiticaStyles = StyleSheet.create({
   },
   kpiDivider: {
     width: 1,
-    height: 64,
+    height: 80,
     backgroundColor: COLORS.border,
     marginHorizontal: 14,
   },
@@ -193,6 +193,35 @@ export const analiticaStyles = StyleSheet.create({
     color: COLORS.textMuted,
     fontWeight: '500',
   },
+  kpiSubtitle: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    fontWeight: '500',
+  },
+  kpiExpand: {
+    backgroundColor: '#FFF5F5',
+    borderRadius: 12,
+    padding: 12,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#FFCDD2',
+  },
+  kpiExpandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  kpiExpandLabel: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    fontWeight: '500',
+  },
+  kpiExpandValue: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
   kpiValueGreen: {
     fontSize: 17,
     fontWeight: '800',
@@ -219,27 +248,8 @@ export const analiticaStyles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.text,
   },
-  chartActions: {
-    flexDirection: 'row',
+  chartStack: {
     gap: 8,
-  },
-  chartActionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    height: 44,
-    borderRadius: 10,
-    backgroundColor: COLORS.primary,
-    justifyContent: 'center',
-  },
-  chartActionBtnText: {
-    color: COLORS.white,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  chartActionBtnDisabled: {
-    opacity: 0.4,
   },
   chartLegend: {
     flexDirection: 'row',
@@ -260,6 +270,71 @@ export const analiticaStyles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '500',
     color: COLORS.textMuted,
+  },
+  legendTextFaded: {
+    opacity: 0.45,
+  },
+  chipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  chip: {
+    backgroundColor: COLORS.white,
+    borderRadius: 50,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  chipText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  chartWeekHit: {
+    position: 'absolute',
+    top: 0,
+    zIndex: 2,
+  },
+  chartWeekHighlight: {
+    position: 'absolute',
+    top: 0,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 196, 140, 0.14)',
+  },
+  chartTooltip: {
+    position: 'absolute',
+    top: 6,
+    zIndex: 6,
+    backgroundColor: COLORS.white,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    gap: 2,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
+  chartTooltipText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  chartTooltipDelta: {
+    fontSize: 11,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  chartTooltipDeltaPos: {
+    color: '#3EBF7A',
+  },
+  chartTooltipDeltaNeg: {
+    color: '#E53935',
   },
   chartBody: {
     flexDirection: 'row',
@@ -289,6 +364,7 @@ export const analiticaStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(232, 248, 240, 0.78)',
+    zIndex: 4,
   },
   chartEmptyText: {
     fontSize: 12,
@@ -326,6 +402,20 @@ export const analiticaStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+    borderRadius: 14,
+    paddingVertical: 2,
+    paddingHorizontal: 2,
+  },
+  distSelected: {
+    borderColor: COLORS.primary,
+  },
+  distEmptyText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.textMuted,
+    paddingVertical: 8,
   },
   distBadge: {
     minWidth: 44,
