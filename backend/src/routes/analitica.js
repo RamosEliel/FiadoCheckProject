@@ -97,6 +97,9 @@ router.get('/cliente/:clienteId', async (req, res) => {
         ORDER BY semana
       `, [clienteId, idTendero, anioNum, mesChart]),
 
+      // Esperado = monto original de créditos que vencen esa semana, incluidos los ya
+      // pagados. Si se usa saldo_pendiente y se excluye estado=pagado, un abono
+      // puntual deja Esperado en $0 y la app muestra "Sin vencimientos este mes".
       pool.query(`
         SELECT
           CASE
@@ -105,10 +108,9 @@ router.get('/cliente/:clienteId', async (req, res) => {
             WHEN EXTRACT(DAY FROM fecha_limite_pago) <= 21 THEN 3
             ELSE 4
           END AS semana,
-          COALESCE(SUM(saldo_pendiente), 0) AS esperado
+          COALESCE(SUM(monto_total), 0) AS esperado
         FROM creditos
         WHERE id_cliente = $1 AND id_tendero = $2
-          AND estado != 'pagado'
           AND EXTRACT(YEAR FROM fecha_limite_pago) = $3
           AND EXTRACT(MONTH FROM fecha_limite_pago) = $4
         GROUP BY semana

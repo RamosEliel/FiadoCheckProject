@@ -16,6 +16,17 @@ export function cumplimientoMesPct(semanas: SemanaLike[]): number | null {
   return Math.round((totalPagosMes(semanas) / esperado) * 100);
 }
 
+/** Chip bajo el gráfico: no decir "sin vencimientos" si sí hubo abonos. */
+export function etiquetaResumenMes(
+  pagos: number,
+  esperado: number,
+  cumplimiento: number | null,
+): string {
+  if (esperado > 0) return `Cumplimiento: ${cumplimiento ?? 0}%`;
+  if (pagos > 0) return 'Abonos a deudas de otro mes';
+  return 'Sin vencimientos este mes';
+}
+
 export function carteraTotal(distribucion: DistLike[]): number {
   return distribucion.reduce((acc, item) => acc + (Number(item.monto) || 0), 0);
 }

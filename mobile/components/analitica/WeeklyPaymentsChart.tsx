@@ -10,6 +10,7 @@ import {
 } from '@/hooks/Useanalitica';
 
 const CHART_HEIGHT = 150;
+const CHART_PADDING_TOP = 14;
 const CHART_PADDING_BOTTOM = 18;
 const BAR_GREEN = '#7EDDAF';
 const BAR_BLUE = '#5B9BD5';
@@ -44,13 +45,16 @@ export function WeeklyPaymentsChart({
   const groupWidth = plotWidth / 4;
   const barWidth = 10;
   const gap = 4;
+  const usableHeight = Math.max(plotHeight - CHART_PADDING_TOP, 1);
 
   useEffect(() => {
     setSelectedWeek(null);
   }, [data]);
 
   const scaleY = (value: number) =>
-    yMax <= 0 ? plotHeight : plotHeight - (Math.min(value, yMax) / yMax) * plotHeight;
+    yMax <= 0
+      ? plotHeight
+      : CHART_PADDING_TOP + usableHeight - (Math.min(value, yMax) / yMax) * usableHeight;
 
   const formatTick = (value: number) =>
     value >= 1000 ? `${value / 1000}k` : String(value);

@@ -25,6 +25,7 @@ import {
   totalPagosMes,
   totalEsperadoMes,
   cumplimientoMesPct,
+  etiquetaResumenMes,
   carteraTotal,
 } from '@/hooks/Useanalitica';
 
@@ -310,9 +311,7 @@ export default function AnaliticaScreen() {
                       </View>
                       <View style={styles.chip}>
                         <Text style={styles.chipText}>
-                          {esperadoMes === 0
-                            ? 'Sin vencimientos este mes'
-                            : `Cumplimiento: ${cumplimiento ?? 0}%`}
+                          {etiquetaResumenMes(pagosMes, esperadoMes, cumplimiento)}
                         </Text>
                       </View>
                       {esperadoMes > 0 && pagosMes === 0 ? (

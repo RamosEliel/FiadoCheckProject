@@ -7,6 +7,7 @@ import {
   totalPagosMes,
   totalEsperadoMes,
   cumplimientoMesPct,
+  etiquetaResumenMes,
   carteraTotal,
 } from '@/utils/analiticaDerived';
 
@@ -14,6 +15,7 @@ export {
   totalPagosMes,
   totalEsperadoMes,
   cumplimientoMesPct,
+  etiquetaResumenMes,
   carteraTotal,
 };
 
