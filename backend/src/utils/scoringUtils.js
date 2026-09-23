@@ -38,6 +38,21 @@ async function queryTotalesCreditos(pool, clienteId, idTendero) {
   };
 }
 
+/**
+ * Si hay créditos vencidos abiertos, el perfil persistido no puede quedar en
+ * 'bajo': el RF a veces sigue alto en confianza por el historial cerrado.
+ */
+function ajustarPrediccionPorMora(prediccion, totales) {
+  if (!prediccion || !totales || !(totales.creditos_vencidos > 0)) {
+    return prediccion;
+  }
+  return {
+    ...prediccion,
+    nivel_riesgo: 'alto',
+    puntaje: Math.min(Number(prediccion.puntaje) || 100, 49),
+  };
+}
+
 async function queryCreditosHistorico(pool, clienteId, idTendero) {
   const result = await pool.query(`
     SELECT COUNT(*) AS total_historico
@@ -112,4 +127,5 @@ module.exports = {
   queryCreditosHistorico,
   queryCreditosCerrados,
   calcularLimiteSugerido,
+  ajustarPrediccionPorMora,
 };

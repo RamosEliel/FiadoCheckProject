@@ -98,7 +98,69 @@ export const vistaUsuarioStyles = StyleSheet.create({
     marginTop: 4,
   },
 
-  // ── Card — Nivel De Confianza ──
+  // ── Card — Perfil crediticio ──
+  perfilCard: {
+    backgroundColor: p.white,
+    borderRadius: 20,
+    marginHorizontal: 4,
+    marginBottom: 16,
+    flexDirection: 'row',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  perfilAccent: {
+    width: 5,
+  },
+  perfilCardInner: {
+    flex: 1,
+    paddingVertical: 18,
+    paddingHorizontal: 16,
+  },
+  perfilEyebrow: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: p.textMuted,
+    marginBottom: 14,
+  },
+  perfilHero: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  perfilIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  perfilHeroText: {
+    flex: 1,
+  },
+  perfilHeadline: {
+    fontSize: 22,
+    fontWeight: '800',
+    lineHeight: 26,
+  },
+  perfilSub: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: p.textMuted,
+    marginTop: 4,
+  },
+  perfilHint: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: p.text,
+    marginTop: 14,
+    opacity: 0.75,
+  },
   section: {
     backgroundColor: p.white,
     borderRadius: 20,
@@ -116,46 +178,6 @@ export const vistaUsuarioStyles = StyleSheet.create({
     fontWeight: '700',
     color: p.text,
     marginBottom: 8,
-  },
-  riesgoResumen: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: p.textMuted,
-    marginBottom: 12,
-  },
-  progressWrap: {
-    marginBottom: 12,
-  },
-  progressTrack: {
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: p.border,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 7,
-    backgroundColor: p.primary,
-  },
-  scoreRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 4,
-  },
-  scoreText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: p.textMuted,
-  },
-  confidenceBadge: {
-    fontSize: 15,
-    fontWeight: '700',
-    marginTop: 8,
-  },
-  motivationalText: {
-    fontSize: 13,
-    color: p.textMuted,
-    marginTop: 4,
   },
 
   // ── Últimos Movimientos ──

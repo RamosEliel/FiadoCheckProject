@@ -11,7 +11,7 @@ import { useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
-import { Bell } from 'lucide-react-native';
+import { Bell, ShieldCheck, ShieldAlert, Shield } from 'lucide-react-native';
 import { HeaderIconButton } from '@/components/HeaderIconButton';
 import { vistaUsuarioStyles as styles } from '@/constants/vistaUsuario.styles';
 import { COLORS } from '@/constants/colors';
@@ -65,6 +65,12 @@ const VistaUsuario = () => {
     );
   }
 
+  const riesgoColor = userData.nivelConfianzaColor ?? getRiesgoColor(userData.nivelRiesgo);
+  const riesgoKey = (userData.enMora ? 'alto' : userData.nivelRiesgo ?? 'medio').toLowerCase();
+  const PerfilIcon = riesgoKey === 'alto' ? ShieldAlert : riesgoKey === 'bajo' ? ShieldCheck : Shield;
+  const riesgoSoft =
+    riesgoKey === 'alto' ? COLORS.dangerSoft : riesgoKey === 'bajo' ? '#E8F8F0' : COLORS.warningSoft;
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.white }}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
@@ -114,36 +120,30 @@ const VistaUsuario = () => {
             <Text style={styles.debtDate}>Pagar Antes Del {userData?.fechaLimite}</Text>
           </View>
 
-          {/* Card — Perfil IA */}
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Perfil Crediticio IA</Text>
-            <Text style={styles.riesgoResumen}>
-              Riesgo {formatNivelRiesgo(userData?.nivelRiesgo)}
-              {userData?.nivelConfianza != null
-                ? ` · Confianza ${userData.nivelConfianza}%`
-                : ' · Sin historial suficiente'}
-            </Text>
-            <View style={styles.progressWrap}>
-              <View style={styles.progressTrack}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    {
-                      width: `${userData?.nivelConfianza ?? 0}%`,
-                      backgroundColor: getRiesgoColor(userData?.nivelRiesgo),
-                    },
-                  ]}
-                />
+          <View style={styles.perfilCard}>
+            <View style={[styles.perfilAccent, { backgroundColor: riesgoColor }]} />
+            <View style={styles.perfilCardInner}>
+              <Text style={styles.perfilEyebrow}>Perfil crediticio</Text>
+              <View style={styles.perfilHero}>
+                <View style={[styles.perfilIconWrap, { backgroundColor: riesgoSoft }]}>
+                  <PerfilIcon size={28} color={riesgoColor} strokeWidth={2.2} />
+                </View>
+                <View style={styles.perfilHeroText}>
+                  <Text style={[styles.perfilHeadline, { color: riesgoColor }]}>
+                    {userData.nivelConfianzaLabel}
+                  </Text>
+                  <Text style={styles.perfilSub}>
+                    Riesgo {formatNivelRiesgo(userData.nivelRiesgo)}
+                    {userData.nivelConfianza == null ? ' · Aún sin historial de pagos' : ''}
+                  </Text>
+                </View>
               </View>
+              <Text style={styles.perfilHint}>
+                {userData.enMora
+                  ? 'Tienes saldo vencido. Paga para recuperar tu perfil.'
+                  : 'Paga a tiempo para mantener y mejorar tu crédito en la tienda.'}
+              </Text>
             </View>
-            <Text style={[styles.confidenceBadge, { color: userData?.nivelConfianzaColor }]}>
-              {userData?.nivelConfianzaLabel}
-            </Text>
-            <Text style={styles.motivationalText}>
-              {userData?.enMora
-                ? 'Tienes saldo vencido. Paga para recuperar tu perfil.'
-                : 'Paga A Tiempo Para Mantener Tu Crédito'}
-            </Text>
           </View>
 
           {/* Sección — Últimos Movimientos */}

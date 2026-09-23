@@ -152,11 +152,11 @@ export default function PerfilClienteScreen() {
                     Riesgo {formatNivelRiesgo(perfil.nivelRiesgo)}
                   </Text>
                 </View>
-                <Text style={[styles.statValueSmall, styles.confianzaValue]}>
-                  {perfil.nivelConfianza != null
-                    ? `Confianza ${perfil.nivelConfianza}%`
-                    : 'Sin historial suficiente'}
-                </Text>
+                {perfil.nivelConfianza == null ? (
+                  <Text style={[styles.statValueSmall, styles.confianzaValue]}>
+                    Sin historial suficiente
+                  </Text>
+                ) : null}
                 {perfil.estadoBadgeTipo === 'mora' ? (
                   <Text style={[styles.statValueSmall, styles.confianzaValue]}>
                     En mora: no tratar como riesgo bajo

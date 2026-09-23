@@ -1,5 +1,5 @@
 const { mlPost } = require('./mlServiceClient');
-const { calcularLimiteSugerido } = require('./scoringUtils');
+const { calcularLimiteSugerido, queryTotalesCreditos, ajustarPrediccionPorMora } = require('./scoringUtils');
 
 const SELECT_SCORING = `
   SELECT * FROM scoring
@@ -54,17 +54,19 @@ async function getOrComputeScoring(pool, clienteId, idTendero, options = {}) {
 
   try {
     const rf = await callMLService(clienteId, idTendero);
-    const limiteSugerido = await calcularLimiteSugerido(pool, clienteId, idTendero, rf.nivel_riesgo);
+    const totales = await queryTotalesCreditos(pool, clienteId, idTendero);
+    const ajustado = ajustarPrediccionPorMora(rf, totales);
+    const limiteSugerido = await calcularLimiteSugerido(pool, clienteId, idTendero, ajustado.nivel_riesgo);
     await upsertPrediction(pool, clienteId, idTendero, {
-      nivelRiesgo: rf.nivel_riesgo,
-      puntaje: rf.puntaje,
-      confianza: rf.confianza,
+      nivelRiesgo: ajustado.nivel_riesgo,
+      puntaje: ajustado.puntaje,
+      confianza: ajustado.confianza,
       limiteSugerido,
     });
     return {
-      nivel_riesgo: rf.nivel_riesgo,
-      puntaje: rf.puntaje,
-      confianza: rf.confianza,
+      nivel_riesgo: ajustado.nivel_riesgo,
+      puntaje: ajustado.puntaje,
+      confianza: ajustado.confianza,
       limite_sugerido: limiteSugerido,
       fecha_calculo: new Date(),
     };
