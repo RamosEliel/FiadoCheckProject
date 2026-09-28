@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Alert } from 'react-native';
 import { router } from 'expo-router';
 import { CONFIG } from '@/config/config';
 import { friendlyErrorMessage } from '@/utils/errorMessages';
+import { subscribeCarteraChanged } from '@/utils/carteraEvents';
+import { useAppDialog } from '@/hooks/useAppDialog';
 import {
   totalPagosMes,
   totalEsperadoMes,
@@ -131,6 +132,7 @@ const mesDefaultParaAnio = (anio: string) => {
 };
 
 export const useAnalitica = (token: string | null) => {
+  const { showError } = useAppDialog();
   const [busqueda, setBusqueda] = useState('');
   const [anio, setAnio] = useState(String(new Date().getFullYear()));
   const [mesChart, setMesChart] = useState(mesDefaultParaAnio(String(new Date().getFullYear())));
@@ -185,14 +187,18 @@ export const useAnalitica = (token: string | null) => {
       setDistribucion(json.distribucion ? mapDistribucion(json.distribucion) : []);
     } catch (err: unknown) {
       if (seq !== fetchSeq.current) return;
-      const message = err instanceof Error ? err.message : 'No se pudo cargar la analítica.';
-      Alert.alert('Error', friendlyErrorMessage(message));
+      if (silent) {
+        console.error('Error actualizando analítica:', err);
+      } else {
+        const message = err instanceof Error ? err.message : 'No se pudo cargar la analítica.';
+        showError('Error', friendlyErrorMessage(message));
+      }
     } finally {
       if (seq === fetchSeq.current) {
         setLoading(false);
       }
     }
-  }, [anio, mesChart, token]);
+  }, [anio, mesChart, token, showError]);
 
   useEffect(() => {
     if (cliente?.id) fetchAnalitica(cliente.id);
@@ -201,6 +207,12 @@ export const useAnalitica = (token: string | null) => {
   const refetch = useCallback(() => {
     if (cliente?.id && token) fetchAnalitica(cliente.id, true);
   }, [cliente?.id, token, fetchAnalitica]);
+
+  useEffect(() => {
+    return subscribeCarteraChanged(() => {
+      refetch();
+    });
+  }, [refetch]);
 
   const buscarCliente = async () => {
     const q = busqueda.trim();
@@ -231,7 +243,7 @@ export const useAnalitica = (token: string | null) => {
       });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Error al buscar cliente.';
-      Alert.alert('Error', friendlyErrorMessage(message));
+      showError('Error', friendlyErrorMessage(message));
     } finally {
       setLoading(false);
     }

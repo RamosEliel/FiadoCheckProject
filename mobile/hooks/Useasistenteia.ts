@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { FlatList } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CONFIG } from '@/config/config';
+import { publishCarteraChanged } from '@/utils/carteraEvents';
 import type { ActionBanner, Mensaje } from '@/components/chat/types';
 
 export type { ActionBanner, Mensaje } from '@/components/chat/types';
@@ -209,6 +210,19 @@ export const useAsistenteIA = (token: string, id_tendero: string) => {
         'No tengo información sobre eso en este momento.';
 
       pushMensaje({ id: uid(), tipo: 'bot', texto: respuesta });
+
+      const writeDashboardActions = ['agregar_pago', 'agregar_credito'];
+      const action = json.action_executed ?? '';
+      const scope = json.refresh_scope ?? [];
+      const fromWrite =
+        writeDashboardActions.includes(action) ||
+        Boolean(json.refresh && scope.includes('dashboard'));
+      // No regex sobre el texto: el modelo puede decir "pago registrado" sin tool 201.
+      if (fromWrite) {
+        const tipo: 'pago' | 'credito' =
+          action === 'agregar_credito' ? 'credito' : 'pago';
+        publishCarteraChanged({ tipo });
+      }
 
       if (json.sugerencias && json.sugerencias.length > 0) {
         pushMensaje({

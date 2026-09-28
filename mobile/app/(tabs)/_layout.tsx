@@ -6,7 +6,6 @@ import { Bot } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { HapticTab } from '@/components/haptic-tab';
-import { AppDialog } from '@/components/ui/AppDialog';
 import { AppFonts, Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { COLORS } from '@/constants/colors';
@@ -17,7 +16,7 @@ export default function TabLayout() {
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'].palette ?? Colors.light.palette;
   const [isTendero, setIsTendero] = useState<boolean | null>(null);
-  const { dialog, showSuccess, hide } = useAppDialog();
+  const { showSuccess } = useAppDialog();
   useConsumeLoginWelcome('tabs', showSuccess);
 
   useFocusEffect(
@@ -155,13 +154,6 @@ export default function TabLayout() {
       <Tabs.Screen name="perfilCliente" options={{ href: null }} />
     </Tabs>
     )}
-    <AppDialog
-      visible={dialog.visible}
-      variant={dialog.variant}
-      title={dialog.title}
-      message={dialog.message}
-      onClose={hide}
-    />
     </>
   );
 }

@@ -4,13 +4,14 @@ import {
   Text,
   TouchableOpacity,
   Image,
-  Alert,
   SafeAreaView,
   StatusBar,
   Modal,
   TextInput,
   ScrollView,
-  ActivityIndicator
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -21,18 +22,21 @@ import { COLORS } from '@/constants/colors';
 import { profileStyles as styles } from '@/constants/profile.styles';
 import { ChevronLeft, Bell, User, ShieldCheck, LogOut, Camera, Banknote, BarChart2, LineChart } from 'lucide-react-native';
 import { HeaderIconButton } from '@/components/HeaderIconButton';
+import { useAppDialog } from '@/hooks/useAppDialog';
+import { useKeyboardHeight } from '@/hooks/useKeyboardHeight';
 
 const DEFAULT_AVATAR = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const { showSuccess, showError, showConfirm } = useAppDialog();
+  const keyboardHeight = useKeyboardHeight();
   const [user, setUser] = useState<any>(null);
   const [token, setToken] = useState<string | null>(null);
 
   // Modal states
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
-  const [logoutModalVisible, setLogoutModalVisible] = useState(false);
 
   // Form states
   const [profileForm, setProfileForm] = useState({
@@ -107,16 +111,16 @@ export default function ProfileScreen() {
 
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
-        Alert.alert('Error', err.error || 'No se pudo actualizar el perfil');
+        showError('Error', err.error || 'No se pudo actualizar el perfil');
         return false;
       }
 
       await updateStoredProfile(payload);
-      Alert.alert('Éxito', successMessage);
+      showSuccess('Éxito', successMessage);
       if (closeModal) setEditModalVisible(false);
       return true;
     } catch {
-      Alert.alert('Error', 'Error de conexión con el servidor');
+      showError('Error', 'Error de conexión con el servidor');
       return false;
     } finally {
       setSaving(false);
@@ -222,7 +226,7 @@ export default function ProfileScreen() {
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permisos necesarios', 'Necesitamos acceso a tu galería para cambiar la foto de perfil.');
+      showError('Permisos necesarios', 'Necesitamos acceso a tu galería para cambiar la foto de perfil.');
       return;
     }
 
@@ -242,122 +246,116 @@ export default function ProfileScreen() {
 
       setProfileForm(prev => ({ ...prev, foto_perfil: imageValue }));
 
-      Alert.alert(
+      showConfirm(
         'Confirmar Foto de Perfil',
         '¿Deseas guardar esta foto como tu nueva foto de perfil?',
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          {
-            text: 'Guardar',
-            onPress: async () => {
-              await saveProfileData({ foto_perfil: imageValue }, 'Foto de perfil actualizada correctamente', false);
-            }
-          }
-        ]
+        {
+          confirmLabel: 'Guardar',
+          cancelLabel: 'Cancelar',
+          onConfirm: async () => {
+            await saveProfileData({ foto_perfil: imageValue }, 'Foto de perfil actualizada correctamente', false);
+          },
+        },
       );
     }
   };
 
   const handleUpdateProfile = async () => {
     if (!profileForm.email) {
-      Alert.alert('Error', 'Por favor, completa los campos obligatorios.');
+      showError('Error', 'Por favor, completa los campos obligatorios.');
       return;
     }
 
     const validationError = validateProfileForm();
     if (validationError) {
-      Alert.alert('Revisa la información', validationError);
+      showError('Revisa la información', validationError);
       return;
     }
 
-    Alert.alert(
+    showConfirm(
       'Confirmar Cambios',
       '¿Estás seguro de que deseas actualizar tu información personal?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Guardar',
-          onPress: async () => {
-            const trimmedPayload = {
-              ...profileForm,
-              email: profileForm.email.trim(),
-              nombre: profileForm.nombre.trim(),
-              nombre_tienda: profileForm.nombre_tienda.trim(),
-              telefono: profileForm.telefono.trim(),
-              direccion: profileForm.direccion.trim(),
-              nombre_completo: profileForm.nombre_completo.trim(),
-            };
-            await saveProfileData(trimmedPayload, 'Perfil actualizado correctamente');
-          }
-        }
-      ]
+      {
+        confirmLabel: 'Guardar',
+        cancelLabel: 'Cancelar',
+        onConfirm: async () => {
+          const trimmedPayload = {
+            ...profileForm,
+            email: profileForm.email.trim(),
+            nombre: profileForm.nombre.trim(),
+            nombre_tienda: profileForm.nombre_tienda.trim(),
+            telefono: profileForm.telefono.trim(),
+            direccion: profileForm.direccion.trim(),
+            nombre_completo: profileForm.nombre_completo.trim(),
+          };
+          await saveProfileData(trimmedPayload, 'Perfil actualizado correctamente');
+        },
+      },
     );
   };
 
   const handleChangePassword = async () => {
     if (!passwordForm.currentPassword) {
-      Alert.alert('Error', 'Ingresa tu contraseña actual.');
+      showError('Error', 'Ingresa tu contraseña actual.');
       return;
     }
     if (passwordForm.newPassword.length < 8) {
-      Alert.alert('Error', 'La nueva contraseña debe tener al menos 8 caracteres');
+      showError('Error', 'La nueva contraseña debe tener al menos 8 caracteres');
       return;
     }
     if (!/[A-Z]/.test(passwordForm.newPassword)) {
-      Alert.alert('Error', 'La nueva contraseña debe tener al menos una letra mayúscula');
+      showError('Error', 'La nueva contraseña debe tener al menos una letra mayúscula');
       return;
     }
     if (!/[0-9]/.test(passwordForm.newPassword)) {
-      Alert.alert('Error', 'La nueva contraseña debe tener al menos un número');
+      showError('Error', 'La nueva contraseña debe tener al menos un número');
       return;
     }
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      Alert.alert('Error', 'Las nuevas contraseñas no coinciden');
+      showError('Error', 'Las nuevas contraseñas no coinciden');
       return;
     }
     if (passwordForm.newPassword === passwordForm.currentPassword) {
-      Alert.alert('Error', 'La nueva contraseña debe ser diferente a la actual.');
+      showError('Error', 'La nueva contraseña debe ser diferente a la actual.');
       return;
     }
 
-    Alert.alert(
+    showConfirm(
       'Confirmar Cambio',
       '¿Estás seguro de que deseas cambiar tu contraseña?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Actualizar',
-          onPress: async () => {
-            setChangingPassword(true);
-            try {
-              const response = await fetch(`${CONFIG.API_URL}/auth/change-password`, {
-                method: 'PUT',
-                headers: {
-                  'Authorization': `Bearer ${token}`,
-                  'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                  currentPassword: passwordForm.currentPassword,
-                  newPassword: passwordForm.newPassword
-                }),
-              });
+      {
+        confirmLabel: 'Actualizar',
+        cancelLabel: 'Cancelar',
+        onConfirm: async () => {
+          setChangingPassword(true);
+          try {
+            const response = await fetch(`${CONFIG.API_URL}/auth/change-password`, {
+              method: 'PUT',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                currentPassword: passwordForm.currentPassword,
+                newPassword: passwordForm.newPassword
+              }),
+            });
 
-              if (response.ok) {
-                Alert.alert('Éxito', 'Contraseña actualizada correctamente');
-                setPasswordModalVisible(false);
-                setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-              } else {
-                const err = await response.json();
-                Alert.alert('Error', err.error || 'Error al cambiar la contraseña');
-              }
-            } catch {
-              Alert.alert('Error', 'Error de conexión con el servidor');
-            } finally {
-              setChangingPassword(false);
+            if (response.ok) {
+              showSuccess('Éxito', 'Contraseña actualizada correctamente');
+              setPasswordModalVisible(false);
+              setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+            } else {
+              const err = await response.json();
+              showError('Error', err.error || 'Error al cambiar la contraseña');
             }
+          } catch {
+            showError('Error', 'Error de conexión con el servidor');
+          } finally {
+            setChangingPassword(false);
           }
-        }
-      ]
+        },
+      },
     );
   };
 
@@ -489,7 +487,15 @@ export default function ProfileScreen() {
 
         <TouchableOpacity
           style={styles.menuItem}
-          onPress={() => setLogoutModalVisible(true)}
+          onPress={() => showConfirm(
+            'Cerrar Sesión',
+            '¿Estás seguro de que deseas salir de tu cuenta?',
+            {
+              confirmLabel: 'Cerrar Sesión',
+              cancelLabel: 'Cancelar',
+              onConfirm: () => { void handleLogout(); },
+            },
+          )}
         >
           <View style={[styles.iconContainer, { backgroundColor: '#BFEBC4' }]}>
             <LogOut size={24} color={COLORS.primary} />
@@ -501,9 +507,16 @@ export default function ProfileScreen() {
       <Modal
         visible={editModalVisible}
         transparent
-        animationType="slide"
+        animationType="fade"
       >
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+        <View style={[
+          styles.modalOverlay,
+          Platform.OS === 'android' ? { paddingBottom: keyboardHeight } : null,
+        ]}>
           <View style={styles.modalContainer}>
             <Text style={styles.modalTitle}>Editar Perfil</Text>
             <ScrollView>
@@ -632,14 +645,22 @@ export default function ProfileScreen() {
             </ScrollView>
           </View>
         </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       <Modal
         visible={passwordModalVisible}
         transparent
-        animationType="slide"
+        animationType="fade"
       >
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+        <View style={[
+          styles.modalOverlay,
+          Platform.OS === 'android' ? { paddingBottom: keyboardHeight } : null,
+        ]}>
           <View style={styles.modalContainer}>
             <Text style={styles.modalTitle}>Cambiar Contraseña</Text>
             <View style={styles.inputGroup}>
@@ -711,35 +732,7 @@ export default function ProfileScreen() {
             </View>
           </View>
         </View>
-      </Modal>
-
-      <Modal
-        visible={logoutModalVisible}
-        transparent
-        animationType="fade"
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Cerrar Sesión</Text>
-            <Text style={styles.confirmText}>
-              ¿Estás seguro de que deseas salir de tu cuenta?
-            </Text>
-            <View style={styles.modalBtnRow}>
-              <TouchableOpacity
-                style={styles.modalBtnCancel}
-                onPress={() => setLogoutModalVisible(false)}
-              >
-                <Text style={styles.modalBtnTextCancel}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.modalBtnConfirm}
-                onPress={handleLogout}
-              >
-                <Text style={styles.modalBtnTextConfirm}>Cerrar Sesión</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );

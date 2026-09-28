@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { Alert } from 'react-native';
 import { router } from 'expo-router';
 import { CONFIG } from '@/config/config';
 import { friendlyErrorMessage } from '@/utils/errorMessages';
+import { useAppDialog } from '@/hooks/useAppDialog';
 
 const API_URL = CONFIG.API_URL;
 
 export const useRegister = () => {
+  const { showSuccess, showError } = useAppDialog();
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
   const [telefono, setTelefono] = useState('');
@@ -24,19 +25,19 @@ export const useRegister = () => {
   const handleRegister = async () => {
     // Validaciones
     if (!nombre || !email || !telefono || !cedula || !direccion || !password || !confirmPassword) {
-      Alert.alert('Campos vacíos', 'Por favor completa todos los campos');
+      showError('Campos vacíos', 'Por favor completa todos los campos');
       return;
     }
     if (!email.includes('@')) {
-      Alert.alert('Correo inválido', 'Ingresa un correo electrónico válido');
+      showError('Correo inválido', 'Ingresa un correo electrónico válido');
       return;
     }
     if (password !== confirmPassword) {
-      Alert.alert('Contraseñas no coinciden', 'Las contraseñas deben ser iguales');
+      showError('Contraseñas no coinciden', 'Las contraseñas deben ser iguales');
       return;
     }
     if (password.length < 6) {
-      Alert.alert('Contraseña muy corta', 'Mínimo 6 caracteres');
+      showError('Contraseña muy corta', 'Mínimo 6 caracteres');
       return;
     }
 
@@ -60,11 +61,10 @@ export const useRegister = () => {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Error al registrar');
 
-      Alert.alert('¡Cuenta creada!', 'Ya puedes iniciar sesión', [
-        { text: 'OK', onPress: () => router.replace('/(auth)/login') }
-      ]);
+      showSuccess('¡Cuenta creada!', 'Ya puedes iniciar sesión');
+      router.replace('/(auth)/login');
     } catch (err: any) {
-      Alert.alert('Error', friendlyErrorMessage(err.message || 'No se pudo crear la cuenta'));
+      showError('Error', friendlyErrorMessage(err.message || 'No se pudo crear la cuenta'));
     } finally {
       setLoading(false);
     }

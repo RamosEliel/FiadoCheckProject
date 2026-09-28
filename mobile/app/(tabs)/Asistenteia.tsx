@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
-  Keyboard,
   KeyboardAvoidingView,
   ListRenderItem,
   Platform,
@@ -26,6 +24,8 @@ import type { Mensaje } from '@/components/chat/types';
 import { asistenteIAStyles as styles } from '@/constants/Asistenteia.styles';
 import { COLORS } from '@/constants/colors';
 import { SUGERENCIAS_INICIALES, useAsistenteIA } from '@/hooks/Useasistenteia';
+import { useKeyboardHeight } from '@/hooks/useKeyboardHeight';
+import { useAppDialog } from '@/hooks/useAppDialog';
 
 const IOS_HEADER_OFFSET = 64;
 
@@ -33,7 +33,8 @@ export default function AsistenteIAScreen() {
   const insets = useSafeAreaInsets();
   const [token, setToken] = useState<string | null>(null);
   const [idTendero, setIdTendero] = useState('');
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const keyboardHeight = useKeyboardHeight();
+  const { showConfirm } = useAppDialog();
 
   useFocusEffect(
     useCallback(() => {
@@ -80,24 +81,12 @@ export default function AsistenteIAScreen() {
   } = useAsistenteIA(token ?? '', idTendero);
 
   useEffect(() => {
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-
-    const onShow = (e: { endCoordinates: { height: number } }) => {
-      setKeyboardHeight(e.endCoordinates.height);
+    if (keyboardHeight > 0) {
       requestAnimationFrame(() => {
         scrollRef.current?.scrollToEnd({ animated: true });
       });
-    };
-    const onHide = () => setKeyboardHeight(0);
-
-    const showSub = Keyboard.addListener(showEvent, onShow);
-    const hideSub = Keyboard.addListener(hideEvent, onHide);
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, [scrollRef]);
+    }
+  }, [keyboardHeight, scrollRef]);
 
   const hasUserMessage = mensajes.some((msg) => msg.tipo === 'usuario');
   const listData = hasUserMessage
@@ -114,19 +103,16 @@ export default function AsistenteIAScreen() {
   const confirmNewChat = () => {
     if (!hasUserMessage) return;
 
-    Alert.alert(
+    showConfirm(
       'Nueva conversación',
       'Se perderá el historial de esta sesión. ¿Quieres empezar de nuevo?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Empezar de nuevo',
-          style: 'destructive',
-          onPress: () => {
-            void clearChat();
-          },
+      {
+        confirmLabel: 'Empezar de nuevo',
+        cancelLabel: 'Cancelar',
+        onConfirm: () => {
+          void clearChat();
         },
-      ],
+      },
     );
   };
 

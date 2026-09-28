@@ -1,5 +1,8 @@
 import { Text, type StyleProp, type TextStyle } from 'react-native';
 import { AppFonts } from '@/constants/theme';
+import { normalizeChatText } from '@/utils/chatText';
+
+export { normalizeChatText };
 
 type Props = {
   text: string;
@@ -26,10 +29,10 @@ function renderLine(line: string, boldStyle?: TextStyle) {
 }
 
 export function RichMessageText({ text, style, boldStyle }: Props) {
-  const lines = text.split('\n');
+  const lines = normalizeChatText(text).split('\n');
 
   return (
-    <Text style={style}>
+    <Text style={[style, { flexShrink: 1 }]}>
       {lines.map((line, index) => (
         <Text key={`line-${index}`}>
           {renderLine(line, boldStyle)}

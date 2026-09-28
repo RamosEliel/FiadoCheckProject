@@ -1,6 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { CONFIG } from '@/config/config';
+import { subscribeCarteraChanged } from '@/utils/carteraEvents';
 
 const API_URL = CONFIG.API_URL;
 
@@ -42,9 +43,9 @@ export const useReportes = (token: string | null) => {
   const [periodo, setPeriodo] = useState<PeriodoReporte>('mes');
 
   const fetchReporte = useCallback(
-    async (p: PeriodoReporte = 'mes') => {
+    async (p: PeriodoReporte = 'mes', silent = false) => {
       if (!token) return;
-      setLoading(true);
+      if (!silent) setLoading(true);
       setError(null);
       try {
         const res = await fetch(`${API_URL}/reportes?periodo=${p}`, {
@@ -65,8 +66,14 @@ export const useReportes = (token: string | null) => {
   useFocusEffect(
     useCallback(() => {
       fetchReporte(periodo);
-    }, [token, periodo])
+    }, [token, periodo, fetchReporte])
   );
+
+  useEffect(() => {
+    return subscribeCarteraChanged(() => {
+      void fetchReporte(periodo, true);
+    });
+  }, [fetchReporte, periodo]);
 
   const cambiarPeriodo = (nuevoPeriodo: PeriodoReporte) => {
     setPeriodo(nuevoPeriodo);

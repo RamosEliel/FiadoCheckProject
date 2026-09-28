@@ -18,6 +18,7 @@ import {
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useSessionTimeout } from '@/hooks/useSessionTimeout';
 import { usePushNotificationListener, registerPushToken } from '@/hooks/usePushNotifications';
+import { AppDialogProvider } from '@/hooks/useAppDialog';
 
 
 export const unstable_settings = {
@@ -127,6 +128,7 @@ export default function RootLayout() {
 return (
     <SafeAreaProvider>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <AppDialogProvider>
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="index" />
             <Stack.Screen name="(auth)" />
@@ -136,7 +138,8 @@ return (
             <Stack.Screen name="creditoDetalle" />
             <Stack.Screen name="notificaciones" />
           </Stack>
-        <StatusBar style="auto" />
+          <StatusBar style="auto" />
+        </AppDialogProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );

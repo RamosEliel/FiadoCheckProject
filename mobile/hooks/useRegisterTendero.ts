@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Alert } from 'react-native';
 import { router } from 'expo-router';
 import { CONFIG } from '@/config/config';
 import { friendlyErrorMessage } from '@/utils/errorMessages';
+import { useAppDialog } from '@/hooks/useAppDialog';
 
 const API_URL = CONFIG.API_URL;
 
@@ -18,6 +18,7 @@ interface RegisterFormErrors {
 }
 
 export const useRegisterTendero = () => {
+  const { showSuccess, showError } = useAppDialog();
   const [nombreCompleto, setNombreCompleto] = useState('');
   const [email, setEmail] = useState('');
   const [telefono, setTelefono] = useState('');
@@ -137,15 +138,14 @@ export const useRegisterTendero = () => {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Error al registrar');
 
-      Alert.alert('¡Cuenta creada!', 'Ya puedes iniciar sesión', [
-        { text: 'OK', onPress: () => router.replace('/(auth)/login') }
-      ]);
+      showSuccess('¡Cuenta creada!', 'Ya puedes iniciar sesión');
+      router.replace('/(auth)/login');
     } catch (err: any) {
       clearTimeout(timeoutId);
       if (err.name === 'AbortError') {
-        Alert.alert('Error', 'La conexión tardó demasiado. Verifica tu red e intenta de nuevo.');
+        showError('Error', 'La conexión tardó demasiado. Verifica tu red e intenta de nuevo.');
       } else {
-        Alert.alert('Error', friendlyErrorMessage(err.message || 'No se pudo crear la cuenta'));
+        showError('Error', friendlyErrorMessage(err.message || 'No se pudo crear la cuenta'));
       }
     } finally {
       setLoading(false);

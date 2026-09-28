@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Alert, Linking } from 'react-native';
 import { CONFIG } from '@/config/config';
 import { getTenderoSeleccionado } from '@/hooks/Usetiendasasociadas';
+import { subscribeCarteraChanged } from '@/utils/carteraEvents';
 import {
   formatNivelRiesgo,
   getRiesgoColor,
@@ -187,6 +188,12 @@ export const useVistaUsuario = (token: string | null) => {
 
   useEffect(() => {
     fetchUserData();
+  }, [fetchUserData]);
+
+  useEffect(() => {
+    return subscribeCarteraChanged(() => {
+      void fetchUserData(true);
+    });
   }, [fetchUserData]);
 
   const handleContactStore = useCallback(() => {

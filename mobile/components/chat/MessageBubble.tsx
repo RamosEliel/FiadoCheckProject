@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, Pressable, StyleSheet } from 'react-nativ
 import { Bot, RefreshCw } from 'lucide-react-native';
 import { COLORS } from '@/constants/colors';
 import { AppFonts } from '@/constants/theme';
+import { normalizeChatText } from '@/utils/chatText';
 import { RichMessageText } from './RichMessageText';
 import { copyToClipboard } from './copyMessage';
 import { hapticLight } from './haptic';
@@ -28,6 +29,7 @@ export function MessageBubble({ mensaje, grouped = false, onRetry }: Props) {
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isUser = mensaje.tipo === 'usuario';
   const texto = mensaje.texto ?? '';
+  const textoVisible = normalizeChatText(texto);
   const time = formatTime(mensaje.createdAt);
   const isError = Boolean(mensaje.esError);
 
@@ -39,7 +41,7 @@ export function MessageBubble({ mensaje, grouped = false, onRetry }: Props) {
 
   const handleLongPress = async () => {
     hapticLight();
-    const ok = await copyToClipboard(texto);
+    const ok = await copyToClipboard(textoVisible);
     if (!ok) return;
     setCopied(true);
     if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
@@ -56,10 +58,10 @@ export function MessageBubble({ mensaje, grouped = false, onRetry }: Props) {
           onLongPress={handleLongPress}
           delayLongPress={350}
           accessibilityRole="text"
-          accessibilityLabel={`Tu mensaje: ${texto}`}
+          accessibilityLabel={`Tu mensaje: ${textoVisible}`}
           accessibilityHint="Mantén presionado para copiar"
         >
-          <RichMessageText text={texto} style={styles.userText} />
+          <RichMessageText text={textoVisible} style={styles.userText} />
           {timeLabel ? <Text style={styles.userTime}>{timeLabel}</Text> : null}
         </Pressable>
       </View>
@@ -80,11 +82,11 @@ export function MessageBubble({ mensaje, grouped = false, onRetry }: Props) {
         onLongPress={handleLongPress}
         delayLongPress={350}
         accessibilityRole="text"
-        accessibilityLabel={`Mensaje del asistente: ${texto}`}
+        accessibilityLabel={`Mensaje del asistente: ${textoVisible}`}
         accessibilityHint="Mantén presionado para copiar"
       >
         <RichMessageText
-          text={texto}
+          text={textoVisible}
           style={[styles.botText, isError && styles.botTextError]}
         />
         {timeLabel ? <Text style={styles.botTime}>{timeLabel}</Text> : null}
@@ -115,6 +117,7 @@ const styles = StyleSheet.create({
   botRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
+    alignSelf: 'flex-start',
     gap: 10,
     maxWidth: '88%',
   },
@@ -133,6 +136,7 @@ const styles = StyleSheet.create({
   },
   botBubble: {
     flexShrink: 1,
+    maxWidth: '100%',
     backgroundColor: COLORS.white,
     borderRadius: 20,
     borderBottomLeftRadius: 6,
@@ -151,6 +155,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF8F8',
   },
   botText: {
+    flexShrink: 1,
     fontSize: 15,
     color: COLORS.text,
     lineHeight: 22,
@@ -202,6 +207,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   userText: {
+    flexShrink: 1,
     fontSize: 15,
     color: COLORS.white,
     lineHeight: 22,

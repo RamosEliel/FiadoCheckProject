@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CONFIG } from '@/config/config';
+import { subscribeCarteraChanged } from '@/utils/carteraEvents';
 
 const API_URL = CONFIG.API_URL;
 const FETCH_TIMEOUT_MS = 15000;
@@ -158,6 +159,12 @@ export const useNotificaciones = () => {
 
   useEffect(() => {
     fetchAlertas();
+  }, [fetchAlertas]);
+
+  useEffect(() => {
+    return subscribeCarteraChanged(() => {
+      void fetchAlertas(true);
+    });
   }, [fetchAlertas]);
 
   const onRefresh = useCallback(async () => {

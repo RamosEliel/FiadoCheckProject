@@ -12,7 +12,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { loginStyles as styles } from '@/constants/login.styles';
 import { COLORS } from '@/constants/colors';
 import { useLogin } from '@/hooks/useLogin';
-import { AppDialog } from '@/components/ui/AppDialog';
 import { Eye } from "lucide-react-native";
 import { EyeOff } from "lucide-react-native";
 
@@ -26,8 +25,6 @@ export default function LoginScreen() {
     handleRegister,
     handleRegisterTendero,
     handleGoogleLogin,
-    dialog,
-    hideDialog,
   } = useLogin();
 
   return (
@@ -129,13 +126,6 @@ export default function LoginScreen() {
 
         </View>
       </KeyboardAvoidingView>
-      <AppDialog
-        visible={dialog.visible}
-        variant={dialog.variant}
-        title={dialog.title}
-        message={dialog.message}
-        onClose={hideDialog}
-      />
     </SafeAreaView>
   );
 }

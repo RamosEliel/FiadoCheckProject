@@ -4,7 +4,7 @@ const authMiddleware = require('../middleware/auth');
 const { validateBody, validateQuery, validateParams, rules } = require('../middlewares/validateBody');
 const { triggerMLRetrain } = require('../utils/mlTrigger');
 const { invalidateScoring } = require('../utils/mlScoring');
-const { todayBusinessKey } = require('../utils/dateUtils');
+const { todayBusinessKey, diasAtraso: calcDiasAtraso } = require('../utils/dateUtils');
 const { marcarCreditosVencidos } = require('../utils/creditosMora');
 const creditsController = require('../modules/creditos/credits.controller');
 
@@ -128,9 +128,7 @@ router.get('/:id', async (req, res) => {
     }
 
     const c = credito.rows[0];
-    const diasAtraso = c.estado === 'vencido'
-      ? Math.max(0, Math.floor((new Date() - new Date(c.fecha_limite_pago)) / (1000 * 60 * 60 * 24)))
-      : 0;
+    const diasAtraso = c.estado === 'vencido' ? calcDiasAtraso(c.fecha_limite_pago) : 0;
 
     if (c.estado === 'vencido' && diasAtraso > 30) {
       triggerMLRetrain('credito_mora_30').catch(() => {});

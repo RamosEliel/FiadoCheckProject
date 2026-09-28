@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { router } from 'expo-router';
 import { CONFIG } from '@/config/config';
+import { subscribeCarteraChanged } from '@/utils/carteraEvents';
+import { clasificarEstadoCliente } from '@/utils/mora';
 
 const API_URL = CONFIG.API_URL;
 
@@ -63,16 +65,23 @@ export const useClients = (token: string | null) => {
         return;
       }
 
-      const mapped: Cliente[] = dataArray.map((c: any) => ({
-        id_cliente: c.id_cliente,
-        nombre_completo: c.nombre_completo,
-        initials: getInitials(c.nombre_completo),
-        bgColor: getAvatarColor(c.id_cliente),
-        subtitulo: c.total_deuda > 0 ? `Deuda: $${c.total_deuda.toLocaleString('es-CO')}` : 'Al día',
-        subtituloTipo: c.total_deuda > 0 ? 'mora' : 'normal',
-        monto: `$${Number(c.total_deuda).toLocaleString('es-CO')}`,
-        estado: c.total_deuda > 0 ? 'mora' : 'al_dia',
-      }));
+      const mapped: Cliente[] = dataArray.map((c: any) => {
+        const totalDeuda = Number(c.total_deuda) || 0;
+        const creditosVencidos = Number(c.creditos_vencidos) || 0;
+        const estado = clasificarEstadoCliente(totalDeuda, creditosVencidos);
+        return {
+          id_cliente: c.id_cliente,
+          nombre_completo: c.nombre_completo,
+          initials: getInitials(c.nombre_completo),
+          bgColor: getAvatarColor(c.id_cliente),
+          subtitulo: totalDeuda > 0
+            ? `Deuda: $${totalDeuda.toLocaleString('es-CO')}`
+            : 'Sin deuda',
+          subtituloTipo: estado === 'mora' ? 'mora' : 'normal',
+          monto: `$${totalDeuda.toLocaleString('es-CO')}`,
+          estado,
+        };
+      });
 
       setClientes(mapped);
       setTotal(mapped.length);
@@ -88,6 +97,12 @@ export const useClients = (token: string | null) => {
       fetchClientes();
     }
   }, [token, fetchClientes]);
+
+  useEffect(() => {
+    return subscribeCarteraChanged(() => {
+      void fetchClientes(true);
+    });
+  }, [fetchClientes]);
 
   useEffect(() => {
     aplicarFiltros();

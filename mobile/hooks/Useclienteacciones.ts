@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
-import { Alert } from 'react-native';
 import { CONFIG } from '@/config/config';
 import { friendlyErrorMessage } from '@/utils/errorMessages';
+import { useAppDialog } from '@/hooks/useAppDialog';
 
 const API_URL = CONFIG.API_URL;
 
@@ -29,6 +29,7 @@ const INITIAL_REGISTER: RegisterForm = {
 };
 
 export const useClienteAcciones = (token: string | null, onSuccess: () => void) => {
+  const { showSuccess, showError } = useAppDialog();
   const [modalPaso, setModalPaso] = useState<ModalPaso>('cerrado');
   const [registerForm, setRegisterForm] = useState<RegisterForm>(INITIAL_REGISTER);
   const [cedulaBusqueda, setCedulaBusqueda] = useState('');
@@ -85,7 +86,7 @@ export const useClienteAcciones = (token: string | null, onSuccess: () => void) 
       });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Error al buscar cliente';
-      Alert.alert('Sin resultados', friendlyErrorMessage(message));
+      showError('Sin resultados', friendlyErrorMessage(message));
     } finally {
       setBuscando(false);
     }
@@ -110,12 +111,12 @@ export const useClienteAcciones = (token: string | null, onSuccess: () => void) 
         throw new Error(json.error || 'No se pudo asociar el cliente');
       }
 
-      Alert.alert('Listo', json.message || 'Cliente asociado a tu tienda');
       cerrarModal();
       onSuccess();
+      showSuccess('Listo', json.message || 'Cliente asociado a tu tienda');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Error al asociar cliente';
-      Alert.alert('Error', friendlyErrorMessage(message));
+      showError('Error', friendlyErrorMessage(message));
     } finally {
       setGuardando(false);
     }
@@ -128,15 +129,15 @@ export const useClienteAcciones = (token: string | null, onSuccess: () => void) 
     const telefonoTrim = telefono.trim();
 
     if (!nombreTrim || !cedulaTrim || !telefonoTrim) {
-      Alert.alert('Campos requeridos', 'Nombre, cédula y teléfono son obligatorios.');
+      showError('Campos requeridos', 'Nombre, cédula y teléfono son obligatorios.');
       return;
     }
     if (!/^[0-9]{6,12}$/.test(cedulaTrim)) {
-      Alert.alert('Cédula inválida', 'Ingresa una cédula numérica de 6 a 12 dígitos.');
+      showError('Cédula inválida', 'Ingresa una cédula numérica de 6 a 12 dígitos.');
       return;
     }
     if (!/^[0-9]{7,10}$/.test(telefonoTrim)) {
-      Alert.alert('Teléfono inválido', 'El teléfono debe tener entre 7 y 10 dígitos.');
+      showError('Teléfono inválido', 'El teléfono debe tener entre 7 y 10 dígitos.');
       return;
     }
     if (!token) return;
@@ -162,12 +163,12 @@ export const useClienteAcciones = (token: string | null, onSuccess: () => void) 
         throw new Error(json.error || 'No se pudo registrar el cliente');
       }
 
-      Alert.alert('Listo', json.message || 'Cliente agregado a tu cartera');
       cerrarModal();
       onSuccess();
+      showSuccess('Listo', json.message || 'Cliente agregado a tu cartera');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Error al registrar cliente';
-      Alert.alert('Error', friendlyErrorMessage(message));
+      showError('Error', friendlyErrorMessage(message));
     } finally {
       setGuardando(false);
     }

@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Alert } from 'react-native';
+import { InteractionManager } from 'react-native';
 import { router } from 'expo-router';
 import { CONFIG } from '@/config/config';
 import { getRiesgoColor, mapScoringML } from '@/utils/scoring';
 import { friendlyErrorMessage } from '@/utils/errorMessages';
+import { useAppDialog } from '@/hooks/useAppDialog';
+import { publishCarteraChanged } from '@/utils/carteraEvents';
+import { todayBusinessKey } from '@/utils/businessDate';
 
 const API_URL = CONFIG.API_URL;
 
@@ -68,6 +71,7 @@ const normalizeClienteId = (value: unknown, fallback = ''): string => {
 };
 
 export const useAddCredit = (token: string, id_tendero: string, initialClienteId?: string | string[]) => {
+  const { showSuccess, showError } = useAppDialog();
   const initialId = normalizeClienteId(
     Array.isArray(initialClienteId) ? initialClienteId[0] : initialClienteId,
   );
@@ -105,7 +109,7 @@ export const useAddCredit = (token: string, id_tendero: string, initialClienteId
       const data = await fetchRecomendacion(id);
       setScoring(mapRecomendacion(data));
     } catch (err: any) {
-      Alert.alert('Error', friendlyErrorMessage(err.message || 'No se pudo cargar la información del cliente.'));
+      showError('Error', friendlyErrorMessage(err.message || 'No se pudo cargar la información del cliente.'));
       setScoring(null);
     } finally {
       setLoadingScoring(false);
@@ -125,7 +129,7 @@ export const useAddCredit = (token: string, id_tendero: string, initialClienteId
         if (!cancelled) setScoring(mapRecomendacion(data));
       } catch (err: any) {
         if (!cancelled) {
-          Alert.alert('Error', friendlyErrorMessage(err.message || 'No se pudo cargar la información del cliente.'));
+          showError('Error', friendlyErrorMessage(err.message || 'No se pudo cargar la información del cliente.'));
           setScoring(null);
         }
       } finally {
@@ -154,15 +158,13 @@ export const useAddCredit = (token: string, id_tendero: string, initialClienteId
       return false;
     }
 
-    const currentYear = new Date().getFullYear();
+    const currentYear = parseInt(todayBusinessKey().slice(0, 4), 10);
     if (year < currentYear || year > currentYear + 10) {
       return false;
     }
 
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
-    dateObj.setHours(0, 0, 0, 0);
-    if (dateObj.getTime() < hoy.getTime()) {
+    const key = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    if (key < todayBusinessKey()) {
       return false;
     }
 
@@ -187,12 +189,12 @@ export const useAddCredit = (token: string, id_tendero: string, initialClienteId
 
   const handleGuardar = async () => {
     if (!usuario || !monto || !fechaLimite) {
-      Alert.alert('Campos vacíos', 'Completa usuario, monto y fecha límite');
+      showError('Campos vacíos', 'Completa usuario, monto y fecha límite');
       return;
     }
 
     if (!isValidDate(fechaLimite)) {
-      Alert.alert(
+      showError(
         'Fecha inválida',
         'Ingresa una fecha límite válida (DD/MM/AAAA) igual o posterior a hoy.'
       );
@@ -229,11 +231,19 @@ export const useAddCredit = (token: string, id_tendero: string, initialClienteId
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Error al guardar');
 
-      Alert.alert('¡Crédito creado!', 'El crédito fue registrado correctamente', [
-        { text: 'OK', onPress: () => setTimeout(() => router.back(), 300) }
-      ]);
+      const montoCredito = parseFloat(monto.replace(/[^0-9.]/g, '')) || 0;
+      const clienteVisible = scoring?.nombre?.trim() || usuario.trim();
+      publishCarteraChanged({
+        tipo: 'credito',
+        monto: montoCredito,
+        cliente: clienteVisible,
+      });
+      showSuccess('¡Crédito creado!', 'El crédito fue registrado correctamente');
+      InteractionManager.runAfterInteractions(() => {
+        requestAnimationFrame(() => router.back());
+      });
     } catch (err: any) {
-      Alert.alert('Error', friendlyErrorMessage(err.message));
+      showError('Error', friendlyErrorMessage(err.message));
     } finally {
       setLoading(false);
     }

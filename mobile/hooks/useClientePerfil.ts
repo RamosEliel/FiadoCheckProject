@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { router } from 'expo-router';
 import { CONFIG } from '@/config/config';
 import { mapScoringML, ScoringML } from '@/utils/scoring';
+import { dateFromKey, toDateKey } from '@/utils/businessDate';
+import { subscribeCarteraChanged } from '@/utils/carteraEvents';
 const API_URL = CONFIG.API_URL;
 const MESES = [
   'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
@@ -41,16 +43,22 @@ export type ClientePerfil = {
 const formatCOP = (valor: number) =>
   `$${valor.toLocaleString('es-CO')}`;
 const formatFechaLarga = (fecha: string) => {
-  const d = new Date(fecha);
+  const key = toDateKey(fecha);
+  const d = key ? dateFromKey(key) : null;
+  if (!d) return '—';
   return `${d.getDate()} ${MESES[d.getMonth()]} de ${d.getFullYear()}`;
 };
 const formatFechaCorta = (fecha: string) => {
-  const d = new Date(fecha);
+  const key = toDateKey(fecha);
+  const d = key ? dateFromKey(key) : null;
+  if (!d) return '—';
   const mes = MESES[d.getMonth()];
   return `${d.getDate()} ${mes.charAt(0).toUpperCase()}${mes.slice(1)}`;
 };
 const formatClienteDesde = (fecha: string) => {
-  const d = new Date(fecha);
+  const key = toDateKey(fecha);
+  const d = key ? dateFromKey(key) : null;
+  if (!d) return 'Cliente';
   return `Cliente desde ${MESES[d.getMonth()]} ${d.getFullYear()}`;
 };
 const fetchScoringML = async (clienteId: string, token: string):
@@ -179,6 +187,11 @@ Promise.all([
   }, [token, clienteId]);
   useEffect(() => {
     fetchPerfil();
+  }, [fetchPerfil]);
+  useEffect(() => {
+    return subscribeCarteraChanged(() => {
+      void fetchPerfil(true);
+    });
   }, [fetchPerfil]);
   const handleNuevoCredito = () => {
     if (!clienteId) return;

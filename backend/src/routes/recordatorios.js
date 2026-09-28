@@ -3,6 +3,7 @@ const pool = require('../config/database');
 const authMiddleware = require('../middleware/auth');
 const { validateParams, validateBody, rules } = require('../middlewares/validateBody');
 const { marcarCreditosVencidos } = require('../utils/creditosMora');
+const { toDateKey, todayBusinessKey, calendarDaysBetween } = require('../utils/dateUtils');
 
 const router = express.Router();
 router.use(authMiddleware);
@@ -33,11 +34,9 @@ async function clienteDeLaSesion(req) {
 }
 
 function clasificarCredito(estado, fechaLimite) {
-  const limite = new Date(fechaLimite);
-  const hoy = new Date();
-  hoy.setHours(0, 0, 0, 0);
-  limite.setHours(0, 0, 0, 0);
-  const dias = Math.floor((hoy - limite) / (1000 * 60 * 60 * 24));
+  const limite = toDateKey(fechaLimite);
+  const hoy = todayBusinessKey();
+  const dias = limite ? calendarDaysBetween(limite, hoy) : 0;
 
   if (estado === 'vencido' || dias > 0) {
     const atraso = Math.max(dias, 1);

@@ -34,21 +34,6 @@ export default function HomeScreen() {
   const searchAnim = useRef(new Animated.Value(0)).current;
   const isFirstFocus = useRef(true);
 
-useFocusEffect(
-  useCallback(() => {
-    AsyncStorage.getItem('token').then(t => {
-      setToken(t);
-      if (t && !isFirstFocus.current) {
-        refetch(t, true);
-      }
-      isFirstFocus.current = false;
-    });
-    AsyncStorage.getItem('tendero').then(t => {
-      if (t) setTendero(JSON.parse(t));
-    });
-  }, [])
-);
-
   const {
     data, loading, error, actividad, formatCOP,
     busqueda, setBusqueda, mostrarBusqueda, toggleBusqueda,
@@ -56,6 +41,22 @@ useFocusEffect(
     handleNuevoCredito, handleRegistrarPago, handleBell,
     refetch,
   } = useDashboard(token ?? '');
+
+useFocusEffect(
+  useCallback(() => {
+    const firstFocus = isFirstFocus.current;
+    isFirstFocus.current = false;
+    AsyncStorage.getItem('token').then(t => {
+      setToken(t);
+      if (t && !firstFocus) {
+        refetch(t, true);
+      }
+    });
+    AsyncStorage.getItem('tendero').then(t => {
+      if (t) setTendero(JSON.parse(t));
+    });
+  }, [refetch])
+);
 
   // Animación de la barra de búsqueda
   useEffect(() => {
@@ -119,7 +120,7 @@ useFocusEffect(
             <View style={styles.totalCard}>
               <View>
                 <Text style={styles.totalLabel}>Total Por Cobrar</Text>
-                <Text style={styles.totalAmount}>{formatCOP(data?.cartera_total ?? 0)}</Text>
+                <Text style={styles.totalAmount}>{formatCOP(data?.monto_total_pendiente ?? data?.cartera_total ?? 0)}</Text>
                 <Text style={styles.totalSub}>Actualizado Hoy</Text>
               </View>
               <View style={styles.totalIcon}>
@@ -193,12 +194,18 @@ useFocusEffect(
             <View style={styles.activityCard}>
               {actividad.length === 0 ? (
                 <Text style={{ textAlign: 'center', color: COLORS.textMuted, padding: 20 }}>
-                  Sin resultados
+                  {filtroFecha === 'hoy'
+                    ? 'Sin actividad hoy'
+                    : filtroFecha === 'semana'
+                      ? 'Sin actividad esta semana'
+                      : filtroFecha === 'mes'
+                        ? 'Sin actividad este mes'
+                        : 'Sin actividad'}
                 </Text>
               ) : (
                 actividad.map((item, idx) => (
                   <View
-                    key={idx}
+                    key={item.id != null && item.id !== 0 ? String(item.id) : `${item.name}-${item.amount}-${idx}`}
                     style={[
                       styles.activityRow,
                       idx < actividad.length - 1 && styles.activityDivider,

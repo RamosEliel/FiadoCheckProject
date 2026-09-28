@@ -32,25 +32,47 @@ const toDateKey = (value) => {
   if (value == null || value === '') return null;
 
   if (typeof value === 'string') {
-    const match = value.match(/^(\d{4}-\d{2}-\d{2})/);
-    if (match) return match[1];
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+    if (/^\d{4}-\d{2}-\d{2}T00:00:00(\.\d+)?Z?$/.test(value)) {
+      return value.slice(0, 10);
+    }
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return null;
+    return formateador.format(parsed);
   }
 
-  const d = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(d.getTime())) return null;
+  if (!(value instanceof Date) || Number.isNaN(value.getTime())) return null;
 
-  // Una columna DATE de PostgreSQL no guarda hora ni zona; node-postgres la
-  // entrega como medianoche LOCAL del proceso (p. ej. 00:00:00 GMT-0500), no
-  // como medianoche UTC. Leerla con getUTC* solo acierta mientras el servidor
-  // esté en UTC o al oeste; al este del meridiano devolvería el día anterior.
-  // Con los componentes locales se recupera el día almacenado en cualquier zona.
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+  // DATE de PostgreSQL: medianoche local del proceso (cualquier TZ).
+  if (
+    value.getHours() === 0 &&
+    value.getMinutes() === 0 &&
+    value.getSeconds() === 0 &&
+    value.getMilliseconds() === 0
+  ) {
+    const y = value.getFullYear();
+    const m = String(value.getMonth() + 1).padStart(2, '0');
+    const day = String(value.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  return formateador.format(value);
 };
 
 // Día de hoy en la zona del negocio, independiente de dónde corra el proceso.
 const todayBusinessKey = () => formateador.format(new Date());
 
-module.exports = { toDateKey, todayBusinessKey };
+const calendarDaysBetween = (fromKey, toKey) => {
+  if (!fromKey || !toKey) return 0;
+  const [fy, fm, fd] = fromKey.split('-').map(Number);
+  const [ty, tm, td] = toKey.split('-').map(Number);
+  return Math.round((Date.UTC(ty, tm - 1, td) - Date.UTC(fy, fm - 1, fd)) / 86400000);
+};
+
+const diasAtraso = (fechaLimite) => {
+  const limite = toDateKey(fechaLimite);
+  if (!limite) return 0;
+  return Math.max(0, calendarDaysBetween(limite, todayBusinessKey()));
+};
+
+module.exports = { toDateKey, todayBusinessKey, calendarDaysBetween, diasAtraso };

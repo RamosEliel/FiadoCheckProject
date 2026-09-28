@@ -87,10 +87,15 @@ router.get('/', async (req, res) => {
     const { estado, q } = req.query;
     const idTendero = req.user.id_tendero;
 
+    if (idTendero) {
+      await marcarCreditosVencidos(pool, { idTendero });
+    }
+
     let query = `
       SELECT c.id_cliente, c.nombre_completo, c.telefono, c.direccion, c.estado, c.created_at,
              COALESCE(SUM(CASE WHEN cr.estado != 'pagado' THEN cr.saldo_pendiente ELSE 0 END), 0) as total_deuda,
-             COUNT(CASE WHEN cr.estado != 'pagado' THEN cr.id_credito END) as total_creditos
+             COUNT(CASE WHEN cr.estado != 'pagado' THEN cr.id_credito END) as total_creditos,
+             COUNT(CASE WHEN cr.estado = 'vencido' THEN 1 END) as creditos_vencidos
       FROM clientes c
       JOIN tendero_cliente tc ON c.id_cliente = tc.id_cliente
       LEFT JOIN creditos cr ON c.id_cliente = cr.id_cliente AND cr.id_tendero = tc.id_tendero
@@ -106,7 +111,7 @@ router.get('/', async (req, res) => {
     query += ` GROUP BY c.id_cliente, c.nombre_completo, c.telefono, c.direccion, c.estado, c.created_at`;
 
     if (estado === 'mora') {
-      query += ` HAVING COALESCE(SUM(CASE WHEN cr.estado != 'pagado' THEN cr.saldo_pendiente ELSE 0 END), 0) > 0`;
+      query += ` HAVING COUNT(CASE WHEN cr.estado = 'vencido' THEN 1 END) > 0`;
     } else if (estado === 'al_dia') {
       query += ` HAVING COUNT(CASE WHEN cr.estado = 'vigente' THEN 1 END) > 0 AND COUNT(CASE WHEN cr.estado = 'vencido' THEN 1 END) = 0`;
     } else if (estado === 'sin_deuda') {
@@ -125,7 +130,8 @@ router.get('/', async (req, res) => {
       estado: c.estado,
       created_at: c.created_at,
       total_deuda: parseFloat(c.total_deuda) || 0,
-      total_creditos: parseInt(c.total_creditos) || 0
+      total_creditos: parseInt(c.total_creditos) || 0,
+      creditos_vencidos: parseInt(c.creditos_vencidos) || 0
     })));
   } catch (err) {
     console.error('Error en listar clientes:', err);

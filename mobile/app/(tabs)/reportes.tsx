@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   StatusBar,
   ActivityIndicator,
-  Alert,
   Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -22,6 +21,7 @@ import { CONFIG } from '@/config/config';
 import { ErrorState } from '@/components/ErrorState';
 import { friendlyErrorMessage, clasificarError } from '@/utils/errorMessages';
 import { cerrarSesionYRedirigir } from '@/utils/session';
+import { useAppDialog } from '@/hooks/useAppDialog';
 
 // ── Períodos disponibles ─────────────────────────────────────────────────────
 const PERIODOS: { key: PeriodoReporte; label: string }[] = [
@@ -51,6 +51,7 @@ const tituloResumen: Record<PeriodoReporte, string> = {
 export default function ReportesScreen() {
   const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
+  const { showError } = useAppDialog();
 
   useFocusEffect(
     useCallback(() => {
@@ -103,7 +104,7 @@ export default function ReportesScreen() {
       }
       await Share.share({ message: buildResumenTexto(), title: 'Reporte FiadoCheck' });
     } catch (e: any) {
-      Alert.alert('Error', e.message ?? 'No se pudo exportar el informe');
+      showError('Error', e.message ?? 'No se pudo exportar el informe');
     }
   };
 
@@ -113,7 +114,7 @@ export default function ReportesScreen() {
     try {
       await Share.share({ message: buildResumenTexto() });
     } catch {
-      Alert.alert('Error', 'No se pudo compartir el reporte');
+      showError('Error', 'No se pudo compartir el reporte');
     }
   };
 

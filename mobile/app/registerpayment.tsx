@@ -6,6 +6,8 @@ import {
   TextInput,
   ScrollView,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useFocusEffect, useLocalSearchParams, router } from 'expo-router';
@@ -16,6 +18,8 @@ import { HeaderIconButton } from '@/components/HeaderIconButton';
 import { registerPaymentStyles as styles } from '@/constants/Registerpayment.styles';
 import { COLORS } from '@/constants/colors';
 import { useRegisterPayment } from '@/hooks/Useregisterpayment';
+import { useKeyboardHeight } from '@/hooks/useKeyboardHeight';
+import { formatFechaUI } from '@/utils/businessDate';
 
 export default function RegisterPaymentScreen() {
   const { clienteId } = useLocalSearchParams<{ clienteId?: string }>();
@@ -35,11 +39,21 @@ export default function RegisterPaymentScreen() {
     monto, setMonto,
     getQuickAmounts, aplicarMontoRapido,
     observaciones, setObservaciones,
+    fechaAbono,
     loading,
+    resetForm,
     handleConfirmarPago,
     handleCancelar,
     getEstadoColor, getEstadoLabel,
   } = useRegisterPayment(token ?? '', clienteId);
+
+  const keyboardHeight = useKeyboardHeight();
+
+  useFocusEffect(
+    useCallback(() => {
+      resetForm();
+    }, [resetForm]),
+  );
 
   const quickAmounts = getQuickAmounts();
   const multiplesCreditos = creditosDisponibles.length > 1;
@@ -57,6 +71,14 @@ export default function RegisterPaymentScreen() {
       <Stack.Screen options={{ headerShown: false, presentation: 'modal' }} />
       <SafeAreaView style={styles.safe}>
         <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+        <View style={[
+          { flex: 1 },
+          Platform.OS === 'android' ? { paddingBottom: keyboardHeight } : null,
+        ]}>
 
         <View style={styles.header}>
           <HeaderIconButton
@@ -261,6 +283,13 @@ export default function RegisterPaymentScreen() {
               </View>
             )}
 
+            <Text style={[styles.sectionLabel, { marginTop: 4 }]}>Fecha del abono</Text>
+            <TextInput
+              style={styles.amountInput}
+              value={formatFechaUI(fechaAbono)}
+              editable={false}
+            />
+
             <Text style={[styles.sectionLabel, { marginTop: 4 }]}>Observaciones</Text>
             <TextInput
               style={styles.obsInput}
@@ -295,6 +324,8 @@ export default function RegisterPaymentScreen() {
             <Text style={styles.btnGhostText}>Cancelar</Text>
           </TouchableOpacity>
         </View>
+        </View>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </>
   );

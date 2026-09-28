@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { router } from 'expo-router';
 import { CONFIG } from '@/config/config';
+import { subscribeCarteraChanged } from '@/utils/carteraEvents';
+import { dateFromKey, toDateKey } from '@/utils/businessDate';
 const API_URL = CONFIG.API_URL;
 export type FiltroPeriodo = 'todos' | 'hoy' | 'semana' | 'mes';
 export type PagoItem = {
@@ -19,9 +21,11 @@ const MESES = [
 const formatCOP = (valor: number) =>
 `$${valor.toLocaleString('es-CO')}`;
 const formatFecha = (fecha: string) => {
-const d = new Date(fecha);
-const mes = MESES[d.getMonth()];
-return `${d.getDate()} ${mes.charAt(0).toUpperCase()}${mes.slice(1)}
+  const key = toDateKey(fecha);
+  const d = key ? dateFromKey(key) : null;
+  if (!d) return '—';
+  const mes = MESES[d.getMonth()];
+  return `${d.getDate()} ${mes.charAt(0).toUpperCase()}${mes.slice(1)}
 ${d.getFullYear()}`;
 };
 const mapPago = (p: any): PagoItem => ({
@@ -73,6 +77,11 @@ const fetchPagos = useCallback(async (silent = false) => {
 }, [token, filtroPeriodo]);
 useEffect(() => {
     fetchPagos();
+}, [fetchPagos]);
+useEffect(() => {
+    return subscribeCarteraChanged(() => {
+        void fetchPagos(true);
+    });
 }, [fetchPagos]);
 const pagosFiltrados = useMemo(() => {
     if (!busqueda.trim()) return pagos;

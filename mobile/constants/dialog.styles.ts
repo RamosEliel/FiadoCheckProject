@@ -55,6 +55,15 @@ export const dialogStyles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 24,
   },
+  childrenWrap: {
+    width: '100%',
+    marginBottom: 16,
+  },
+  btnRow: {
+    flexDirection: 'row',
+    gap: 10,
+    width: '100%',
+  },
   primaryBtn: {
     backgroundColor: COLORS.primary,
     borderRadius: 25,
@@ -63,8 +72,26 @@ export const dialogStyles = StyleSheet.create({
     alignItems: 'center',
     minWidth: 140,
   },
+  primaryBtnFlex: {
+    flex: 1,
+    minWidth: 0,
+    paddingHorizontal: 16,
+  },
   primaryBtnText: {
     color: COLORS.white,
+    fontFamily: AppFonts.bold,
+    fontSize: 16,
+  },
+  secondaryBtn: {
+    flex: 1,
+    backgroundColor: COLORS.inputBg,
+    borderRadius: 25,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+  },
+  secondaryBtnText: {
+    color: COLORS.primary,
     fontFamily: AppFonts.bold,
     fontSize: 16,
   },

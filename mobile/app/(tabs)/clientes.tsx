@@ -21,6 +21,7 @@ import { useClienteAcciones } from '@/hooks/Useclienteacciones';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Search, Bell, BadgeCheck, UserPlus, Link2, X } from 'lucide-react-native';
 import { HeaderIconButton } from '@/components/HeaderIconButton';
+import { useKeyboardHeight } from '@/hooks/useKeyboardHeight';
 
 const FILTROS = [
   { key: 'todos',     label: 'Todos'     },
@@ -108,6 +109,8 @@ export default function ClientsScreen() {
     asociarCliente,
     registrarCliente,
   } = useClienteAcciones(token, refetch);
+
+  const keyboardHeight = useKeyboardHeight();
 
   return (
     <>
@@ -198,7 +201,10 @@ export default function ClientsScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
           <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={cerrarModal} />
-          <View style={styles.modalSheet}>
+          <View style={[
+            styles.modalSheet,
+            Platform.OS === 'android' ? { paddingBottom: keyboardHeight } : null,
+          ]}>
             <View style={styles.modalHandle} />
 
             {modalPaso === 'eleccion' && (

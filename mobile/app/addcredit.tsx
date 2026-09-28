@@ -6,9 +6,8 @@ import {
   ScrollView,
   StatusBar,
   ActivityIndicator,
-  Modal,
-  StyleSheet,
-  Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, router } from 'expo-router';
@@ -21,6 +20,8 @@ import { useAddCredit } from '@/hooks/Useaddcredit';
 import { formatNivelRiesgo } from '@/utils/scoring';
 import { Bell, CalendarDays, ChevronLeft, Sparkles, AlertCircle, Wallet, Receipt } from 'lucide-react-native';
 import { HeaderIconButton } from '@/components/HeaderIconButton';
+import { CreditCalendar } from '@/components/CreditCalendar';
+import { useKeyboardHeight } from '@/hooks/useKeyboardHeight';
 
 export default function AddCreditScreen() {
   const { clienteId } = useLocalSearchParams<{ clienteId?: string }>();
@@ -51,96 +52,21 @@ export default function AddCreditScreen() {
     showDatePicker, setShowDatePicker,
   } = useAddCredit(token ?? '', tendero?.id_tendero, clienteId);
 
-  const [currentCalendarDate, setCurrentCalendarDate] = useState(new Date());
-
-  const inicioHoy = () => {
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
-    return hoy;
-  };
-
-  const esFechaPasada = (dia: number, month = currentCalendarDate.getMonth(), year = currentCalendarDate.getFullYear()) => {
-    const candidata = new Date(year, month, dia);
-    candidata.setHours(0, 0, 0, 0);
-    return candidata.getTime() < inicioHoy().getTime();
-  };
-
-  const esMesAnteriorAlActual = (fecha: Date) => {
-    const inicioMesVista = new Date(fecha.getFullYear(), fecha.getMonth(), 1);
-    const inicioMesActual = new Date(inicioHoy().getFullYear(), inicioHoy().getMonth(), 1);
-    return inicioMesVista < inicioMesActual;
-  };
-
-  const changeMonth = (direction: number) => {
-    setCurrentCalendarDate(prev => {
-      const nextDate = new Date(prev.getFullYear(), prev.getMonth() + direction, 1);
-      if (direction < 0 && esMesAnteriorAlActual(nextDate)) {
-        return prev;
-      }
-      return nextDate;
-    });
-  };
-
-  const obtenerNombreMes = (monthIndex: number) => {
-    const meses = [
-      'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-      'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
-    ];
-    return meses[monthIndex];
-  };
-
-  const obtenerDiasCalendario = () => {
-    const year = currentCalendarDate.getFullYear();
-    const month = currentCalendarDate.getMonth();
-
-    const cantDias = new Date(year, month + 1, 0).getDate();
-    const primerDiaSemana = new Date(year, month, 1).getDay();
-    const primerDiaAjustado = primerDiaSemana === 0 ? 6 : primerDiaSemana - 1;
-
-    const celdas = [];
-    for (let i = 0; i < primerDiaAjustado; i++) {
-      celdas.push(null);
-    }
-    for (let i = 1; i <= cantDias; i++) {
-      celdas.push(i);
-    }
-    return celdas;
-  };
-
-  const seleccionarDia = (dia: number) => {
-    if (esFechaPasada(dia)) {
-      Alert.alert('Fecha inválida', 'La fecha límite no puede ser anterior a hoy.');
-      return;
-    }
-    const d = String(dia).padStart(2, '0');
-    const m = String(currentCalendarDate.getMonth() + 1).padStart(2, '0');
-    const y = currentCalendarDate.getFullYear();
-    setFechaLimite(`${d}/${m}/${y}`);
-    setShowDatePicker(false);
-  };
-
-  const verificarDiaSeleccionado = (dia: number) => {
-    if (!fechaLimite) return false;
-    const partes = fechaLimite.split('/');
-    if (partes.length !== 3) return false;
-    const d = parseInt(partes[0], 10);
-    const m = parseInt(partes[1], 10);
-    const y = parseInt(partes[2], 10);
-    return d === dia && m === (currentCalendarDate.getMonth() + 1) && y === currentCalendarDate.getFullYear();
-  };
-
-  const verificarEsHoy = (dia: number) => {
-    const hoy = new Date();
-    return hoy.getDate() === dia && 
-           hoy.getMonth() === currentCalendarDate.getMonth() && 
-           hoy.getFullYear() === currentCalendarDate.getFullYear();
-  };
+  const keyboardHeight = useKeyboardHeight();
 
   return (
     <>
       <Stack.Screen options={{ headerShown: false, presentation: 'modal' }} />
       <SafeAreaView style={styles.safe}>
         <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+        <View style={[
+          { flex: 1 },
+          Platform.OS === 'android' ? { paddingBottom: keyboardHeight } : null,
+        ]}>
 
         {/* Header */}
         <View style={styles.header}>
@@ -209,10 +135,7 @@ export default function AddCreditScreen() {
                 />
                 <TouchableOpacity
                   style={styles.calendarBtn}
-                  onPress={() => {
-                    setCurrentCalendarDate(new Date());
-                    setShowDatePicker(true);
-                  }}
+                  onPress={() => setShowDatePicker(true)}
                   activeOpacity={0.7}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   accessibilityLabel="Elegir fecha"
@@ -340,6 +263,8 @@ export default function AddCreditScreen() {
               )}
             </View>
 
+          </ScrollView>
+
             {/* Botones */}
             <View style={styles.btnRow}>
               <TouchableOpacity
@@ -362,226 +287,17 @@ export default function AddCreditScreen() {
                 }
               </TouchableOpacity>
             </View>
-
-          </ScrollView>
         </View>
+        </View>
+        </KeyboardAvoidingView>
       </SafeAreaView>
 
-      {/* Modal del Calendario */}
-      <Modal
+      <CreditCalendar
         visible={showDatePicker}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowDatePicker(false)}
-      >
-        <TouchableOpacity 
-          style={calendarStyles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setShowDatePicker(false)}
-        >
-          <TouchableOpacity 
-            style={calendarStyles.modalContent}
-            activeOpacity={1}
-            onPress={(e) => e.stopPropagation()}
-          >
-            {/* Header del Calendario */}
-            <View style={calendarStyles.header}>
-              <TouchableOpacity
-                style={[
-                  calendarStyles.navBtn,
-                  esMesAnteriorAlActual(
-                    new Date(currentCalendarDate.getFullYear(), currentCalendarDate.getMonth() - 1, 1)
-                  ) && calendarStyles.navBtnDisabled,
-                ]}
-                onPress={() => changeMonth(-1)}
-                disabled={esMesAnteriorAlActual(
-                  new Date(currentCalendarDate.getFullYear(), currentCalendarDate.getMonth() - 1, 1)
-                )}
-                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                accessibilityLabel="Mes anterior"
-              >
-                <ChevronLeft size={20} color={COLORS.text} />
-              </TouchableOpacity>
-
-              <Text style={calendarStyles.monthTitle}>
-                {obtenerNombreMes(currentCalendarDate.getMonth())} {currentCalendarDate.getFullYear()}
-              </Text>
-
-              <TouchableOpacity
-                style={calendarStyles.navBtn}
-                onPress={() => changeMonth(1)}
-                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                accessibilityLabel="Mes siguiente"
-              >
-                <ChevronLeft size={20} color={COLORS.text} style={{ transform: [{ rotate: '180deg' }] }} />
-              </TouchableOpacity>
-            </View>
-
-            {/* Días de la semana */}
-            <View style={calendarStyles.weekDaysRow}>
-              {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((d, i) => (
-                <Text key={i} style={calendarStyles.weekDayText}>{d}</Text>
-              ))}
-            </View>
-
-            {/* Cuadrícula de días */}
-            <View style={calendarStyles.daysGrid}>
-              {obtenerDiasCalendario().map((dia, idx) => {
-                if (dia === null) {
-                  return <View key={idx} style={calendarStyles.emptyCell} />;
-                }
-
-                const esSeleccionado = verificarDiaSeleccionado(dia);
-                const esHoy = verificarEsHoy(dia);
-                const esPasado = esFechaPasada(dia);
-
-                return (
-                  <TouchableOpacity
-                    key={idx}
-                    style={[
-                      calendarStyles.dayCell,
-                      esSeleccionado && calendarStyles.selectedDayCell,
-                      esHoy && !esSeleccionado && calendarStyles.todayCell,
-                      esPasado && calendarStyles.disabledDayCell,
-                    ]}
-                    onPress={() => seleccionarDia(dia)}
-                    disabled={esPasado}
-                    activeOpacity={esPasado ? 1 : 0.7}
-                    hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
-                  >
-                    <Text
-                      style={[
-                        calendarStyles.dayText,
-                        esSeleccionado && calendarStyles.selectedDayText,
-                        esPasado && calendarStyles.disabledDayText,
-                      ]}
-                    >
-                      {dia}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            {/* Botón cerrar */}
-            <TouchableOpacity 
-              style={calendarStyles.closeBtn}
-              onPress={() => setShowDatePicker(false)}
-            >
-              <Text style={calendarStyles.closeBtnText}>Cerrar</Text>
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
+        selected={fechaLimite}
+        onSelect={setFechaLimite}
+        onClose={() => setShowDatePicker(false)}
+      />
     </>
   );
 }
-
-const calendarStyles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    width: '100%',
-    maxWidth: 340,
-    backgroundColor: COLORS.white,
-    borderRadius: 24,
-    padding: 22,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  monthTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.text,
-    textTransform: 'capitalize',
-  },
-  navBtn: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: COLORS.inputBg,
-  },
-  navBtnDisabled: {
-    opacity: 0.35,
-  },
-  weekDaysRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    paddingBottom: 8,
-  },
-  weekDayText: {
-    width: 36,
-    textAlign: 'center',
-    fontSize: 11,
-    fontWeight: '700',
-    color: COLORS.textMuted,
-  },
-  daysGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  dayCell: {
-    width: 36,
-    height: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginVertical: 4,
-    borderRadius: 18,
-  },
-  dayText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: COLORS.text,
-  },
-  emptyCell: {
-    width: 36,
-    height: 36,
-    marginVertical: 4,
-  },
-  selectedDayCell: {
-    backgroundColor: COLORS.primary,
-  },
-  selectedDayText: {
-    color: COLORS.white,
-    fontWeight: '700',
-  },
-  todayCell: {
-    borderWidth: 1.5,
-    borderColor: COLORS.primary,
-  },
-  disabledDayCell: {
-    opacity: 0.35,
-  },
-  disabledDayText: {
-    color: COLORS.textMuted,
-  },
-  closeBtn: {
-    marginTop: 20,
-    paddingVertical: 13,
-    alignItems: 'center',
-    borderRadius: 50,
-    backgroundColor: COLORS.inputBg,
-  },
-  closeBtnText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: COLORS.primary,
-  },
-});

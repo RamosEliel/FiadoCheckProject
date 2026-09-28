@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { CONFIG } from '@/config/config';
+import { subscribeCarteraChanged } from '@/utils/carteraEvents';
 
 const API_URL = CONFIG.API_URL;
 const FETCH_TIMEOUT_MS = 15000;
@@ -83,6 +84,12 @@ export const useCreditoDetalle = (token: string | null, creditoId: string | null
 
   useEffect(() => {
     fetchCredito();
+  }, [fetchCredito]);
+
+  useEffect(() => {
+    return subscribeCarteraChanged(() => {
+      void fetchCredito(true);
+    });
   }, [fetchCredito]);
 
   return { loading, credito, error, refetch: fetchCredito };

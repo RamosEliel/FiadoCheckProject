@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Alert } from 'react-native';
+import { InteractionManager } from 'react-native';
 import { router } from 'expo-router';
 import { CONFIG } from '@/config/config';
 import { friendlyErrorMessage } from '@/utils/errorMessages';
+import { useAppDialog } from '@/hooks/useAppDialog';
+import { publishCarteraChanged } from '@/utils/carteraEvents';
+import { diasAtraso, formatFechaUI, todayBusinessKey, toDateKey } from '@/utils/businessDate';
 
 const API_URL = CONFIG.API_URL;
 
@@ -56,17 +59,10 @@ const formatCurrency = (value: number) =>
 
 const calcDiasAtraso = (fechaLimitePago: string, estado: EstadoCredito): number => {
   if (estado !== 'vencido') return 0;
-  const limite = new Date(fechaLimitePago);
-  return Math.max(0, Math.floor((Date.now() - limite.getTime()) / (1000 * 60 * 60 * 24)));
+  return diasAtraso(fechaLimitePago);
 };
 
-const fechaHoyISO = (): string => {
-  const hoy = new Date();
-  const y = hoy.getFullYear();
-  const m = String(hoy.getMonth() + 1).padStart(2, '0');
-  const d = String(hoy.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-};
+const formatFecha = (iso: string) => formatFechaUI(iso);
 
 const mapCreditoBackend = (c: CreditoBackend): CreditoOpcion => ({
   id: c.id_credito,
@@ -77,15 +73,6 @@ const mapCreditoBackend = (c: CreditoBackend): CreditoOpcion => ({
   descripcion: c.descripcion ?? null,
   fechaLimitePago: c.fecha_limite_pago,
 });
-
-const formatFecha = (iso: string) => {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '—';
-  const dd = String(d.getDate()).padStart(2, '0');
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const yyyy = d.getFullYear();
-  return `${dd}/${mm}/${yyyy}`;
-};
 
 const resolverCliente = async (
   term: string,
@@ -140,6 +127,7 @@ export const useRegisterPayment = (
   token: string,
   initialClienteId?: string | string[],
 ) => {
+  const { showSuccess, showError } = useAppDialog();
   const initialId = normalizeClienteId(
     Array.isArray(initialClienteId) ? initialClienteId[0] : initialClienteId,
   );
@@ -152,7 +140,21 @@ export const useRegisterPayment = (
 
   const [monto, setMonto]                 = useState('');
   const [observaciones, setObservaciones] = useState('');
+  const [fechaAbono, setFechaAbono]       = useState(todayBusinessKey());
   const [loading, setLoading]             = useState(false);
+
+  const resetForm = useCallback(() => {
+    setFechaAbono(todayBusinessKey());
+    setMonto('');
+    setObservaciones('');
+    setCredito(null);
+    if (!initialId) {
+      setBusqueda('');
+      setNombreCliente(null);
+      setClienteId(null);
+      setCreditosDisponibles([]);
+    }
+  }, [initialId]);
 
   const seleccionarCredito = (opcion: CreditoOpcion) => {
     if (!clienteId || !nombreCliente) return;
@@ -171,7 +173,7 @@ export const useRegisterPayment = (
     const trimmed = term.trim();
     if (!trimmed) return;
     if (!token) {
-      Alert.alert('Sesión', 'No hay sesión activa. Inicia sesión nuevamente.');
+      showError('Sesión', 'No hay sesión activa. Inicia sesión nuevamente.');
       return;
     }
 
@@ -218,7 +220,7 @@ export const useRegisterPayment = (
         setMonto(unico.saldoPendiente.toString());
       }
     } catch (err: any) {
-      Alert.alert('Error', friendlyErrorMessage(err.message || 'No se pudo cargar la información del cliente.'));
+      showError('Error', friendlyErrorMessage(err.message || 'No se pudo cargar la información del cliente.'));
       setCredito(null);
       setNombreCliente(null);
       setClienteId(null);
@@ -258,7 +260,7 @@ export const useRegisterPayment = (
 
   const validarPago = (): boolean => {
     if (!credito) {
-      Alert.alert(
+      showError(
         'Sin crédito',
         creditosDisponibles.length > 1
           ? 'Selecciona el crédito al que deseas aplicar el pago.'
@@ -270,12 +272,12 @@ export const useRegisterPayment = (
     const montoNum = parseMonto(monto);
 
     if (!monto || montoNum <= 0) {
-      Alert.alert('Monto inválido', 'Ingresa un monto mayor a $0.');
+      showError('Monto inválido', 'Ingresa un monto mayor a $0.');
       return false;
     }
 
     if (montoNum > credito.saldoPendiente) {
-      Alert.alert(
+      showError(
         'Monto excede la deuda',
         `El monto ingresado ($${montoNum.toLocaleString('es-CO')}) supera la deuda pendiente (${formatCurrency(credito.saldoPendiente)}).`,
       );
@@ -290,6 +292,7 @@ export const useRegisterPayment = (
 
     setLoading(true);
     try {
+      const claveAbono = toDateKey(fechaAbono) || todayBusinessKey();
       const res = await fetch(`${API_URL}/creditos/${credito.id}/abonos`, {
         method: 'POST',
         headers: {
@@ -298,7 +301,7 @@ export const useRegisterPayment = (
         },
         body: JSON.stringify({
           monto: parseMonto(monto),
-          fechaAbono: fechaHoyISO(),
+          fechaAbono: claveAbono,
         }),
       });
 
@@ -306,11 +309,23 @@ export const useRegisterPayment = (
 
       if (!res.ok) throw new Error(json.error || 'Error al registrar el pago.');
 
-      Alert.alert('¡Pago registrado!', json.message || 'El pago fue registrado correctamente.', [
-        { text: 'OK', onPress: () => setTimeout(() => router.back(), 300) },
-      ]);
+      const montoPagado = parseMonto(monto);
+      const clientePago = nombreCliente ?? credito.nombreCliente;
+      const estadoCredito = credito.estado;
+
+      resetForm();
+      publishCarteraChanged({
+        tipo: 'pago',
+        monto: montoPagado,
+        cliente: clientePago,
+        estadoCredito,
+      });
+      showSuccess('¡Pago registrado!', json.message || 'El pago fue registrado correctamente.');
+      InteractionManager.runAfterInteractions(() => {
+        requestAnimationFrame(() => router.back());
+      });
     } catch (err: any) {
-      Alert.alert('Error', friendlyErrorMessage(err.message));
+      showError('Error', friendlyErrorMessage(err.message));
     } finally {
       setLoading(false);
     }
@@ -353,7 +368,10 @@ export const useRegisterPayment = (
     aplicarMontoRapido,
     observaciones,
     setObservaciones,
+    fechaAbono,
+    setFechaAbono,
     loading,
+    resetForm,
     handleConfirmarPago,
     handleCancelar,
     getEstadoColor,

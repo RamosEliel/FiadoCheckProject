@@ -56,7 +56,7 @@ export const useLogin = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { dialog, showSuccess, showError, showInfo, hide } = useAppDialog();
+  const { showSuccess, showError, showInfo } = useAppDialog();
 
   const presentFeedback = (fb: LoginFeedback) => {
     if (fb.variant === 'success') showSuccess(fb.title, fb.message);
@@ -167,7 +167,5 @@ export const useLogin = () => {
     handleRegister,
     handleRegisterTendero: () => router.push('/(auth)/registerTendero'),
     handleGoogleLogin,
-    dialog,
-    hideDialog: hide,
   };
 };
