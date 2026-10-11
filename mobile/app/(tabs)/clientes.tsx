@@ -203,7 +203,7 @@ export default function ClientsScreen() {
           <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={cerrarModal} />
           <View style={[
             styles.modalSheet,
-            Platform.OS === 'android' ? { paddingBottom: keyboardHeight } : null,
+            Platform.OS === 'android' ? { paddingBottom: 48 + keyboardHeight } : null,
           ]}>
             <View style={styles.modalHandle} />
 
@@ -245,7 +245,11 @@ export default function ClientsScreen() {
             )}
 
             {modalPaso === 'registrar' && (
-              <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={styles.modalScrollContent}
+              >
                 <TouchableOpacity style={styles.modalBackBtn} onPress={volverEleccion}>
                   <Text style={styles.modalBackText}>← Volver</Text>
                 </TouchableOpacity>
@@ -315,7 +319,11 @@ export default function ClientsScreen() {
             )}
 
             {modalPaso === 'asociar' && (
-              <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={styles.modalScrollContent}
+              >
                 <TouchableOpacity style={styles.modalBackBtn} onPress={volverEleccion}>
                   <Text style={styles.modalBackText}>← Volver</Text>
                 </TouchableOpacity>

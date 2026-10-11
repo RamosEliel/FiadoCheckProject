@@ -236,8 +236,11 @@ export const clientStyles = StyleSheet.create({
     borderTopRightRadius: 24,
     paddingHorizontal: 24,
     paddingTop: 12,
-    paddingBottom: 32,
+    paddingBottom: 48,
     maxHeight: '88%',
+  },
+  modalScrollContent: {
+    paddingBottom: 16,
   },
   modalHandle: {
     width: 40,
@@ -370,7 +373,8 @@ export const clientStyles = StyleSheet.create({
     borderRadius: 50,
     paddingVertical: 15,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 16,
+    marginBottom: 8,
   },
   modalBtnPrimaryText: {
     color: COLORS.white,
