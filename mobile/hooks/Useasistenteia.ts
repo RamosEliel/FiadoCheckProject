@@ -3,6 +3,7 @@ import { FlatList } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CONFIG } from '@/config/config';
 import { publishCarteraChanged } from '@/utils/carteraEvents';
+import { tryExecuteChatWrite, isChatConsulta, type ChatWritePending } from '@/utils/asistenteWrites';
 import type { ActionBanner, Mensaje } from '@/components/chat/types';
 
 export type { ActionBanner, Mensaje } from '@/components/chat/types';
@@ -118,6 +119,7 @@ export const useAsistenteIA = (token: string, id_tendero: string) => {
   const sendingRef = useRef(false);
   const lastPreguntaRef = useRef('');
   const bannerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const writePendingRef = useRef<ChatWritePending | null>(null);
 
   useEffect(() => {
     return () => {
@@ -141,6 +143,28 @@ export const useAsistenteIA = (token: string, id_tendero: string) => {
   const fetchRespuesta = async (pregunta: string, signal: AbortSignal): Promise<ChatResponse> => {
     if (!token) {
       throw new Error('No hay sesión activa. Inicia sesión nuevamente.');
+    }
+
+    if (isChatConsulta(pregunta)) {
+      writePendingRef.current = null;
+    }
+
+    const localWrite = await tryExecuteChatWrite(
+      pregunta,
+      token,
+      writePendingRef.current,
+      signal,
+    );
+    if (localWrite) {
+      writePendingRef.current = localWrite.pending;
+      return {
+        respuesta: localWrite.respuesta,
+        mensaje: localWrite.respuesta,
+        action_executed: localWrite.action_executed,
+        refresh: localWrite.refresh,
+        refresh_scope: localWrite.refresh_scope ?? undefined,
+        success: true,
+      };
     }
 
     const sessionId = await getOrCreateSessionId();
@@ -303,6 +327,7 @@ export const useAsistenteIA = (token: string, id_tendero: string) => {
     setActionBanner(null);
     if (bannerTimerRef.current) clearTimeout(bannerTimerRef.current);
     setMensajes(buildBienvenida());
+    writePendingRef.current = null;
 
     await AsyncStorage.removeItem(SESSION_KEY);
     const nuevo = `sess_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;

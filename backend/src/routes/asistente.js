@@ -1,5 +1,6 @@
 const express = require('express');
 const authMiddleware = require('../middleware/auth');
+const { tryExecuteChatWrite } = require('../modules/asistente/chatWrites');
 
 const router = express.Router();
 router.use(authMiddleware);
@@ -32,13 +33,6 @@ const resolveN8nWebhookUrl = () => {
 
 router.post('/chat', async (req, res) => {
   try {
-    const n8nUrl = resolveN8nWebhookUrl();
-    if (!n8nUrl) {
-      return res.status(503).json({
-        error: 'Asistente IA no configurado. Define N8N_WEBHOOK_URL en el backend.',
-      });
-    }
-
     const { sessionId, message, mensaje, userId, metadata } = req.body;
     const texto = (message || mensaje || '').trim();
 
@@ -56,8 +50,34 @@ router.post('/chat', async (req, res) => {
       });
     }
 
+    const resolvedSessionId = sessionId || `sess_${req.user.id_usuario}`;
+    const write = await tryExecuteChatWrite({
+      texto,
+      idTendero,
+      sessionId: resolvedSessionId,
+    });
+    if (write?.handled) {
+      return res.json({
+        respuesta: write.respuesta,
+        mensaje: write.mensaje,
+        sugerencias: write.sugerencias ?? [],
+        action_executed: write.action_executed,
+        refresh: write.refresh === true,
+        refresh_scope: write.refresh_scope,
+        sessionId: resolvedSessionId,
+        success: write.success !== false,
+      });
+    }
+
+    const n8nUrl = resolveN8nWebhookUrl();
+    if (!n8nUrl) {
+      return res.status(503).json({
+        error: 'Asistente IA no configurado. Define N8N_WEBHOOK_URL en el backend.',
+      });
+    }
+
     const payload = {
-      sessionId: sessionId || `sess_${req.user.id_usuario}`,
+      sessionId: resolvedSessionId,
       userId: userId || String(idTendero),
       id_tendero: idTendero,
       message: texto,
