@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   Image,
-  SafeAreaView,
   StatusBar,
   Modal,
   TextInput,
@@ -13,6 +12,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
@@ -360,7 +360,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
 
       <View style={styles.header}>
@@ -379,6 +379,7 @@ export default function ProfileScreen() {
         />
       </View>
 
+      <View style={styles.sheet}>
       <View style={styles.profileContent}>
         <TouchableOpacity
           onPress={() => setEditModalVisible(true)}
@@ -502,6 +503,7 @@ export default function ProfileScreen() {
           </View>
           <Text style={styles.menuText}>Cerrar Sesión</Text>
         </TouchableOpacity>
+      </View>
       </View>
 
       <Modal

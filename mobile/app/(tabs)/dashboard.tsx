@@ -5,7 +5,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState, useRef } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Stack } from 'expo-router';
+import { Stack, router, useFocusEffect } from 'expo-router';
 import { dashboardStyles as styles } from '@/constants/dashboard.styles';
 import { COLORS } from '@/constants/colors';
 import { useDashboard, FiltroFecha } from '@/hooks/Usedashboard';
@@ -13,7 +13,6 @@ import { BanknoteArrowUp } from "lucide-react-native";
 import { Bell } from "lucide-react-native";
 import { X } from "lucide-react-native";
 import { Search } from "lucide-react-native";
-import { useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
 import { HeaderIconButton } from '@/components/HeaderIconButton';
 import { ErrorState } from '@/components/ErrorState';
@@ -46,15 +45,34 @@ useFocusEffect(
   useCallback(() => {
     const firstFocus = isFirstFocus.current;
     isFirstFocus.current = false;
-    AsyncStorage.getItem('token').then(t => {
+    let cancelled = false;
+
+    const load = async () => {
+      const usuarioRaw = await AsyncStorage.getItem('usuario');
+      if (cancelled) return;
+      try {
+        const user = usuarioRaw ? JSON.parse(usuarioRaw) : null;
+        if (Number(user?.id_rol) === 2) {
+          router.replace('/(tabs)/vistaUsuario' as any);
+          return;
+        }
+      } catch {
+        /* sigue como tendero */
+      }
+
+      const t = await AsyncStorage.getItem('token');
+      if (cancelled) return;
       setToken(t);
       if (t && !firstFocus) {
         refetch(t, true);
       }
-    });
-    AsyncStorage.getItem('tendero').then(t => {
-      if (t) setTendero(JSON.parse(t));
-    });
+      const tenderoRaw = await AsyncStorage.getItem('tendero');
+      if (cancelled) return;
+      if (tenderoRaw) setTendero(JSON.parse(tenderoRaw));
+    };
+
+    void load();
+    return () => { cancelled = true; };
   }, [refetch])
 );
 

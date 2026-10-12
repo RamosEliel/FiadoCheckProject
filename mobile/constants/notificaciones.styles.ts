@@ -67,7 +67,7 @@ export const createNotificacionesStyles = (scheme: SchemeName) => {
   return StyleSheet.create({
     safe: {
       flex: 1,
-      backgroundColor: t.screenBg,
+      backgroundColor: COLORS.primary,
     },
 
     /* ---------- Encabezado ---------- */
@@ -76,10 +76,15 @@ export const createNotificacionesStyles = (scheme: SchemeName) => {
       alignItems: 'center',
       paddingHorizontal: 16,
       paddingTop: 12,
-      paddingBottom: 22,
+      paddingBottom: 16,
       backgroundColor: COLORS.primary,
-      borderBottomLeftRadius: 28,
-      borderBottomRightRadius: 28,
+    },
+    body: {
+      flex: 1,
+      backgroundColor: t.screenBg,
+      borderTopLeftRadius: 28,
+      borderTopRightRadius: 28,
+      overflow: 'hidden',
     },
     backBtn: {
       width: 48,

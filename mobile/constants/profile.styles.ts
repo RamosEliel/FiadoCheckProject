@@ -5,14 +5,12 @@ import { AppFonts } from './theme';
 export const profileStyles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#EAF9E8', // palette.surface
+    backgroundColor: COLORS.primary,
   },
   header: {
     backgroundColor: COLORS.primary,
-    height: 180,
-    borderBottomLeftRadius: 80,
-    borderBottomRightRadius: 80,
-    paddingTop: 50,
+    paddingTop: 8,
+    paddingBottom: 16,
     paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
@@ -41,16 +39,22 @@ export const profileStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  sheet: {
+    flex: 1,
+    backgroundColor: COLORS.white,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingTop: 20,
+  },
   profileContent: {
     alignItems: 'center',
-    marginTop: -80, // Subido para que la foto esté en la zona verde
   },
   profileImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 5,
-    borderColor: COLORS.white, // Borde blanco para resaltar sobre el verde
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    borderWidth: 3,
+    borderColor: '#E8F5EE',
   },
   userName: {
     fontSize: 22,
@@ -59,15 +63,16 @@ export const profileStyles = StyleSheet.create({
     marginTop: 12,
   },
   userId: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: AppFonts.regular,
     color: COLORS.textMuted,
-    marginBottom: 30,
+    marginBottom: 16,
   },
   menuContainer: {
     width: '100%',
-    paddingHorizontal: 30,
-    gap: 20,
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+    gap: 8,
   },
   menuItem: {
     flexDirection: 'row',

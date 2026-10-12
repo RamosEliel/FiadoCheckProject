@@ -146,7 +146,7 @@ export default function NotificacionesScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
-      {renderContenido()}
+      <View style={styles.body}>{renderContenido()}</View>
     </SafeAreaView>
   );
 }
