@@ -8,7 +8,21 @@ describe('chatWrites.parse', () => {
     assert.equal(p.tipo, 'credito');
     assert.equal(p.monto, 50000);
     assert.equal(p.nombre, 'ana');
-    assert.match(p.fecha, /^\d{4}-\d{2}-\d{2}$/);
+    assert.equal(p.fecha, null);
+  });
+
+  it('crédito sin fecha deja fecha en null', () => {
+    const p = parseIntent('Registra un crédito de 50000 a Ana');
+    assert.equal(p.tipo, 'credito');
+    assert.equal(p.fecha, null);
+  });
+
+  it('crédito con vencimiento explícito captura la fecha', () => {
+    const p = parseIntent('Registra un crédito de 50000 a Ana vence 2026-10-20');
+    assert.equal(p.tipo, 'credito');
+    assert.equal(p.monto, 50000);
+    assert.equal(p.nombre, 'ana');
+    assert.equal(p.fecha, '2026-10-20');
   });
 
   it('detecta pago con miles colombianos', () => {
@@ -54,5 +68,12 @@ describe('chatWrites.parse', () => {
     const p = parseIntent('Ana Ruiz', { allowFill: true });
     assert.equal(p.nombre, 'ana ruiz');
     assert.equal(p.tipo, null);
+  });
+
+  it('allowFill captura fecha suelta ISO o DD/MM/AAAA', () => {
+    const iso = parseIntent('2026-10-20', { allowFill: true });
+    assert.equal(iso.fecha, '2026-10-20');
+    const dmy = parseIntent('20/10/2026', { allowFill: true });
+    assert.equal(dmy.fecha, '2026-10-20');
   });
 });

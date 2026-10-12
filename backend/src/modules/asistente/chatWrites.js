@@ -9,7 +9,6 @@ const AppError = require('../../utils/AppError');
 const { todayBusinessKey } = require('../../utils/dateUtils');
 const creditsService = require('../creditos/credits.service');
 const {
-  addDaysKey,
   detectTipo,
   parseIntent,
   isConsulta,
@@ -219,7 +218,10 @@ const runChatWrite = async ({ texto, idTendero, key }) => {
   const cliente = resolved.cliente;
 
   if (intent.tipo === 'credito') {
-    const fechaLimite = intent.fecha || addDaysKey(todayBusinessKey(), 7);
+    if (!intent.fecha) {
+      return ask('¿Cuál es la fecha de vencimiento? Escríbela DD/MM/AAAA o YYYY-MM-DD.', intent, key);
+    }
+    const fechaLimite = intent.fecha;
     const idCredito = await registrarCredito({
       idTendero,
       clienteId: cliente.id_cliente,
@@ -249,7 +251,7 @@ const runChatWrite = async ({ texto, idTendero, key }) => {
     credito = porSaldo || creditos[0];
   }
 
-  const fechaAbono = intent.fechaAbono || todayBusinessKey();
+  const fechaAbono = todayBusinessKey();
   const resultado = await creditsService.registrarPago({
     creditoId: credito.id_credito,
     idTendero,

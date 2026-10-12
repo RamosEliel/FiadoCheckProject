@@ -156,9 +156,9 @@ const parseIntent = (texto: string, allowFill: boolean): ChatWritePending | null
     monto: parseMonto(t),
     cedula: parseCedula(t),
     nombre: parseNombre(t),
-    fecha: parseFecha(t, tipo === 'credito' ? 7 : null),
+    fecha: parseFecha(t, null),
     descripcion: parseDescripcion(t),
-    fechaAbono: tipo === 'pago' ? parseFecha(t, null) || todayBusinessKey() : null,
+    fechaAbono: tipo === 'pago' ? todayBusinessKey() : null,
   };
 
   const nums = unlabeledNumbers(t).filter((n) => parsed.monto !== Number(n));
@@ -177,6 +177,9 @@ const parseIntent = (texto: string, allowFill: boolean): ChatWritePending | null
     if (/^\d{6,12}$/.test(t) && !parsed.cedula) parsed.cedula = t;
     if (!parsed.nombre && /^[a-zñ]+(?:\s+[a-zñ]+){0,3}$/.test(t) && !STOP_NAME.has(t)) {
       parsed.nombre = t;
+    }
+    if (!parsed.fecha && /^(?:\d{4}-\d{2}-\d{2}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})$/.test(t)) {
+      parsed.fecha = parseFecha(t, null);
     }
   }
 
@@ -295,7 +298,10 @@ export async function tryExecuteChatWrite(
   const cliente = resolved.cliente;
 
   if (intent.tipo === 'credito') {
-    const fechaLimite = intent.fecha || addDaysKey(todayBusinessKey(), 7);
+    if (!intent.fecha) {
+      return ask('¿Cuál es la fecha de vencimiento? Escríbela DD/MM/AAAA o YYYY-MM-DD.', intent);
+    }
+    const fechaLimite = intent.fecha;
     const res = await fetch(`${API_URL}/creditos`, {
       method: 'POST',
       headers: {
@@ -362,7 +368,7 @@ export async function tryExecuteChatWrite(
     String(a.fecha_limite_pago || '').localeCompare(String(b.fecha_limite_pago || '')),
   )[0];
   const credito = porSaldo || porVence || creditos[0];
-  const fechaAbono = intent.fechaAbono || todayBusinessKey();
+  const fechaAbono = todayBusinessKey();
 
   const resPago = await fetch(`${API_URL}/creditos/${credito.id_credito}/abonos`, {
     method: 'POST',

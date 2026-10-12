@@ -134,9 +134,9 @@ const parseIntent = (texto, { allowFill = false } = {}) => {
     monto: parseMonto(t),
     cedula: parseCedula(t),
     nombre: parseNombre(t),
-    fecha: parseFecha(t, { defaultOffsetDays: tipo === 'credito' ? 7 : null }),
+    fecha: parseFecha(t, { defaultOffsetDays: null }),
     descripcion: parseDescripcion(t),
-    fechaAbono: tipo === 'pago' ? parseFecha(t) || todayBusinessKey() : null,
+    fechaAbono: tipo === 'pago' ? todayBusinessKey() : null,
   };
 
   const nums = unlabeledNumbers(t).filter((n) => parsed.monto !== Number(n));
@@ -155,6 +155,9 @@ const parseIntent = (texto, { allowFill = false } = {}) => {
     if (/^\d{6,12}$/.test(t) && !parsed.cedula) parsed.cedula = t;
     if (!parsed.nombre && /^[a-zñ]+(?:\s+[a-zñ]+){0,3}$/.test(t) && !STOP_NAME.has(t)) {
       parsed.nombre = t;
+    }
+    if (!parsed.fecha && /^(?:\d{4}-\d{2}-\d{2}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})$/.test(t)) {
+      parsed.fecha = parseFecha(t);
     }
   }
 

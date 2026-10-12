@@ -20,7 +20,7 @@ import { COLORS } from '@/constants/colors';
 import { GAP_ABOVE_KEYBOARD } from '@/constants/keyboard';
 import { useRegisterPayment } from '@/hooks/Useregisterpayment';
 import { useKeyboardHeight } from '@/hooks/useKeyboardHeight';
-import { formatFechaUI } from '@/utils/businessDate';
+import { formatFechaUI, todayBusinessKey } from '@/utils/businessDate';
 
 export default function RegisterPaymentScreen() {
   const { clienteId } = useLocalSearchParams<{ clienteId?: string }>();
@@ -40,7 +40,6 @@ export default function RegisterPaymentScreen() {
     monto, setMonto,
     getQuickAmounts, aplicarMontoRapido,
     observaciones, setObservaciones,
-    fechaAbono,
     loading,
     resetForm,
     handleConfirmarPago,
@@ -284,10 +283,10 @@ export default function RegisterPaymentScreen() {
               </View>
             )}
 
-            <Text style={[styles.sectionLabel, { marginTop: 4 }]}>Fecha del abono</Text>
+            <Text style={[styles.sectionLabel, { marginTop: 4 }]}>Fecha del abono (hoy)</Text>
             <TextInput
               style={styles.amountInput}
-              value={formatFechaUI(fechaAbono)}
+              value={formatFechaUI(todayBusinessKey())}
               editable={false}
             />
 

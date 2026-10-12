@@ -123,7 +123,7 @@ export default function AddCreditScreen() {
 
             {/* Fecha De Pago Limite */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Fecha De Pago Limite</Text>
+              <Text style={styles.label}>Fecha de vencimiento *</Text>
               <View style={styles.inputRow}>
                 <TextInput
                   style={styles.inputFlex}
