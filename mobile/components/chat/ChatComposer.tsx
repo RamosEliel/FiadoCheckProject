@@ -10,7 +10,7 @@ type Props = {
   onSend: () => void;
   loading: boolean;
   placeholder: string;
-  /** Padding bajo el pill. Con teclado abierto debe ser chico (8–12), no el inset de home. */
+  /** Gap sobre el teclado (GAP_ABOVE_KEYBOARD), no el inset de home. */
   bottomInset: number;
 };
 
@@ -63,7 +63,7 @@ export function ChatComposer({
 const styles = StyleSheet.create({
   wrapper: {
     backgroundColor: COLORS.bg,
-    paddingTop: 8,
+    paddingTop: 16,
     paddingHorizontal: 16,
   },
   pill: {

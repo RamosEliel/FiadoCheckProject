@@ -19,6 +19,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { CONFIG } from '@/config/config';
 import { clearTenderoSeleccionado } from '@/hooks/Usetiendasasociadas';
 import { COLORS } from '@/constants/colors';
+import { GAP_ABOVE_KEYBOARD } from '@/constants/keyboard';
 import { profileStyles as styles } from '@/constants/profile.styles';
 import { ChevronLeft, Bell, User, ShieldCheck, LogOut, Camera, Banknote, BarChart2, LineChart } from 'lucide-react-native';
 import { HeaderIconButton } from '@/components/HeaderIconButton';
@@ -30,7 +31,7 @@ const DEFAULT_AVATAR = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
 export default function ProfileScreen() {
   const router = useRouter();
   const { showSuccess, showError, showConfirm } = useAppDialog();
-  const keyboardHeight = useKeyboardHeight();
+  const { keyboardHeight } = useKeyboardHeight();
   const [user, setUser] = useState<any>(null);
   const [token, setToken] = useState<string | null>(null);
 
@@ -517,7 +518,9 @@ export default function ProfileScreen() {
         >
         <View style={[
           styles.modalOverlay,
-          Platform.OS === 'android' ? { paddingBottom: keyboardHeight } : null,
+          Platform.OS === 'android'
+            ? { paddingBottom: keyboardHeight > 0 ? keyboardHeight + GAP_ABOVE_KEYBOARD : undefined }
+            : null,
         ]}>
           <View style={styles.modalContainer}>
             <Text style={styles.modalTitle}>Editar Perfil</Text>
@@ -661,7 +664,9 @@ export default function ProfileScreen() {
         >
         <View style={[
           styles.modalOverlay,
-          Platform.OS === 'android' ? { paddingBottom: keyboardHeight } : null,
+          Platform.OS === 'android'
+            ? { paddingBottom: keyboardHeight > 0 ? keyboardHeight + GAP_ABOVE_KEYBOARD : undefined }
+            : null,
         ]}>
           <View style={styles.modalContainer}>
             <Text style={styles.modalTitle}>Cambiar Contraseña</Text>

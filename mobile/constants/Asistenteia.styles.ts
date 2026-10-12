@@ -24,7 +24,7 @@ export const asistenteIAStyles = StyleSheet.create({
   chatContent: {
     paddingHorizontal: 16,
     paddingTop: 20,
-    paddingBottom: 12,
+    paddingBottom: 24,
     flexGrow: 1,
     gap: 12,
   },

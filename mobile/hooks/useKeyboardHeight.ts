@@ -21,5 +21,5 @@ export function useKeyboardHeight() {
     };
   }, []);
 
-  return keyboardHeight;
+  return { keyboardHeight, keyboardOpen: keyboardHeight > 0 };
 }

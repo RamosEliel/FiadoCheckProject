@@ -11,6 +11,7 @@ import {
 import { CircleAlert, CircleCheck, Info } from 'lucide-react-native';
 import { dialogStyles as styles } from '@/constants/dialog.styles';
 import { COLORS } from '@/constants/colors';
+import { GAP_ABOVE_KEYBOARD } from '@/constants/keyboard';
 import type { AppDialogVariant } from '@/hooks/useAppDialog';
 import { useKeyboardHeight } from '@/hooks/useKeyboardHeight';
 
@@ -44,7 +45,7 @@ export function AppDialog({
   children,
 }: Props) {
   const { Icon, color, iconWrap } = VARIANT_UI[variant];
-  const keyboardHeight = useKeyboardHeight();
+  const { keyboardHeight } = useKeyboardHeight();
   const hasInputs = !!children;
   const dismiss = onSecondary ?? onClose;
 
@@ -62,7 +63,9 @@ export function AppDialog({
         <Pressable
           style={[
             styles.overlay,
-            hasInputs && Platform.OS === 'android' ? { paddingBottom: keyboardHeight } : null,
+            hasInputs && Platform.OS === 'android'
+              ? { paddingBottom: keyboardHeight > 0 ? keyboardHeight + GAP_ABOVE_KEYBOARD : undefined }
+              : null,
           ]}
           onPress={dismiss}
         >

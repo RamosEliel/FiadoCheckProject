@@ -16,6 +16,7 @@ import { useCallback, useState } from 'react';
 import { Stack, useFocusEffect, router } from 'expo-router';
 import { clientStyles as styles } from '@/constants/Clients.styles';
 import { COLORS } from '@/constants/colors';
+import { GAP_ABOVE_KEYBOARD } from '@/constants/keyboard';
 import { useClients, Cliente } from '@/hooks/Useclients';
 import { useClienteAcciones } from '@/hooks/Useclienteacciones';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -110,7 +111,7 @@ export default function ClientsScreen() {
     registrarCliente,
   } = useClienteAcciones(token, refetch);
 
-  const keyboardHeight = useKeyboardHeight();
+  const { keyboardHeight } = useKeyboardHeight();
 
   return (
     <>
@@ -203,7 +204,9 @@ export default function ClientsScreen() {
           <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={cerrarModal} />
           <View style={[
             styles.modalSheet,
-            Platform.OS === 'android' ? { paddingBottom: 48 + keyboardHeight } : null,
+            Platform.OS === 'android' && keyboardHeight > 0
+              ? { paddingBottom: keyboardHeight + GAP_ABOVE_KEYBOARD }
+              : null,
           ]}>
             <View style={styles.modalHandle} />
 

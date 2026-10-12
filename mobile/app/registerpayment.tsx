@@ -17,6 +17,7 @@ import { ChevronLeft, Bell } from 'lucide-react-native';
 import { HeaderIconButton } from '@/components/HeaderIconButton';
 import { registerPaymentStyles as styles } from '@/constants/Registerpayment.styles';
 import { COLORS } from '@/constants/colors';
+import { GAP_ABOVE_KEYBOARD } from '@/constants/keyboard';
 import { useRegisterPayment } from '@/hooks/Useregisterpayment';
 import { useKeyboardHeight } from '@/hooks/useKeyboardHeight';
 import { formatFechaUI } from '@/utils/businessDate';
@@ -47,7 +48,7 @@ export default function RegisterPaymentScreen() {
     getEstadoColor, getEstadoLabel,
   } = useRegisterPayment(token ?? '', clienteId);
 
-  const keyboardHeight = useKeyboardHeight();
+  const { keyboardOpen } = useKeyboardHeight();
 
   useFocusEffect(
     useCallback(() => {
@@ -77,7 +78,7 @@ export default function RegisterPaymentScreen() {
         >
         <View style={[
           { flex: 1 },
-          Platform.OS === 'android' ? { paddingBottom: keyboardHeight } : null,
+          keyboardOpen ? { paddingBottom: GAP_ABOVE_KEYBOARD } : null,
         ]}>
 
         <View style={styles.header}>
