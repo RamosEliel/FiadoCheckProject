@@ -211,13 +211,13 @@ export const useAsistenteIA = (token: string, id_tendero: string) => {
 
       pushMensaje({ id: uid(), tipo: 'bot', texto: respuesta });
 
+      const refreshOk = json.refresh === true;
       const writeDashboardActions = ['agregar_pago', 'agregar_credito'];
       const action = json.action_executed ?? '';
       const scope = json.refresh_scope ?? [];
       const fromWrite =
-        writeDashboardActions.includes(action) ||
-        Boolean(json.refresh && scope.includes('dashboard'));
-      // No regex sobre el texto: el modelo puede decir "pago registrado" sin tool 201.
+        refreshOk &&
+        (writeDashboardActions.includes(action) || scope.includes('dashboard'));
       if (fromWrite) {
         const tipo: 'pago' | 'credito' =
           action === 'agregar_credito' ? 'credito' : 'pago';
@@ -232,7 +232,7 @@ export const useAsistenteIA = (token: string, id_tendero: string) => {
         });
       }
 
-      if (json.refresh && json.action_executed) {
+      if (refreshOk && json.action_executed) {
         const bannerMensajes: Record<string, string> = {
           agregar_cliente: 'Cliente vinculado correctamente a tu cartera',
           agregar_credito: 'Crédito registrado correctamente',
