@@ -20,7 +20,7 @@ async function callMLService(clienteId, idTendero) {
 }
 
 async function upsertPrediction(pool, clienteId, idTendero, { nivelRiesgo, puntaje, confianza, limiteSugerido }) {
-  await pool.query(`
+  const result = await pool.query(`
     INSERT INTO scoring (id_cliente, id_tendero, nivel_riesgo, puntaje, confianza, limite_sugerido)
     VALUES ($1, $2, $3, $4, $5, $6)
     ON CONFLICT (id_cliente, id_tendero) DO UPDATE SET
@@ -29,7 +29,9 @@ async function upsertPrediction(pool, clienteId, idTendero, { nivelRiesgo, punta
       confianza = EXCLUDED.confianza,
       limite_sugerido = EXCLUDED.limite_sugerido,
       fecha_calculo = NOW()
+    RETURNING fecha_calculo
   `, [clienteId, idTendero, nivelRiesgo, puntaje, confianza, limiteSugerido]);
+  return result.rows[0].fecha_calculo;
 }
 
 /**
@@ -57,7 +59,7 @@ async function getOrComputeScoring(pool, clienteId, idTendero, options = {}) {
     const totales = await queryTotalesCreditos(pool, clienteId, idTendero);
     const ajustado = ajustarPrediccionPorMora(rf, totales);
     const limiteSugerido = await calcularLimiteSugerido(pool, clienteId, idTendero, ajustado.nivel_riesgo);
-    await upsertPrediction(pool, clienteId, idTendero, {
+    const fechaCalculo = await upsertPrediction(pool, clienteId, idTendero, {
       nivelRiesgo: ajustado.nivel_riesgo,
       puntaje: ajustado.puntaje,
       confianza: ajustado.confianza,
@@ -68,7 +70,7 @@ async function getOrComputeScoring(pool, clienteId, idTendero, options = {}) {
       puntaje: ajustado.puntaje,
       confianza: ajustado.confianza,
       limite_sugerido: limiteSugerido,
-      fecha_calculo: new Date(),
+      fecha_calculo: fechaCalculo,
     };
   } catch (mlErr) {
     console.error('Error obteniendo predicción ML:', mlErr.message);

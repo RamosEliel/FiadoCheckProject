@@ -3,7 +3,7 @@ const pool = require('../config/database');
 const authMiddleware = require('../middleware/auth');
 const { validateParams, validateBody, rules } = require('../middlewares/validateBody');
 const { marcarCreditosVencidos } = require('../utils/creditosMora');
-const { toDateKey, todayBusinessKey, calendarDaysBetween } = require('../utils/dateUtils');
+const { clasificarCredito } = require('../utils/avisosCredito');
 
 const router = express.Router();
 router.use(authMiddleware);
@@ -31,28 +31,6 @@ async function clienteDeLaSesion(req) {
     [req.user.id_usuario]
   );
   return result.rows[0]?.id_cliente ?? null;
-}
-
-function clasificarCredito(estado, fechaLimite) {
-  const limite = toDateKey(fechaLimite);
-  const hoy = todayBusinessKey();
-  const dias = limite ? calendarDaysBetween(limite, hoy) : 0;
-
-  if (estado === 'vencido' || dias > 0) {
-    const atraso = Math.max(dias, 1);
-    const detalle = atraso === 1 ? '1 día de atraso' : `${atraso} días de atraso`;
-    return { tipo: 'critica', dias_atraso: atraso, detalle };
-  }
-
-  const faltan = Math.abs(dias);
-  if (faltan <= 3) {
-    const detalle = faltan === 0 ? 'Vence hoy' : faltan === 1 ? 'Vence mañana' : `Vence en ${faltan} días`;
-    return { tipo: 'proxima', dias_atraso: 0, detalle };
-  }
-  if (faltan <= 7) {
-    return { tipo: 'informativa', dias_atraso: 0, detalle: `Vence en ${faltan} días` };
-  }
-  return null;
 }
 
 // GET /api/recordatorios/me
