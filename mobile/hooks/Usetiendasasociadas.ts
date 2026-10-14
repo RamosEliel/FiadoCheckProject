@@ -89,7 +89,6 @@ export const useTiendasAsociadas = () => {
   const [tiendas, setTiendas] = useState<TiendaConDeuda[]>([]);
   const [loading, setLoading] = useState(true);
   const [tiendaSeleccionada, setTiendaSeleccionada] = useState<TiendaConDeuda | null>(null);
-  const [dropdownAbierto, setDropdownAbierto] = useState(false);
 
   const cargarTiendas = useCallback(async (authToken: string) => {
     setLoading(true);
@@ -122,11 +121,8 @@ export const useTiendasAsociadas = () => {
     init();
   }, [cargarTiendas]);
 
-  const toggleDropdown = () => setDropdownAbierto((v) => !v);
-
   const seleccionarTienda = (tienda: TiendaConDeuda) => {
     setTiendaSeleccionada(tienda);
-    setDropdownAbierto(false);
   };
 
   const handleContinuar = async () => {
@@ -140,8 +136,6 @@ export const useTiendasAsociadas = () => {
     tiendas,
     loading,
     tiendaSeleccionada,
-    dropdownAbierto,
-    toggleDropdown,
     seleccionarTienda,
     handleContinuar,
     formatCOP,

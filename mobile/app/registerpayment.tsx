@@ -17,9 +17,10 @@ import { ChevronLeft, Bell } from 'lucide-react-native';
 import { HeaderIconButton } from '@/components/HeaderIconButton';
 import { registerPaymentStyles as styles } from '@/constants/Registerpayment.styles';
 import { COLORS } from '@/constants/colors';
+import { GAP_ABOVE_KEYBOARD } from '@/constants/keyboard';
 import { useRegisterPayment } from '@/hooks/Useregisterpayment';
 import { useKeyboardHeight } from '@/hooks/useKeyboardHeight';
-import { formatFechaUI } from '@/utils/businessDate';
+import { formatFechaUI, todayBusinessKey } from '@/utils/businessDate';
 
 export default function RegisterPaymentScreen() {
   const { clienteId } = useLocalSearchParams<{ clienteId?: string }>();
@@ -39,7 +40,6 @@ export default function RegisterPaymentScreen() {
     monto, setMonto,
     getQuickAmounts, aplicarMontoRapido,
     observaciones, setObservaciones,
-    fechaAbono,
     loading,
     resetForm,
     handleConfirmarPago,
@@ -47,7 +47,7 @@ export default function RegisterPaymentScreen() {
     getEstadoColor, getEstadoLabel,
   } = useRegisterPayment(token ?? '', clienteId);
 
-  const keyboardHeight = useKeyboardHeight();
+  const { keyboardOpen } = useKeyboardHeight();
 
   useFocusEffect(
     useCallback(() => {
@@ -77,7 +77,7 @@ export default function RegisterPaymentScreen() {
         >
         <View style={[
           { flex: 1 },
-          Platform.OS === 'android' ? { paddingBottom: keyboardHeight } : null,
+          keyboardOpen ? { paddingBottom: GAP_ABOVE_KEYBOARD } : null,
         ]}>
 
         <View style={styles.header}>
@@ -283,10 +283,10 @@ export default function RegisterPaymentScreen() {
               </View>
             )}
 
-            <Text style={[styles.sectionLabel, { marginTop: 4 }]}>Fecha del abono</Text>
+            <Text style={[styles.sectionLabel, { marginTop: 4 }]}>Fecha del abono (hoy)</Text>
             <TextInput
               style={styles.amountInput}
-              value={formatFechaUI(fechaAbono)}
+              value={formatFechaUI(todayBusinessKey())}
               editable={false}
             />
 

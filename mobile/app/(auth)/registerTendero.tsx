@@ -13,7 +13,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
 import { registerTenderoStyles as styles } from '@/constants/registerTendero.styles';
 import { COLORS } from '@/constants/colors';
+import { GAP_ABOVE_KEYBOARD } from '@/constants/keyboard';
 import { useRegisterTendero } from '@/hooks/useRegisterTendero';
+import { useKeyboardHeight } from '@/hooks/useKeyboardHeight';
 import { Eye } from 'lucide-react-native';
 import { EyeOff } from 'lucide-react-native';
 
@@ -34,6 +36,7 @@ export default function RegisterTenderoScreen() {
     togglePassword, toggleConfirm,
     handleRegister, handleLogin,
   } = useRegisterTendero();
+  const { keyboardOpen } = useKeyboardHeight();
 
   const hasError = (field: keyof typeof errors) => !!errors[field];
   const borderError = (field: keyof typeof errors) =>
@@ -46,7 +49,7 @@ export default function RegisterTenderoScreen() {
         <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
 
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.container}
         >
           {/* Título sobre fondo verde */}
@@ -60,6 +63,7 @@ export default function RegisterTenderoScreen() {
             <ScrollView
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
+              contentContainerStyle={keyboardOpen ? { paddingBottom: GAP_ABOVE_KEYBOARD } : undefined}
             >
 
               {/* Nombre Completo */}

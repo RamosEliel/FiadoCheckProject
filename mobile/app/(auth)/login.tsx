@@ -11,7 +11,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { loginStyles as styles } from '@/constants/login.styles';
 import { COLORS } from '@/constants/colors';
+import { GAP_ABOVE_KEYBOARD } from '@/constants/keyboard';
 import { useLogin } from '@/hooks/useLogin';
+import { useKeyboardHeight } from '@/hooks/useKeyboardHeight';
 import { Eye } from "lucide-react-native";
 import { EyeOff } from "lucide-react-native";
 
@@ -26,13 +28,14 @@ export default function LoginScreen() {
     handleRegisterTendero,
     handleGoogleLogin,
   } = useLogin();
+  const { keyboardOpen } = useKeyboardHeight();
 
   return (
       <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
 
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
       >
         {/* Título sobre fondo verde */}
@@ -42,7 +45,7 @@ export default function LoginScreen() {
         </View>
 
         {/* Card blanca con esquinas redondeadas arriba */}
-        <View style={styles.card}>
+        <View style={[styles.card, keyboardOpen ? { paddingBottom: 24 + GAP_ABOVE_KEYBOARD } : null]}>
 
           {/* Email */}
           <View style={styles.inputGroup}>

@@ -190,6 +190,7 @@ export const useAddCredit = (token: string, id_tendero: string, initialClienteId
   const handleGuardar = async () => {
     if (!usuario || !monto || !fechaLimite) {
       showError('Campos vacíos', 'Completa usuario, monto y fecha límite');
+      if (!fechaLimite) setShowDatePicker(true);
       return;
     }
 
@@ -198,6 +199,7 @@ export const useAddCredit = (token: string, id_tendero: string, initialClienteId
         'Fecha inválida',
         'Ingresa una fecha límite válida (DD/MM/AAAA) igual o posterior a hoy.'
       );
+      setShowDatePicker(true);
       return;
     }
 

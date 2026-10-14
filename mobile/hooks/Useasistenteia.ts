@@ -1,8 +1,15 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { FlatList } from 'react-native';
+import {
+  FlatList,
+  Keyboard,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  Platform,
+} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CONFIG } from '@/config/config';
 import { publishCarteraChanged } from '@/utils/carteraEvents';
+import { tryExecuteChatWrite, isChatConsulta, type ChatWritePending } from '@/utils/asistenteWrites';
 import type { ActionBanner, Mensaje } from '@/components/chat/types';
 
 export type { ActionBanner, Mensaje } from '@/components/chat/types';
@@ -27,6 +34,7 @@ const buildBienvenida = (): Mensaje[] => [
 ];
 
 const uid = () => Math.random().toString(36).slice(2, 9);
+const STICK_TO_BOTTOM_THRESHOLD = 80;
 
 const classifyError = (err: unknown, status?: number): { message: string; esError: boolean } => {
   if (status === 403) {
@@ -113,34 +121,111 @@ export const useAsistenteIA = (token: string, id_tendero: string) => {
   const [loading, setLoading] = useState(false);
   const [actionBanner, setActionBanner] = useState<ActionBanner>(null);
   const scrollRef = useRef<FlatList<Mensaje>>(null);
+  const stickToBottomRef = useRef(true);
+  const ignoreScrollRef = useRef(false);
   const requestIdRef = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
   const sendingRef = useRef(false);
   const lastPreguntaRef = useRef('');
   const bannerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rafIdRef = useRef<number | null>(null);
+  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const writePendingRef = useRef<ChatWritePending | null>(null);
+
+  const cancelScrollTimers = useCallback(() => {
+    if (rafIdRef.current != null) {
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = null;
+    }
+    if (scrollTimeoutRef.current != null) {
+      clearTimeout(scrollTimeoutRef.current);
+      scrollTimeoutRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     return () => {
       requestIdRef.current += 1;
       abortRef.current?.abort();
       if (bannerTimerRef.current) clearTimeout(bannerTimerRef.current);
+      cancelScrollTimers();
     };
+  }, [cancelScrollTimers]);
+
+  const scrollToBottom = useCallback(() => {
+    cancelScrollTimers();
+    if (!stickToBottomRef.current) return;
+    ignoreScrollRef.current = true;
+    rafIdRef.current = requestAnimationFrame(() => {
+      rafIdRef.current = null;
+      scrollTimeoutRef.current = setTimeout(() => {
+        scrollTimeoutRef.current = null;
+        if (!stickToBottomRef.current) {
+          ignoreScrollRef.current = false;
+          return;
+        }
+        scrollRef.current?.scrollToEnd({ animated: true });
+      }, 80);
+    });
+  }, [cancelScrollTimers]);
+
+  const onChatScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (ignoreScrollRef.current) return;
+    const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+    const distanceFromEnd = contentSize.height - layoutMeasurement.height - contentOffset.y;
+    stickToBottomRef.current = distanceFromEnd <= STICK_TO_BOTTOM_THRESHOLD;
   }, []);
 
-  const scrollToBottom = () => {
-    requestAnimationFrame(() => {
-      scrollRef.current?.scrollToEnd({ animated: true });
+  const onScrollBeginDrag = useCallback(() => {
+    stickToBottomRef.current = false;
+  }, []);
+
+  const onChatScrollEnd = useCallback(() => {
+    ignoreScrollRef.current = false;
+  }, []);
+
+  const onContentSizeChange = useCallback(() => {
+    if (stickToBottomRef.current) scrollToBottom();
+  }, [scrollToBottom]);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const sub = Keyboard.addListener(showEvent, () => {
+      scrollToBottom();
     });
-  };
+    return () => sub.remove();
+  }, [scrollToBottom]);
 
   const pushMensaje = useCallback((msg: Mensaje) => {
     setMensajes((prev) => [...prev, { createdAt: Date.now(), ...msg }]);
     scrollToBottom();
-  }, []);
+  }, [scrollToBottom]);
 
   const fetchRespuesta = async (pregunta: string, signal: AbortSignal): Promise<ChatResponse> => {
     if (!token) {
       throw new Error('No hay sesión activa. Inicia sesión nuevamente.');
+    }
+
+    if (isChatConsulta(pregunta)) {
+      writePendingRef.current = null;
+    }
+
+    const localWrite = await tryExecuteChatWrite(
+      pregunta,
+      token,
+      writePendingRef.current,
+      signal,
+    );
+    if (localWrite) {
+      writePendingRef.current = localWrite.pending;
+      return {
+        respuesta: localWrite.respuesta,
+        mensaje: localWrite.respuesta,
+        action_executed: localWrite.action_executed,
+        refresh: localWrite.refresh,
+        refresh_scope: localWrite.refresh_scope ?? undefined,
+        success: true,
+      };
     }
 
     const sessionId = await getOrCreateSessionId();
@@ -179,6 +264,7 @@ export const useAsistenteIA = (token: string, id_tendero: string) => {
     if (!trimmed || sendingRef.current) return;
 
     sendingRef.current = true;
+    stickToBottomRef.current = true;
     const requestId = ++requestIdRef.current;
     lastPreguntaRef.current = trimmed;
 
@@ -211,13 +297,13 @@ export const useAsistenteIA = (token: string, id_tendero: string) => {
 
       pushMensaje({ id: uid(), tipo: 'bot', texto: respuesta });
 
+      const refreshOk = json.refresh === true;
       const writeDashboardActions = ['agregar_pago', 'agregar_credito'];
       const action = json.action_executed ?? '';
       const scope = json.refresh_scope ?? [];
       const fromWrite =
-        writeDashboardActions.includes(action) ||
-        Boolean(json.refresh && scope.includes('dashboard'));
-      // No regex sobre el texto: el modelo puede decir "pago registrado" sin tool 201.
+        refreshOk &&
+        (writeDashboardActions.includes(action) || scope.includes('dashboard'));
       if (fromWrite) {
         const tipo: 'pago' | 'credito' =
           action === 'agregar_credito' ? 'credito' : 'pago';
@@ -232,7 +318,7 @@ export const useAsistenteIA = (token: string, id_tendero: string) => {
         });
       }
 
-      if (json.refresh && json.action_executed) {
+      if (refreshOk && json.action_executed) {
         const bannerMensajes: Record<string, string> = {
           agregar_cliente: 'Cliente vinculado correctamente a tu cartera',
           agregar_credito: 'Crédito registrado correctamente',
@@ -298,16 +384,20 @@ export const useAsistenteIA = (token: string, id_tendero: string) => {
     abortRef.current = null;
     sendingRef.current = false;
     lastPreguntaRef.current = '';
+    stickToBottomRef.current = true;
+    ignoreScrollRef.current = false;
+    cancelScrollTimers();
     setLoading(false);
     setInput('');
     setActionBanner(null);
     if (bannerTimerRef.current) clearTimeout(bannerTimerRef.current);
     setMensajes(buildBienvenida());
+    writePendingRef.current = null;
 
     await AsyncStorage.removeItem(SESSION_KEY);
     const nuevo = `sess_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
     await AsyncStorage.setItem(SESSION_KEY, nuevo);
-  }, []);
+  }, [cancelScrollTimers]);
 
   return {
     mensajes,
@@ -320,5 +410,10 @@ export const useAsistenteIA = (token: string, id_tendero: string) => {
     handleSugerencia,
     clearChat,
     retryLast,
+    onChatScroll,
+    onContentSizeChange,
+    onScrollBeginDrag,
+    onScrollEndDrag: onChatScrollEnd,
+    onMomentumScrollEnd: onChatScrollEnd,
   };
 };

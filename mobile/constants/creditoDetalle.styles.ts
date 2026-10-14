@@ -4,7 +4,7 @@ import { COLORS } from './colors';
 export const creditoDetalleStyles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.primary,
   },
   center: {
     flex: 1,
@@ -38,27 +38,36 @@ export const creditoDetalleStyles = StyleSheet.create({
   },
   scroll: {
     flex: 1,
+    backgroundColor: COLORS.white,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
   },
   scrollContent: {
     padding: 20,
     paddingBottom: 40,
   },
   amountCard: {
-    backgroundColor: COLORS.bg,
-    borderRadius: 16,
-    padding: 20,
+    backgroundColor: '#F3FBF7',
+    borderRadius: 20,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
     marginBottom: 16,
-    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#D7EFE6',
   },
   amountLabel: {
-    fontSize: 14,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
     color: COLORS.textMuted,
     marginBottom: 4,
   },
   amountValue: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '800',
     color: COLORS.text,
+    letterSpacing: -0.4,
   },
   badge: {
     marginTop: 10,
@@ -95,6 +104,9 @@ export const creditoDetalleStyles = StyleSheet.create({
     color: COLORS.text,
     fontSize: 14,
     fontWeight: '600',
+    flex: 1,
+    textAlign: 'right',
+    marginLeft: 12,
   },
   abonoItem: {
     flexDirection: 'row',

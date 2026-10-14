@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   Image,
-  SafeAreaView,
   StatusBar,
   Modal,
   TextInput,
@@ -13,12 +12,14 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { CONFIG } from '@/config/config';
 import { clearTenderoSeleccionado } from '@/hooks/Usetiendasasociadas';
 import { COLORS } from '@/constants/colors';
+import { GAP_ABOVE_KEYBOARD } from '@/constants/keyboard';
 import { profileStyles as styles } from '@/constants/profile.styles';
 import { ChevronLeft, Bell, User, ShieldCheck, LogOut, Camera, Banknote, BarChart2, LineChart } from 'lucide-react-native';
 import { HeaderIconButton } from '@/components/HeaderIconButton';
@@ -30,7 +31,7 @@ const DEFAULT_AVATAR = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
 export default function ProfileScreen() {
   const router = useRouter();
   const { showSuccess, showError, showConfirm } = useAppDialog();
-  const keyboardHeight = useKeyboardHeight();
+  const { keyboardHeight } = useKeyboardHeight();
   const [user, setUser] = useState<any>(null);
   const [token, setToken] = useState<string | null>(null);
 
@@ -360,7 +361,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
 
       <View style={styles.header}>
@@ -379,6 +380,7 @@ export default function ProfileScreen() {
         />
       </View>
 
+      <View style={styles.sheet}>
       <View style={styles.profileContent}>
         <TouchableOpacity
           onPress={() => setEditModalVisible(true)}
@@ -503,6 +505,7 @@ export default function ProfileScreen() {
           <Text style={styles.menuText}>Cerrar Sesión</Text>
         </TouchableOpacity>
       </View>
+      </View>
 
       <Modal
         visible={editModalVisible}
@@ -515,7 +518,9 @@ export default function ProfileScreen() {
         >
         <View style={[
           styles.modalOverlay,
-          Platform.OS === 'android' ? { paddingBottom: keyboardHeight } : null,
+          Platform.OS === 'android'
+            ? { paddingBottom: keyboardHeight > 0 ? keyboardHeight + GAP_ABOVE_KEYBOARD : undefined }
+            : null,
         ]}>
           <View style={styles.modalContainer}>
             <Text style={styles.modalTitle}>Editar Perfil</Text>
@@ -659,7 +664,9 @@ export default function ProfileScreen() {
         >
         <View style={[
           styles.modalOverlay,
-          Platform.OS === 'android' ? { paddingBottom: keyboardHeight } : null,
+          Platform.OS === 'android'
+            ? { paddingBottom: keyboardHeight > 0 ? keyboardHeight + GAP_ABOVE_KEYBOARD : undefined }
+            : null,
         ]}>
           <View style={styles.modalContainer}>
             <Text style={styles.modalTitle}>Cambiar Contraseña</Text>

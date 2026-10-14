@@ -5,7 +5,7 @@ import { CONFIG } from '@/config/config';
 import { friendlyErrorMessage } from '@/utils/errorMessages';
 import { useAppDialog } from '@/hooks/useAppDialog';
 import { publishCarteraChanged } from '@/utils/carteraEvents';
-import { diasAtraso, formatFechaUI, todayBusinessKey, toDateKey } from '@/utils/businessDate';
+import { diasAtraso, formatFechaUI, todayBusinessKey } from '@/utils/businessDate';
 
 const API_URL = CONFIG.API_URL;
 
@@ -292,7 +292,6 @@ export const useRegisterPayment = (
 
     setLoading(true);
     try {
-      const claveAbono = toDateKey(fechaAbono) || todayBusinessKey();
       const res = await fetch(`${API_URL}/creditos/${credito.id}/abonos`, {
         method: 'POST',
         headers: {
@@ -301,7 +300,7 @@ export const useRegisterPayment = (
         },
         body: JSON.stringify({
           monto: parseMonto(monto),
-          fechaAbono: claveAbono,
+          fechaAbono: todayBusinessKey(),
         }),
       });
 

@@ -13,7 +13,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
 import { registerStyles as styles } from '@/constants/registerClientes.styles';
 import { COLORS } from '@/constants/colors';
+import { GAP_ABOVE_KEYBOARD } from '@/constants/keyboard';
 import { useRegister } from '@/hooks/useRegisterClientes';
+import { useKeyboardHeight } from '@/hooks/useKeyboardHeight';
 import { Eye } from "lucide-react-native";
 import { EyeOff } from "lucide-react-native";
 
@@ -31,6 +33,7 @@ export default function RegisterScreen() {
     togglePassword, toggleConfirm,
     handleRegister, handleLogin,
   } = useRegister();
+  const { keyboardOpen } = useKeyboardHeight();
 
   return (
     <>
@@ -39,7 +42,7 @@ export default function RegisterScreen() {
         <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
 
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.container}
         >
           {/* Título sobre fondo verde */}
@@ -50,7 +53,10 @@ export default function RegisterScreen() {
 
           {/* Card blanca con scroll */}
           <View style={styles.card}>
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={keyboardOpen ? { paddingBottom: GAP_ABOVE_KEYBOARD } : undefined}
+            >
 
               {/* Nombre Completo */}
               <View style={styles.inputGroup}>

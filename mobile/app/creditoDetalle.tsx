@@ -11,6 +11,9 @@ import { useCreditoDetalle } from '@/hooks/useCreditoDetalle';
 import { ErrorState } from '@/components/ErrorState';
 import { friendlyErrorMessage, clasificarError } from '@/utils/errorMessages';
 import { cerrarSesionYRedirigir } from '@/utils/session';
+import { formatFechaUI } from '@/utils/businessDate';
+
+const formatCOP = (valor: number) => `$${Math.round(valor).toLocaleString('es-CO')}`;
 
 const ESTADO_COLORS: Record<string, string> = {
   vencido: '#E53935',
@@ -64,7 +67,7 @@ export default function CreditoDetalleScreen() {
           onPress={() => router.back()}
           style={styles.backBtn}
         />
-        <Text style={styles.headerTitle}>Detalle del Pago</Text>
+        <Text style={styles.headerTitle}>Detalle del crédito</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -86,7 +89,7 @@ export default function CreditoDetalleScreen() {
         <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
           <View style={styles.amountCard}>
             <Text style={styles.amountLabel}>Saldo Pendiente</Text>
-            <Text style={styles.amountValue}>${credito.saldo_pendiente.toLocaleString()}</Text>
+            <Text style={styles.amountValue}>{formatCOP(credito.saldo_pendiente)}</Text>
             <View style={[styles.badge, { backgroundColor: ESTADO_COLORS[credito.estado] || COLORS.textMuted }]}>
               <Text style={styles.badgeText}>
                 {ESTADO_LABELS[credito.estado] || credito.estado}
@@ -106,20 +109,20 @@ export default function CreditoDetalleScreen() {
               <Text style={styles.rowValue}>{credito.descripcion || '—'}</Text>
             </View>
             <View style={styles.row}>
-              <Text style={styles.rowLabel}>Monto Total</Text>
-              <Text style={styles.rowValue}>${credito.monto_total.toLocaleString()}</Text>
+              <Text style={styles.rowLabel}>Monto total</Text>
+              <Text style={styles.rowValue}>{formatCOP(credito.monto_total)}</Text>
             </View>
             <View style={styles.row}>
-              <Text style={styles.rowLabel}>Total Abonado</Text>
-              <Text style={styles.rowValue}>${credito.total_abonado.toLocaleString()}</Text>
+              <Text style={styles.rowLabel}>Total abonado</Text>
+              <Text style={styles.rowValue}>{formatCOP(credito.total_abonado)}</Text>
             </View>
             <View style={styles.row}>
-              <Text style={styles.rowLabel}>Fecha del Crédito</Text>
-              <Text style={styles.rowValue}>{credito.fecha_credito?.split('T')[0]}</Text>
+              <Text style={styles.rowLabel}>Fecha del crédito</Text>
+              <Text style={styles.rowValue}>{formatFechaUI(credito.fecha_credito)}</Text>
             </View>
             <View style={styles.row}>
-              <Text style={styles.rowLabel}>Fecha Límite de Pago</Text>
-              <Text style={styles.rowValue}>{credito.fecha_limite_pago?.split('T')[0]}</Text>
+              <Text style={styles.rowLabel}>Fecha límite</Text>
+              <Text style={styles.rowValue}>{formatFechaUI(credito.fecha_limite_pago)}</Text>
             </View>
           </View>
 
@@ -130,8 +133,8 @@ export default function CreditoDetalleScreen() {
             ) : (
               credito.abonos.map((abono) => (
                 <View key={abono.id_abono} style={styles.abonoItem}>
-                  <Text style={styles.abonoFecha}>{abono.fecha_abono?.split('T')[0]}</Text>
-                  <Text style={styles.abonoMonto}>${abono.monto.toLocaleString()}</Text>
+                  <Text style={styles.abonoFecha}>{formatFechaUI(abono.fecha_abono)}</Text>
+                  <Text style={styles.abonoMonto}>{formatCOP(abono.monto)}</Text>
                 </View>
               ))
             )}

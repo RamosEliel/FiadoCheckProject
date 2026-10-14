@@ -32,14 +32,21 @@ export type Movimiento = {
   bgColor: string;
   signColor: string;
   id_credito?: number;
+  saldoPendiente?: number;
+  estado?: 'vigente' | 'vencido' | 'pagado';
 };
 
 export type UserData = {
   id_cliente: number;
   nombreUsuario: string;
   nombreTienda: string;
+  direccionTienda: string;
   totalDeuda: number;
+  totalAbonado: number;
+  creditosActivos: number;
+  creditosVencidos: number;
   fechaLimite: string;
+  puntaje: number | null;
   nivelRiesgo: string | null;
   nivelConfianza: number | null;
   nivelConfianzaLabel: string;
@@ -97,8 +104,13 @@ export const useVistaUsuario = (token: string | null) => {
         id_cliente: user.id_cliente,
         nombreUsuario: user.nombre_completo,
         nombreTienda: user.tienda?.nombre_tienda || 'Sin tienda asociada',
-        totalDeuda: 0,
-        fechaLimite: 'Sujeto a crédito',
+        direccionTienda: user.tienda?.direccion || '',
+        totalDeuda: Number(user.totales?.total_deuda) || 0,
+        totalAbonado: 0,
+        creditosActivos: Number(user.totales?.total_creditos) || 0,
+        creditosVencidos: Number(user.totales?.creditos_vencidos) || 0,
+        fechaLimite: '',
+        puntaje: scoringML.puntaje,
         nivelRiesgo,
         nivelConfianza,
         nivelConfianzaLabel,
@@ -132,23 +144,26 @@ export const useVistaUsuario = (token: string | null) => {
           processedMovements.push({
             id: `cred-${item.credito.id_credito}`,
             tipo: 'CARGO',
-            descripcion: item.credito.descripcion || 'Compra en Tienda',
+            descripcion: item.credito.descripcion || 'Compra en tienda',
             fecha: fechaCredito,
             monto: item.credito.monto_total,
             bgColor: '#FFCDD2',
             signColor: '#E53935',
             id_credito: item.credito.id_credito,
+            saldoPendiente: Number(item.credito.saldo_pendiente) || 0,
+            estado: item.credito.estado,
           });
           item.abonos?.forEach((abono: any) => {
             const fechaAbono = abono.fecha_abono?.split('T')[0] ?? '';
             processedMovements.push({
               id: `abono-${abono.id_abono}`,
               tipo: 'ABONO',
-              descripcion: `Abono a ${item.credito.descripcion || 'Crédito'}`,
+              descripcion: `Abono · ${item.credito.descripcion || 'crédito'}`,
               fecha: fechaAbono,
               monto: abono.monto,
-              bgColor: '#FFE0B2',
-              signColor: '#FF9800',
+              bgColor: '#D7F5E8',
+              signColor: '#00C48C',
+              id_credito: item.credito.id_credito,
             });
           });
         });
@@ -156,7 +171,6 @@ export const useVistaUsuario = (token: string | null) => {
         const sortedMovements = processedMovements
           .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
 
-        // Calcular total a pagar sumando saldos pendientes de créditos vigentes y vencidos
         const totalDeudaCalculada = history.historial?.reduce((acc: number, item: any) => {
           if (item.credito.estado === 'vigente' || item.credito.estado === 'vencido') {
             return acc + (item.credito.saldo_pendiente ?? 0);
@@ -164,7 +178,12 @@ export const useVistaUsuario = (token: string | null) => {
           return acc;
         }, 0) ?? 0;
 
-        setUserData(prev => prev ? { ...prev, fechaLimite, totalDeuda: totalDeudaCalculada } : prev);
+        const totalAbonado = history.historial?.reduce((acc: number, item: any) => {
+          const abonos = Array.isArray(item.abonos) ? item.abonos : [];
+          return acc + abonos.reduce((s: number, a: any) => s + (Number(a.monto) || 0), 0);
+        }, 0) ?? 0;
+
+        setUserData(prev => prev ? { ...prev, fechaLimite, totalDeuda: totalDeudaCalculada, totalAbonado } : prev);
         setMovements(sortedMovements);
       } catch (historyError: any) {
         console.error('Error cargando historial:', historyError);

@@ -16,6 +16,7 @@ import { useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { addCreditStyles as styles } from '@/constants/Addcredit.styles';
 import { COLORS } from '@/constants/colors';
+import { GAP_ABOVE_KEYBOARD } from '@/constants/keyboard';
 import { useAddCredit } from '@/hooks/Useaddcredit';
 import { formatNivelRiesgo } from '@/utils/scoring';
 import { Bell, CalendarDays, ChevronLeft, Sparkles, AlertCircle, Wallet, Receipt } from 'lucide-react-native';
@@ -52,7 +53,7 @@ export default function AddCreditScreen() {
     showDatePicker, setShowDatePicker,
   } = useAddCredit(token ?? '', tendero?.id_tendero, clienteId);
 
-  const keyboardHeight = useKeyboardHeight();
+  const { keyboardOpen } = useKeyboardHeight();
 
   return (
     <>
@@ -65,7 +66,7 @@ export default function AddCreditScreen() {
         >
         <View style={[
           { flex: 1 },
-          Platform.OS === 'android' ? { paddingBottom: keyboardHeight } : null,
+          keyboardOpen ? { paddingBottom: GAP_ABOVE_KEYBOARD } : null,
         ]}>
 
         {/* Header */}
@@ -122,7 +123,7 @@ export default function AddCreditScreen() {
 
             {/* Fecha De Pago Limite */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Fecha De Pago Limite</Text>
+              <Text style={styles.label}>Fecha de vencimiento *</Text>
               <View style={styles.inputRow}>
                 <TextInput
                   style={styles.inputFlex}

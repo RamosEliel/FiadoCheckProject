@@ -68,6 +68,7 @@ export default function TabLayout() {
       </View>
     ) : (
     <Tabs
+      initialRouteName={isTendero ? 'dashboard' : 'vistaUsuario'}
       screenOptions={{
         tabBarActiveTintColor: palette.primary,
         tabBarInactiveTintColor: palette.textMuted,
