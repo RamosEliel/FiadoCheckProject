@@ -87,6 +87,7 @@ export default function TabLayout() {
           marginTop: 6,
           fontFamily: AppFonts.regular,
         },
+        tabBarHideOnKeyboard: true,
       }}>
 
       <Tabs.Screen
@@ -111,7 +112,6 @@ export default function TabLayout() {
           title: 'Asistente',
           href: isTendero ? undefined : null,
           tabBarIcon: ({ color }) => <Bot size={24} color={color} strokeWidth={2} />,
-          tabBarHideOnKeyboard: true,
         }}
       />
 

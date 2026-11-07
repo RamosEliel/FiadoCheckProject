@@ -61,6 +61,7 @@ export default function RegisterTenderoScreen() {
           {/* Card blanca con scroll */}
           <View style={styles.card}>
             <ScrollView
+              style={{ flex: 1 }}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
               contentContainerStyle={keyboardOpen ? { paddingBottom: GAP_ABOVE_KEYBOARD } : undefined}

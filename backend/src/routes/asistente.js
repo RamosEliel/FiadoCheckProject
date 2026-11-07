@@ -1,6 +1,7 @@
 const express = require('express');
 const authMiddleware = require('../middleware/auth');
 const { tryExecuteChatWrite } = require('../modules/asistente/chatWrites');
+const { resolveN8nWebhookUrl, n8nErrorMessage } = require('../modules/asistente/n8nProxy');
 
 const router = express.Router();
 router.use(authMiddleware);
@@ -10,26 +11,6 @@ router.use(authMiddleware);
 // abierto y se pulsó "Execute workflow"). Copiar la de pruebas es fácil y el
 // síntoma es un 404 "webhook not registered" sin pista de la causa.
 const TIMEOUT_N8N_MS = 30000;
-
-const resolveN8nWebhookUrl = () => {
-  let url = (process.env.N8N_WEBHOOK_URL || '').trim();
-  if (!url) return '';
-
-  if (!/^https?:\/\//i.test(url)) {
-    url = `https://${url.replace(/^\/+/, '')}`;
-  }
-
-  if (url.includes('/webhook-test/')) {
-    console.warn(
-      '[Asistente] N8N_WEBHOOK_URL apunta a /webhook-test/, que solo responde ' +
-      'con el canvas de n8n abierto. Usa /webhook/ para producción.'
-    );
-  } else if (!/\/webhook\//.test(url)) {
-    url = `${url.replace(/\/+$/, '')}/webhook/fiadocheck-asistente`;
-  }
-
-  return url;
-};
 
 router.post('/chat', async (req, res) => {
   try {
@@ -69,7 +50,7 @@ router.post('/chat', async (req, res) => {
       });
     }
 
-    const n8nUrl = resolveN8nWebhookUrl();
+    const n8nUrl = resolveN8nWebhookUrl(process.env.N8N_WEBHOOK_URL);
     if (!n8nUrl) {
       return res.status(503).json({
         error: 'Asistente IA no configurado. Define N8N_WEBHOOK_URL en el backend.',
@@ -113,19 +94,8 @@ router.post('/chat', async (req, res) => {
     const json = await n8nRes.json().catch(() => ({}));
 
     if (!n8nRes.ok) {
-      const mensajeError = [
-        json?.error,
-        json?.message,
-        json?.detail,
-      ].find(Boolean) || 'Error al contactar el asistente IA';
-
-      const isInactive = /not active|workflow.*inactive|workflow.*not.*active|inactive workflow/i.test(mensajeError);
-      const errorFinal = isInactive
-        ? 'El workflow de n8n está inactivo. Actívalo desde n8n y vuelve a intentarlo.'
-        : mensajeError;
-
       return res.status(n8nRes.status).json({
-        error: errorFinal,
+        error: n8nErrorMessage({ status: n8nRes.status, body: json }),
       });
     }
 

@@ -90,7 +90,7 @@ export default function AddCreditScreen() {
 
         {/* Card */}
         <View style={styles.card}>
-          <ScrollView showsVerticalScrollIndicator={false}>
+          <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
 
             {/* Usuario */}
             <View style={styles.inputGroup}>

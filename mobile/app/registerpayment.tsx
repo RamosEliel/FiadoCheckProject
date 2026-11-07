@@ -102,7 +102,7 @@ export default function RegisterPaymentScreen() {
         </View>
 
         <ScrollView
-          style={styles.body}
+          style={[styles.body, { flex: 1 }]}
           contentContainerStyle={styles.bodyContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"

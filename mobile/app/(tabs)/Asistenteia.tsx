@@ -166,7 +166,7 @@ export default function AsistenteIAScreen() {
         <KeyboardAvoidingView
           style={styles.body}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? IOS_HEADER_OFFSET : 0}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? IOS_HEADER_OFFSET + insets.top : 0}
         >
           <View style={styles.bodyInner}>
             {actionBanner?.visible ? <ActionBanner mensaje={actionBanner.mensaje} /> : null}

@@ -7,6 +7,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { loginStyles as styles } from '@/constants/login.styles';
@@ -45,7 +46,12 @@ export default function LoginScreen() {
         </View>
 
         {/* Card blanca con esquinas redondeadas arriba */}
-        <View style={[styles.card, keyboardOpen ? { paddingBottom: 24 + GAP_ABOVE_KEYBOARD } : null]}>
+        <View style={[styles.card, keyboardOpen ? { paddingBottom: GAP_ABOVE_KEYBOARD } : null]}>
+          <ScrollView
+            style={{ flex: 1 }}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
 
           {/* Email */}
           <View style={styles.inputGroup}>
@@ -127,6 +133,7 @@ export default function LoginScreen() {
             <Text style={styles.footerLink}>Regístrate como tendero</Text>
           </TouchableOpacity>
 
+          </ScrollView>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
