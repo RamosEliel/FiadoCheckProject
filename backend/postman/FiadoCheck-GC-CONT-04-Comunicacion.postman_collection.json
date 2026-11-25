@@ -1,0 +1,983 @@
+{
+  "info": {
+    "name": "FiadoCheck — GC-CONT-04 Calidad de la comunicación con el cliente",
+    "description": "Dimensión: Comunicación con el cliente. Fundamento: SERVQUAL (Parasuraman, Zeithaml y Berry, 1988), solo las ideas de oportunidad y confiabilidad. No se aplica el cuestionario de percepciones.\n\nSeis fiados de $80.000 con fecha de pago ayer, hace 10 días, hoy, +2, +5 y +10 días (calendario de Colombia). El cliente abre sus avisos (GET /recordatorios/me): esa primera consulta es la que marca como vencidos los atrasados. Se comprueba etiqueta, texto, días, valor y saldo contra el fiado.\n\nRegla: vencido o con atraso → crítica (\"1 día de atraso\" / \"N días de atraso\"); vence hoy, mañana o en 2-3 días → próxima; 4 a 7 días → informativa; más de 7 días → sin aviso.\n\nAlcance: la lista de alertas del TENDERO (GET /alertas) queda fuera de esta prueba.\nEjecutar con el entorno FiadoCheck-Azure o FiadoCheck-Local, una iteración, en orden. No ejecutarla cerca de la medianoche de Colombia (el último paso lo verifica).\nLIMPIEZA\nCada corrida crea una tienda y clientes desechables con correo gcc.*@test.fiadocheck.com,\ny créditos reales asociados. Cuando se terminen las corridas:\n    node backend/scripts/limpiar_pruebas_gestion_credito.js --dry-run\n    node backend/scripts/limpiar_pruebas_gestion_credito.js\nLos créditos vencidos y pagados de estas tiendas entran al conjunto de entrenamiento del\nRandom Forest mientras existan: limpiar pronto, y no dejar pasar un reentrenamiento por\nvolumen entre la corrida y la limpieza.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "S1 — Preparación: registrar tienda de prueba",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function hoyBogota() { return new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10); }",
+              "function sumarDias(clave, n) { const p = clave.split('-').map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2] + n)).toISOString().slice(0, 10); }",
+              "function diasEntre(desde, hasta) { const a = desde.split('-').map(Number), b = hasta.split('-').map(Number); return Math.round((Date.UTC(b[0], b[1] - 1, b[2]) - Date.UTC(a[0], a[1] - 1, a[2])) / 86400000); }",
+              "// Identificador único por corrida. Empieza en 1 para no perder ceros al pasar a número.",
+              "const ts = '1' + Date.now().toString().slice(-8);",
+              "pm.collectionVariables.set('runId', ts);",
+              "pm.collectionVariables.set('tenderoEmail', 'gcc.t.' + ts + '@test.fiadocheck.com');",
+              "pm.collectionVariables.set('tenderoCedula', ts);",
+              "pm.collectionVariables.set('clienteEmail', 'gcc.c1.' + ts + '@test.fiadocheck.com');",
+              "pm.collectionVariables.set('clienteCedula', String(Number(ts) + 1));",
+              "pm.collectionVariables.set('cliente2Email', 'gcc.c2.' + ts + '@test.fiadocheck.com');",
+              "pm.collectionVariables.set('cliente2Cedula', String(Number(ts) + 2));",
+              "pm.collectionVariables.set('fechaCorte', hoyBogota());"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Preparación — tienda de prueba registrada (201)', function () { pm.response.to.have.status(201); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/auth/registerTendero",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "registerTendero"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre_completo\": \"Tienda GC-CONT-04 {{runId}}\",\n  \"email\": \"{{tenderoEmail}}\",\n  \"telefono\": \"3001234567\",\n  \"cedula\": \"{{tenderoCedula}}\",\n  \"direccion\": \"Calle 10 # 20-30\",\n  \"num_camara_comercio\": \"CC-{{runId}}\",\n  \"password\": \"{{password}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "S2 — Preparación: login del tendero",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Preparación — login del tendero (200)', function () { pm.response.to.have.status(200); });",
+              "const b = pm.response.json();",
+              "pm.test('Preparación — la sesión es de tendero', function () { pm.expect(b.tendero).to.not.be.null; });",
+              "if (b.token) { pm.collectionVariables.set('tokenTendero', b.token); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "login"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"email\": \"{{tenderoEmail}}\", \"password\": \"{{password}}\" }"
+        }
+      }
+    },
+    {
+      "name": "S3 — Preparación: registrar Cliente de prueba (con cuenta propia)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Preparación — Cliente de prueba registrado (201)', function () { pm.response.to.have.status(201); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/auth/registerClientes",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "registerClientes"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre_completo\": \"Cliente de prueba {{runId}}\",\n  \"email\": \"{{clienteEmail}}\",\n  \"telefono\": \"3007654321\",\n  \"cedula\": \"{{clienteCedula}}\",\n  \"direccion\": \"Carrera 5 # 15-25\",\n  \"password\": \"{{password}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "S5 — Preparación: login del cliente",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Preparación — login del cliente (200)', function () { pm.response.to.have.status(200); });",
+              "const b = pm.response.json();",
+              "if (b.token) { pm.collectionVariables.set('tokenCliente', b.token); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "login"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"email\": \"{{clienteEmail}}\", \"password\": \"{{password}}\" }"
+        }
+      }
+    },
+    {
+      "name": "S6 — Preparación: vincular cliente de prueba a la tienda",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Preparación — cliente vinculado a la tienda (201)', function () { pm.response.to.have.status(201); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/clientes/asociar",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "clientes",
+            "asociar"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"id_cliente\": \"{{clienteCedula}}\" }"
+        }
+      }
+    },
+    {
+      "name": "S7 — Preparación: fiado de $80.000, mora de un día",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function hoyBogota() { return new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10); }",
+              "function sumarDias(clave, n) { const p = clave.split('-').map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2] + n)).toISOString().slice(0, 10); }",
+              "function diasEntre(desde, hasta) { const a = desde.split('-').map(Number), b = hasta.split('-').map(Number); return Math.round((Date.UTC(b[0], b[1] - 1, b[2]) - Date.UTC(a[0], a[1] - 1, a[2])) / 86400000); }",
+              "if (0 === 0) { pm.collectionVariables.set('fechaCorte', hoyBogota()); }",
+              "pm.collectionVariables.set('fechaLimite', sumarDias(pm.collectionVariables.get('fechaCorte'), -1));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Preparación — fiado 04-A creado (201)', function () { pm.response.to.have.status(201); });",
+              "pm.collectionVariables.set('idCredito_04A', String(pm.response.json().id_credito));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/creditos",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "creditos"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"clienteId\": {{clienteCedula}},\n  \"montoTotal\": 80000,\n  \"fechaLimitePago\": \"{{fechaLimite}}\",\n  \"descripcion\": \"GC-CONT-04 04-A mora de un día\"\n}"
+        }
+      }
+    },
+    {
+      "name": "S8 — Preparación: fiado de $80.000, mora de 10 días",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function hoyBogota() { return new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10); }",
+              "function sumarDias(clave, n) { const p = clave.split('-').map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2] + n)).toISOString().slice(0, 10); }",
+              "function diasEntre(desde, hasta) { const a = desde.split('-').map(Number), b = hasta.split('-').map(Number); return Math.round((Date.UTC(b[0], b[1] - 1, b[2]) - Date.UTC(a[0], a[1] - 1, a[2])) / 86400000); }",
+              "if (1 === 0) { pm.collectionVariables.set('fechaCorte', hoyBogota()); }",
+              "pm.collectionVariables.set('fechaLimite', sumarDias(pm.collectionVariables.get('fechaCorte'), -10));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Preparación — fiado 04-B creado (201)', function () { pm.response.to.have.status(201); });",
+              "pm.collectionVariables.set('idCredito_04B', String(pm.response.json().id_credito));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/creditos",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "creditos"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"clienteId\": {{clienteCedula}},\n  \"montoTotal\": 80000,\n  \"fechaLimitePago\": \"{{fechaLimite}}\",\n  \"descripcion\": \"GC-CONT-04 04-B mora de 10 días\"\n}"
+        }
+      }
+    },
+    {
+      "name": "S9 — Preparación: fiado de $80.000, vence hoy",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function hoyBogota() { return new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10); }",
+              "function sumarDias(clave, n) { const p = clave.split('-').map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2] + n)).toISOString().slice(0, 10); }",
+              "function diasEntre(desde, hasta) { const a = desde.split('-').map(Number), b = hasta.split('-').map(Number); return Math.round((Date.UTC(b[0], b[1] - 1, b[2]) - Date.UTC(a[0], a[1] - 1, a[2])) / 86400000); }",
+              "if (2 === 0) { pm.collectionVariables.set('fechaCorte', hoyBogota()); }",
+              "pm.collectionVariables.set('fechaLimite', sumarDias(pm.collectionVariables.get('fechaCorte'), 0));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Preparación — fiado 04-C creado (201)', function () { pm.response.to.have.status(201); });",
+              "pm.collectionVariables.set('idCredito_04C', String(pm.response.json().id_credito));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/creditos",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "creditos"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"clienteId\": {{clienteCedula}},\n  \"montoTotal\": 80000,\n  \"fechaLimitePago\": \"{{fechaLimite}}\",\n  \"descripcion\": \"GC-CONT-04 04-C vence hoy\"\n}"
+        }
+      }
+    },
+    {
+      "name": "S10 — Preparación: fiado de $80.000, faltan 2 días",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function hoyBogota() { return new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10); }",
+              "function sumarDias(clave, n) { const p = clave.split('-').map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2] + n)).toISOString().slice(0, 10); }",
+              "function diasEntre(desde, hasta) { const a = desde.split('-').map(Number), b = hasta.split('-').map(Number); return Math.round((Date.UTC(b[0], b[1] - 1, b[2]) - Date.UTC(a[0], a[1] - 1, a[2])) / 86400000); }",
+              "if (3 === 0) { pm.collectionVariables.set('fechaCorte', hoyBogota()); }",
+              "pm.collectionVariables.set('fechaLimite', sumarDias(pm.collectionVariables.get('fechaCorte'), 2));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Preparación — fiado 04-D creado (201)', function () { pm.response.to.have.status(201); });",
+              "pm.collectionVariables.set('idCredito_04D', String(pm.response.json().id_credito));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/creditos",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "creditos"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"clienteId\": {{clienteCedula}},\n  \"montoTotal\": 80000,\n  \"fechaLimitePago\": \"{{fechaLimite}}\",\n  \"descripcion\": \"GC-CONT-04 04-D faltan 2 días\"\n}"
+        }
+      }
+    },
+    {
+      "name": "S11 — Preparación: fiado de $80.000, faltan 5 días",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function hoyBogota() { return new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10); }",
+              "function sumarDias(clave, n) { const p = clave.split('-').map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2] + n)).toISOString().slice(0, 10); }",
+              "function diasEntre(desde, hasta) { const a = desde.split('-').map(Number), b = hasta.split('-').map(Number); return Math.round((Date.UTC(b[0], b[1] - 1, b[2]) - Date.UTC(a[0], a[1] - 1, a[2])) / 86400000); }",
+              "if (4 === 0) { pm.collectionVariables.set('fechaCorte', hoyBogota()); }",
+              "pm.collectionVariables.set('fechaLimite', sumarDias(pm.collectionVariables.get('fechaCorte'), 5));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Preparación — fiado 04-E creado (201)', function () { pm.response.to.have.status(201); });",
+              "pm.collectionVariables.set('idCredito_04E', String(pm.response.json().id_credito));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/creditos",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "creditos"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"clienteId\": {{clienteCedula}},\n  \"montoTotal\": 80000,\n  \"fechaLimitePago\": \"{{fechaLimite}}\",\n  \"descripcion\": \"GC-CONT-04 04-E faltan 5 días\"\n}"
+        }
+      }
+    },
+    {
+      "name": "S12 — Preparación: fiado de $80.000, faltan 10 días",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function hoyBogota() { return new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10); }",
+              "function sumarDias(clave, n) { const p = clave.split('-').map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2] + n)).toISOString().slice(0, 10); }",
+              "function diasEntre(desde, hasta) { const a = desde.split('-').map(Number), b = hasta.split('-').map(Number); return Math.round((Date.UTC(b[0], b[1] - 1, b[2]) - Date.UTC(a[0], a[1] - 1, a[2])) / 86400000); }",
+              "if (5 === 0) { pm.collectionVariables.set('fechaCorte', hoyBogota()); }",
+              "pm.collectionVariables.set('fechaLimite', sumarDias(pm.collectionVariables.get('fechaCorte'), 10));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Preparación — fiado 04-F creado (201)', function () { pm.response.to.have.status(201); });",
+              "pm.collectionVariables.set('idCredito_04F', String(pm.response.json().id_credito));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/creditos",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "creditos"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"clienteId\": {{clienteCedula}},\n  \"montoTotal\": 80000,\n  \"fechaLimitePago\": \"{{fechaLimite}}\",\n  \"descripcion\": \"GC-CONT-04 04-F faltan 10 días\"\n}"
+        }
+      }
+    },
+    {
+      "name": "04 — Entrar como cliente y abrir los avisos (primera consulta del día)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('04 — los avisos del cliente responden 200', function () { pm.response.to.have.status(200); });",
+              "const avisos = pm.response.json();",
+              "pm.test('04 — la respuesta es una lista', function () { pm.expect(avisos).to.be.an('array'); });",
+              "pm.collectionVariables.set('avisos', JSON.stringify(avisos));",
+              "console.log('AVISOS', JSON.stringify(avisos.map(function (a) { return [a.id_credito, a.tipo, a.detalle, a.dias_atraso, a.saldo_pendiente]; })));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenCliente}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/recordatorios/me",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "recordatorios",
+            "me"
+          ]
+        }
+      }
+    },
+    {
+      "name": "04-A — mora de un día: comparar el aviso con el fiado",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const avisos = JSON.parse(pm.collectionVariables.get('avisos') || '[]');",
+              "const b = pm.response.json();",
+              "const aviso = avisos.find(function (a) { return String(a.id_credito) === pm.collectionVariables.get('idCredito_04A'); });",
+              "pm.test('04-A — existe un aviso para el fiado en la primera consulta del día', function () { pm.expect(aviso, 'no hay aviso').to.not.be.undefined; });",
+              "if (aviso) {",
+              "  pm.test('04-A — etiqueta critica', function () { pm.expect(aviso.tipo).to.eql('critica'); });",
+              "  pm.test('04-A — texto «1 día de atraso»', function () { pm.expect(aviso.detalle).to.eql('1 día de atraso'); });",
+              "  pm.test('04-A — el valor y el saldo del aviso coinciden con el fiado', function () {",
+              "      pm.expect(aviso.monto_total).to.eql(b.monto_total);",
+              "      pm.expect(aviso.saldo_pendiente).to.eql(b.saldo_pendiente);",
+              "  });",
+              "}",
+              "pm.test('04-A — estado del fiado: vencido', function () { pm.expect(b.estado).to.eql('vencido'); });",
+              "pm.test('04-A — los días de atraso del aviso (1) son los del fiado', function () {",
+              "    pm.expect(b.dias_atraso).to.eql(1);",
+              "    if (aviso) { pm.expect(aviso.dias_atraso).to.eql(1); }",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenCliente}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/creditos/{{idCredito_04A}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "creditos",
+            "{{idCredito_04A}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "04-B — mora de 10 días: comparar el aviso con el fiado",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const avisos = JSON.parse(pm.collectionVariables.get('avisos') || '[]');",
+              "const b = pm.response.json();",
+              "const aviso = avisos.find(function (a) { return String(a.id_credito) === pm.collectionVariables.get('idCredito_04B'); });",
+              "pm.test('04-B — existe un aviso para el fiado en la primera consulta del día', function () { pm.expect(aviso, 'no hay aviso').to.not.be.undefined; });",
+              "if (aviso) {",
+              "  pm.test('04-B — etiqueta critica', function () { pm.expect(aviso.tipo).to.eql('critica'); });",
+              "  pm.test('04-B — texto «10 días de atraso»', function () { pm.expect(aviso.detalle).to.eql('10 días de atraso'); });",
+              "  pm.test('04-B — el valor y el saldo del aviso coinciden con el fiado', function () {",
+              "      pm.expect(aviso.monto_total).to.eql(b.monto_total);",
+              "      pm.expect(aviso.saldo_pendiente).to.eql(b.saldo_pendiente);",
+              "  });",
+              "}",
+              "pm.test('04-B — estado del fiado: vencido', function () { pm.expect(b.estado).to.eql('vencido'); });",
+              "pm.test('04-B — los días de atraso del aviso (10) son los del fiado', function () {",
+              "    pm.expect(b.dias_atraso).to.eql(10);",
+              "    if (aviso) { pm.expect(aviso.dias_atraso).to.eql(10); }",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenCliente}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/creditos/{{idCredito_04B}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "creditos",
+            "{{idCredito_04B}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "04-C — vence hoy: comparar el aviso con el fiado",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const avisos = JSON.parse(pm.collectionVariables.get('avisos') || '[]');",
+              "const b = pm.response.json();",
+              "const aviso = avisos.find(function (a) { return String(a.id_credito) === pm.collectionVariables.get('idCredito_04C'); });",
+              "pm.test('04-C — existe un aviso para el fiado en la primera consulta del día', function () { pm.expect(aviso, 'no hay aviso').to.not.be.undefined; });",
+              "if (aviso) {",
+              "  pm.test('04-C — etiqueta proxima', function () { pm.expect(aviso.tipo).to.eql('proxima'); });",
+              "  pm.test('04-C — texto «Vence hoy»', function () { pm.expect(aviso.detalle).to.eql('Vence hoy'); });",
+              "  pm.test('04-C — el valor y el saldo del aviso coinciden con el fiado', function () {",
+              "      pm.expect(aviso.monto_total).to.eql(b.monto_total);",
+              "      pm.expect(aviso.saldo_pendiente).to.eql(b.saldo_pendiente);",
+              "  });",
+              "}",
+              "pm.test('04-C — estado del fiado: sigue al día (vigente)', function () { pm.expect(b.estado).to.eql('vigente'); });",
+              ""
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenCliente}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/creditos/{{idCredito_04C}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "creditos",
+            "{{idCredito_04C}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "04-D — faltan 2 días: comparar el aviso con el fiado",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const avisos = JSON.parse(pm.collectionVariables.get('avisos') || '[]');",
+              "const b = pm.response.json();",
+              "const aviso = avisos.find(function (a) { return String(a.id_credito) === pm.collectionVariables.get('idCredito_04D'); });",
+              "pm.test('04-D — existe un aviso para el fiado en la primera consulta del día', function () { pm.expect(aviso, 'no hay aviso').to.not.be.undefined; });",
+              "if (aviso) {",
+              "  pm.test('04-D — etiqueta proxima', function () { pm.expect(aviso.tipo).to.eql('proxima'); });",
+              "  pm.test('04-D — texto «Vence en 2 días»', function () { pm.expect(aviso.detalle).to.eql('Vence en 2 días'); });",
+              "  pm.test('04-D — el valor y el saldo del aviso coinciden con el fiado', function () {",
+              "      pm.expect(aviso.monto_total).to.eql(b.monto_total);",
+              "      pm.expect(aviso.saldo_pendiente).to.eql(b.saldo_pendiente);",
+              "  });",
+              "}",
+              "pm.test('04-D — estado del fiado: sigue al día (vigente)', function () { pm.expect(b.estado).to.eql('vigente'); });",
+              ""
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenCliente}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/creditos/{{idCredito_04D}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "creditos",
+            "{{idCredito_04D}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "04-E — faltan 5 días: comparar el aviso con el fiado",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const avisos = JSON.parse(pm.collectionVariables.get('avisos') || '[]');",
+              "const b = pm.response.json();",
+              "const aviso = avisos.find(function (a) { return String(a.id_credito) === pm.collectionVariables.get('idCredito_04E'); });",
+              "pm.test('04-E — existe un aviso para el fiado en la primera consulta del día', function () { pm.expect(aviso, 'no hay aviso').to.not.be.undefined; });",
+              "if (aviso) {",
+              "  pm.test('04-E — etiqueta informativa', function () { pm.expect(aviso.tipo).to.eql('informativa'); });",
+              "  pm.test('04-E — texto «Vence en 5 días»', function () { pm.expect(aviso.detalle).to.eql('Vence en 5 días'); });",
+              "  pm.test('04-E — el valor y el saldo del aviso coinciden con el fiado', function () {",
+              "      pm.expect(aviso.monto_total).to.eql(b.monto_total);",
+              "      pm.expect(aviso.saldo_pendiente).to.eql(b.saldo_pendiente);",
+              "  });",
+              "}",
+              "pm.test('04-E — estado del fiado: sigue al día (vigente)', function () { pm.expect(b.estado).to.eql('vigente'); });",
+              ""
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenCliente}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/creditos/{{idCredito_04E}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "creditos",
+            "{{idCredito_04E}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "04-F — faltan 10 días: comparar el aviso con el fiado",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const avisos = JSON.parse(pm.collectionVariables.get('avisos') || '[]');",
+              "const aviso = avisos.find(function (a) { return String(a.id_credito) === pm.collectionVariables.get('idCredito_04F'); });",
+              "pm.test('04-F — el fiado que vence en 10 días no produce aviso', function () { pm.expect(aviso).to.be.undefined; });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenCliente}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/creditos/{{idCredito_04F}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "creditos",
+            "{{idCredito_04F}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Cierre — La corrida fue válida: el día de Colombia no cambió",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function hoyBogota() { return new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10); }",
+              "function sumarDias(clave, n) { const p = clave.split('-').map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2] + n)).toISOString().slice(0, 10); }",
+              "function diasEntre(desde, hasta) { const a = desde.split('-').map(Number), b = hasta.split('-').map(Number); return Math.round((Date.UTC(b[0], b[1] - 1, b[2]) - Date.UTC(a[0], a[1] - 1, a[2])) / 86400000); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function hoyBogota() { return new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10); }",
+              "function sumarDias(clave, n) { const p = clave.split('-').map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2] + n)).toISOString().slice(0, 10); }",
+              "function diasEntre(desde, hasta) { const a = desde.split('-').map(Number), b = hasta.split('-').map(Number); return Math.round((Date.UTC(b[0], b[1] - 1, b[2]) - Date.UTC(a[0], a[1] - 1, a[2])) / 86400000); }",
+              "pm.test('Cierre — la fecha de corte sigue siendo la de hoy en Colombia (si cambió a medianoche, repetir la corrida)', function () {",
+              "    pm.expect(hoyBogota()).to.eql(pm.collectionVariables.get('fechaCorte'));",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenCliente}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/recordatorios/me",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "recordatorios",
+            "me"
+          ]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "password",
+      "value": "GccPrueba2026"
+    },
+    {
+      "key": "runId",
+      "value": ""
+    },
+    {
+      "key": "tenderoEmail",
+      "value": ""
+    },
+    {
+      "key": "tenderoCedula",
+      "value": ""
+    },
+    {
+      "key": "clienteEmail",
+      "value": ""
+    },
+    {
+      "key": "clienteCedula",
+      "value": ""
+    },
+    {
+      "key": "cliente2Email",
+      "value": ""
+    },
+    {
+      "key": "cliente2Cedula",
+      "value": ""
+    },
+    {
+      "key": "fechaCorte",
+      "value": ""
+    },
+    {
+      "key": "tokenTendero",
+      "value": ""
+    },
+    {
+      "key": "tokenCliente",
+      "value": ""
+    },
+    {
+      "key": "fechaLimite",
+      "value": ""
+    },
+    {
+      "key": "avisos",
+      "value": "[]"
+    },
+    {
+      "key": "idCredito_04A",
+      "value": ""
+    },
+    {
+      "key": "idCredito_04B",
+      "value": ""
+    },
+    {
+      "key": "idCredito_04C",
+      "value": ""
+    },
+    {
+      "key": "idCredito_04D",
+      "value": ""
+    },
+    {
+      "key": "idCredito_04E",
+      "value": ""
+    },
+    {
+      "key": "idCredito_04F",
+      "value": ""
+    }
+  ]
+}

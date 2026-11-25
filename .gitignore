@@ -38,3 +38,7 @@ Thumbs.db
 .tmp_main_ml/
 backend/ml_service/_diag_tmp.py
 backend/ml_service/*.log
+
+# Salidas locales de la prueba comparativa (credenciales desechables y hojas de respuestas)
+backend/scripts/comparativa/salida/
+*.local.json

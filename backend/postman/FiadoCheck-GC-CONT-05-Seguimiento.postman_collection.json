@@ -1,0 +1,743 @@
+{
+  "info": {
+    "name": "FiadoCheck — GC-CONT-05 Cartera en riesgo (PAR30)",
+    "description": "Dimensión: Seguimiento de cartera. Fundamento: Portfolio at Risk a 30 días, de las Microfinance Consensus Guidelines (CGAP, 2003).\n\nSe arma una tienda con tres fiados: al día ($100.000), mora corta de 10 días ($100.000) y mora de 45 días ($200.000 con abono parcial de $50.000, saldo $150.000). Se actualizan los vencidos, se lee el porcentaje que publica el programa (GET /analitica/indicadores, campo porcentaje_cartera_vencida) y se rehacen dos cuentas con los saldos:\n  - cuenta del programa: saldo vencido / saldo abierto\n  - PAR30: saldo abierto con más de 30 días de atraso / saldo abierto\nCorte: el día de hoy en Colombia (no el campo fecha_fin del informe, que sale en UTC).\n\nRESULTADO ESPERADO — LEER ANTES DE EJECUTAR\n 05-1 (el número coincide con su propia fórmula) y 05-3 (tienda vacía) deben cumplir.\n 05-2 (el número es el PAR30) NO cumple con el indicador actual: da ~71,43 % y el PAR30 es ~42,86 %, porque el programa cuenta la mora desde el día 1. Es el hallazgo medido que describe la hoja del experto, no un fallo de la colección. Si el indicador se corrige a PAR30 (o se renombra), 05-2 debe pasar a cumplir.\nEjecutar con el entorno FiadoCheck-Azure o FiadoCheck-Local, una iteración, en orden.\nLIMPIEZA\nCada corrida crea una tienda y clientes desechables con correo gcc.*@test.fiadocheck.com,\ny créditos reales asociados. Cuando se terminen las corridas:\n    node backend/scripts/limpiar_pruebas_gestion_credito.js --dry-run\n    node backend/scripts/limpiar_pruebas_gestion_credito.js\nLos créditos vencidos y pagados de estas tiendas entran al conjunto de entrenamiento del\nRandom Forest mientras existan: limpiar pronto, y no dejar pasar un reentrenamiento por\nvolumen entre la corrida y la limpieza.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "S1 — Preparación: registrar tienda de prueba",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function hoyBogota() { return new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10); }",
+              "function sumarDias(clave, n) { const p = clave.split('-').map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2] + n)).toISOString().slice(0, 10); }",
+              "function diasEntre(desde, hasta) { const a = desde.split('-').map(Number), b = hasta.split('-').map(Number); return Math.round((Date.UTC(b[0], b[1] - 1, b[2]) - Date.UTC(a[0], a[1] - 1, a[2])) / 86400000); }",
+              "// Identificador único por corrida. Empieza en 1 para no perder ceros al pasar a número.",
+              "const ts = '1' + Date.now().toString().slice(-8);",
+              "pm.collectionVariables.set('runId', ts);",
+              "pm.collectionVariables.set('tenderoEmail', 'gcc.t.' + ts + '@test.fiadocheck.com');",
+              "pm.collectionVariables.set('tenderoCedula', ts);",
+              "pm.collectionVariables.set('clienteEmail', 'gcc.c1.' + ts + '@test.fiadocheck.com');",
+              "pm.collectionVariables.set('clienteCedula', String(Number(ts) + 1));",
+              "pm.collectionVariables.set('cliente2Email', 'gcc.c2.' + ts + '@test.fiadocheck.com');",
+              "pm.collectionVariables.set('cliente2Cedula', String(Number(ts) + 2));",
+              "pm.collectionVariables.set('fechaCorte', hoyBogota());"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Preparación — tienda de prueba registrada (201)', function () { pm.response.to.have.status(201); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/auth/registerTendero",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "registerTendero"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre_completo\": \"Tienda GC-CONT-05 {{runId}}\",\n  \"email\": \"{{tenderoEmail}}\",\n  \"telefono\": \"3001234567\",\n  \"cedula\": \"{{tenderoCedula}}\",\n  \"direccion\": \"Calle 10 # 20-30\",\n  \"num_camara_comercio\": \"CC-{{runId}}\",\n  \"password\": \"{{password}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "S2 — Preparación: login del tendero",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Preparación — login del tendero (200)', function () { pm.response.to.have.status(200); });",
+              "const b = pm.response.json();",
+              "pm.test('Preparación — la sesión es de tendero', function () { pm.expect(b.tendero).to.not.be.null; });",
+              "if (b.token) { pm.collectionVariables.set('tokenTendero', b.token); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "login"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"email\": \"{{tenderoEmail}}\", \"password\": \"{{password}}\" }"
+        }
+      }
+    },
+    {
+      "name": "S3 — Preparación: registrar Cliente de prueba (con cuenta propia)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Preparación — Cliente de prueba registrado (201)', function () { pm.response.to.have.status(201); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/auth/registerClientes",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "registerClientes"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre_completo\": \"Cliente de prueba {{runId}}\",\n  \"email\": \"{{clienteEmail}}\",\n  \"telefono\": \"3007654321\",\n  \"cedula\": \"{{clienteCedula}}\",\n  \"direccion\": \"Carrera 5 # 15-25\",\n  \"password\": \"{{password}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "S5 — Preparación: login del cliente",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Preparación — login del cliente (200)', function () { pm.response.to.have.status(200); });",
+              "const b = pm.response.json();",
+              "if (b.token) { pm.collectionVariables.set('tokenCliente', b.token); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "login"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"email\": \"{{clienteEmail}}\", \"password\": \"{{password}}\" }"
+        }
+      }
+    },
+    {
+      "name": "S6 — Preparación: vincular cliente de prueba a la tienda",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Preparación — cliente vinculado a la tienda (201)', function () { pm.response.to.have.status(201); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/clientes/asociar",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "clientes",
+            "asociar"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"id_cliente\": \"{{clienteCedula}}\" }"
+        }
+      }
+    },
+    {
+      "name": "05-3 (previa) — La tienda no tiene fiados: lista vacía",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('05-3 — la lista de fiados responde 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('05-3 — la tienda recién creada no tiene fiados abiertos', function () { pm.expect(pm.response.json()).to.eql([]); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/creditos",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "creditos"
+          ]
+        }
+      }
+    },
+    {
+      "name": "05-3 — Tienda sin saldo por cobrar: el porcentaje es 0 en las dos cuentas",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function hoyBogota() { return new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10); }",
+              "function sumarDias(clave, n) { const p = clave.split('-').map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2] + n)).toISOString().slice(0, 10); }",
+              "function diasEntre(desde, hasta) { const a = desde.split('-').map(Number), b = hasta.split('-').map(Number); return Math.round((Date.UTC(b[0], b[1] - 1, b[2]) - Date.UTC(a[0], a[1] - 1, a[2])) / 86400000); }",
+              "pm.collectionVariables.set('fechaCorte', hoyBogota());"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function r2(x) { return Math.round((x + Number.EPSILON) * 100) / 100; }",
+              "pm.test('05-3 — el informe responde 200', function () { pm.response.to.have.status(200); });",
+              "const b = pm.response.json();",
+              "// Sin fiados abiertos el denominador es 0 y las dos cuentas valen 0 por definición.",
+              "const den = 0;",
+              "const interno = den === 0 ? 0 : r2(100 * 0 / den);",
+              "const par30 = den === 0 ? 0 : r2(100 * 0 / den);",
+              "pm.test('05-3 — el porcentaje del programa es 0, igual que la cuenta propia', function () { pm.expect(b.porcentaje_cartera_vencida).to.eql(interno); });",
+              "pm.test('05-3 — el porcentaje del programa es 0, igual que el PAR30', function () { pm.expect(b.porcentaje_cartera_vencida).to.eql(par30); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/analitica/indicadores",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "analitica",
+            "indicadores"
+          ]
+        }
+      }
+    },
+    {
+      "name": "S7 — Preparación: fiado al día",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function hoyBogota() { return new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10); }",
+              "function sumarDias(clave, n) { const p = clave.split('-').map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2] + n)).toISOString().slice(0, 10); }",
+              "function diasEntre(desde, hasta) { const a = desde.split('-').map(Number), b = hasta.split('-').map(Number); return Math.round((Date.UTC(b[0], b[1] - 1, b[2]) - Date.UTC(a[0], a[1] - 1, a[2])) / 86400000); }",
+              "pm.collectionVariables.set('fechaLimite', sumarDias(pm.collectionVariables.get('fechaCorte'), 15));",
+              "pm.collectionVariables.set('fechaLimiteAlDia', pm.collectionVariables.get('fechaLimite'));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Preparación — fiado al día creado (201)', function () { pm.response.to.have.status(201); });",
+              "pm.collectionVariables.set('idAlDia', String(pm.response.json().id_credito));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/creditos",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "creditos"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"clienteId\": {{clienteCedula}},\n  \"montoTotal\": 100000,\n  \"fechaLimitePago\": \"{{fechaLimite}}\",\n  \"descripcion\": \"GC-CONT-05 al día\"\n}"
+        }
+      }
+    },
+    {
+      "name": "S8 — Preparación: fiado mora corta (10 días)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function hoyBogota() { return new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10); }",
+              "function sumarDias(clave, n) { const p = clave.split('-').map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2] + n)).toISOString().slice(0, 10); }",
+              "function diasEntre(desde, hasta) { const a = desde.split('-').map(Number), b = hasta.split('-').map(Number); return Math.round((Date.UTC(b[0], b[1] - 1, b[2]) - Date.UTC(a[0], a[1] - 1, a[2])) / 86400000); }",
+              "pm.collectionVariables.set('fechaLimite', sumarDias(pm.collectionVariables.get('fechaCorte'), -10));",
+              "pm.collectionVariables.set('fechaLimiteMoraCorta', pm.collectionVariables.get('fechaLimite'));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Preparación — fiado mora corta (10 días) creado (201)', function () { pm.response.to.have.status(201); });",
+              "pm.collectionVariables.set('idMoraCorta', String(pm.response.json().id_credito));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/creditos",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "creditos"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"clienteId\": {{clienteCedula}},\n  \"montoTotal\": 100000,\n  \"fechaLimitePago\": \"{{fechaLimite}}\",\n  \"descripcion\": \"GC-CONT-05 mora corta (10 días)\"\n}"
+        }
+      }
+    },
+    {
+      "name": "S9 — Preparación: fiado mora de más de 30 días (45 días) con abono parcial",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function hoyBogota() { return new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10); }",
+              "function sumarDias(clave, n) { const p = clave.split('-').map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2] + n)).toISOString().slice(0, 10); }",
+              "function diasEntre(desde, hasta) { const a = desde.split('-').map(Number), b = hasta.split('-').map(Number); return Math.round((Date.UTC(b[0], b[1] - 1, b[2]) - Date.UTC(a[0], a[1] - 1, a[2])) / 86400000); }",
+              "pm.collectionVariables.set('fechaLimite', sumarDias(pm.collectionVariables.get('fechaCorte'), -45));",
+              "pm.collectionVariables.set('fechaLimiteMoraLarga', pm.collectionVariables.get('fechaLimite'));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Preparación — fiado mora de más de 30 días (45 días) con abono parcial creado (201)', function () { pm.response.to.have.status(201); });",
+              "pm.collectionVariables.set('idMoraLarga', String(pm.response.json().id_credito));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/creditos",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "creditos"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"clienteId\": {{clienteCedula}},\n  \"montoTotal\": 200000,\n  \"fechaLimitePago\": \"{{fechaLimite}}\",\n  \"descripcion\": \"GC-CONT-05 mora de más de 30 días (45 días) con abono parcial\"\n}"
+        }
+      }
+    },
+    {
+      "name": "S10 — Preparación: abono parcial al fiado de más de 30 días",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Preparación — abono parcial registrado (201)', function () { pm.response.to.have.status(201); });",
+              "pm.test('Preparación — el fiado sigue abierto con saldo $150.000', function () {",
+              "    pm.expect(pm.response.json().saldo_nuevo).to.eql(150000);",
+              "    pm.expect(pm.response.json().estado_credito).to.not.eql('pagado');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/creditos/{{idMoraLarga}}/abonos",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "creditos",
+            "{{idMoraLarga}}",
+            "abonos"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"monto\": 50000, \"fechaAbono\": \"{{fechaCorte}}\" }"
+        }
+      }
+    },
+    {
+      "name": "Paso 2 — Actualizar los vencidos (lista de fiados: la foto de la prueba)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Foto — la lista de fiados responde 200', function () { pm.response.to.have.status(200); });",
+              "const lista = pm.response.json();",
+              "pm.test('Foto — hay tres fiados', function () { pm.expect(lista.length).to.eql(3); });",
+              "pm.collectionVariables.set('foto', JSON.stringify(lista.map(function (c) {",
+              "    return { id: String(c.id_credito), saldo: c.saldo_pendiente, estado: c.estado };",
+              "})));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/creditos",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "creditos"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Paso 3 — Anotar el porcentaje de cartera vencida que informa el programa",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Indicadores — responden 200', function () { pm.response.to.have.status(200); });",
+              "const b = pm.response.json();",
+              "pm.collectionVariables.set('porcentajePrograma', String(b.porcentaje_cartera_vencida));",
+              "console.log('Porcentaje del programa:', b.porcentaje_cartera_vencida);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/analitica/indicadores?periodo=trimestre",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "analitica",
+            "indicadores"
+          ],
+          "query": [
+            {
+              "key": "periodo",
+              "value": "trimestre"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Pasos 4 a 7 — Rehacer las dos cuentas y comparar (05-1 y 05-2)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function hoyBogota() { return new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10); }",
+              "function sumarDias(clave, n) { const p = clave.split('-').map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2] + n)).toISOString().slice(0, 10); }",
+              "function diasEntre(desde, hasta) { const a = desde.split('-').map(Number), b = hasta.split('-').map(Number); return Math.round((Date.UTC(b[0], b[1] - 1, b[2]) - Date.UTC(a[0], a[1] - 1, a[2])) / 86400000); }",
+              "function r2(x) { return Math.round((x + Number.EPSILON) * 100) / 100; }",
+              "const foto = JSON.parse(pm.collectionVariables.get('foto'));",
+              "const programa = Number(pm.collectionVariables.get('porcentajePrograma'));",
+              "const corte = pm.collectionVariables.get('fechaCorte');",
+              "// Los días de atraso salen de las fechas que se pusieron al crear los fiados, no de las que",
+              "// devuelve la API (una columna DATE llega con medianoche del huso del servidor).",
+              "const limites = {",
+              "    [pm.collectionVariables.get('idAlDia')]: pm.collectionVariables.get('fechaLimiteAlDia'),",
+              "    [pm.collectionVariables.get('idMoraCorta')]: pm.collectionVariables.get('fechaLimiteMoraCorta'),",
+              "    [pm.collectionVariables.get('idMoraLarga')]: pm.collectionVariables.get('fechaLimiteMoraLarga')",
+              "};",
+              "const abiertos = foto.filter(function (c) { return c.estado !== 'pagado'; });",
+              "const den = abiertos.reduce(function (s, c) { return s + c.saldo; }, 0);",
+              "const numInterno = abiertos.filter(function (c) { return c.estado === 'vencido'; }).reduce(function (s, c) { return s + c.saldo; }, 0);",
+              "const numPar30 = abiertos.filter(function (c) { return diasEntre(limites[c.id], corte) > 30; }).reduce(function (s, c) { return s + c.saldo; }, 0);",
+              "const interno = den === 0 ? 0 : r2(100 * numInterno / den);",
+              "const par30 = den === 0 ? 0 : r2(100 * numPar30 / den);",
+              "console.log('DICTAMEN', JSON.stringify({ corte: corte, denominador: den, numerador_programa: numInterno, numerador_par30: numPar30, programa: programa, cuenta_programa: interno, par30: par30 }));",
+              "",
+              "pm.test('05-1 — el porcentaje del programa coincide con la suma de saldos vencidos / saldos abiertos (±0,01 pp)', function () {",
+              "    pm.expect(Math.abs(programa - interno)).to.be.at.most(0.01);",
+              "});",
+              "// 05-2 mide si ese mismo número es el PAR30 estándar. Con la regla actual el programa mete en el",
+              "// numerador toda la mora desde el día 1, así que se espera que esta aserción NO se cumpla: es el",
+              "// hallazgo del indicador, no un error de la colección. El procedimiento queda evidenciado en el",
+              "// registro de consola (DICTAMEN) con ambas cifras.",
+              "pm.test('05-2 — el porcentaje del programa es el PAR30 (mora de más de 30 días) (±0,01 pp)', function () {",
+              "    pm.expect(Math.abs(programa - par30), 'programa=' + programa + ' vs PAR30=' + par30).to.be.at.most(0.01);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/analitica/indicadores",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "analitica",
+            "indicadores"
+          ]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "password",
+      "value": "GccPrueba2026"
+    },
+    {
+      "key": "runId",
+      "value": ""
+    },
+    {
+      "key": "tenderoEmail",
+      "value": ""
+    },
+    {
+      "key": "tenderoCedula",
+      "value": ""
+    },
+    {
+      "key": "clienteEmail",
+      "value": ""
+    },
+    {
+      "key": "clienteCedula",
+      "value": ""
+    },
+    {
+      "key": "cliente2Email",
+      "value": ""
+    },
+    {
+      "key": "cliente2Cedula",
+      "value": ""
+    },
+    {
+      "key": "fechaCorte",
+      "value": ""
+    },
+    {
+      "key": "tokenTendero",
+      "value": ""
+    },
+    {
+      "key": "tokenCliente",
+      "value": ""
+    },
+    {
+      "key": "fechaLimite",
+      "value": ""
+    },
+    {
+      "key": "fechaLimiteAlDia",
+      "value": ""
+    },
+    {
+      "key": "fechaLimiteMoraCorta",
+      "value": ""
+    },
+    {
+      "key": "fechaLimiteMoraLarga",
+      "value": ""
+    },
+    {
+      "key": "idAlDia",
+      "value": ""
+    },
+    {
+      "key": "idMoraCorta",
+      "value": ""
+    },
+    {
+      "key": "idMoraLarga",
+      "value": ""
+    },
+    {
+      "key": "foto",
+      "value": "[]"
+    },
+    {
+      "key": "porcentajePrograma",
+      "value": ""
+    }
+  ]
+}

@@ -115,7 +115,10 @@ tenderos 1──N alertas N──1 clientes, creditos
 | Método | Ruta | Descripción | Auth |
 |--------|------|-------------|------|
 | POST | `/api/auth/login` | Iniciar sesión. Devuelve JWT y datos del usuario | No |
-| POST | `/api/auth/logout` | Invalidar sesión activa | Sí |
+| POST | `/api/auth/logout` | Invalidar sesión activa y retirar el token push del dispositivo | Sí |
+| PUT | `/api/auth/push-token` | Registrar el token de Expo del dispositivo (se retira a otros usuarios que lo tuvieran) | Sí |
+| DELETE | `/api/auth/push-token` | Dejar de recibir notificaciones push | Sí |
+| POST | `/api/auth/push-token/prueba` | Enviar una notificación de prueba al dispositivo del usuario | Sí |
 
 **Login Request:**
 ```json

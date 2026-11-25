@@ -1,0 +1,1084 @@
+{
+  "info": {
+    "name": "FiadoCheck — GC-CONT-06 Confirmación cruzada de saldos",
+    "description": "Dimensión: Recuperación de cartera. Fundamento: confirmación externa de saldos, ISA 505 (IAASB, 2008). El acreedor (tendero) y el deudor (cliente) deben ver la misma deuda.\n\nSe arma un cliente con cuenta propia, vinculado a una sola tienda, con dos fiados abiertos (A $100.000, B $60.000) y uno saldado en cero (C $30.000). Corte 1: el cliente consulta la tienda con id_tendero explícito (sin él el programa elige la tienda activa de menor id y se podrían comparar dos negocios distintos), el tendero consulta la ficha y el detalle de cartera, y cada fiado abierto se abre desde las dos cuentas. Luego se registra un abono parcial de $40.000 al fiado A y se repite el corte 2.\n\nCasos: 06-A total antes del abono; 06-B suma del detalle; 06-C un mismo fiado visto por los dos; 06-D después del abono. Tolerancia: $0,01.\nEjecutar con el entorno FiadoCheck-Azure o FiadoCheck-Local, una iteración, en orden.\nLIMPIEZA\nCada corrida crea una tienda y clientes desechables con correo gcc.*@test.fiadocheck.com,\ny créditos reales asociados. Cuando se terminen las corridas:\n    node backend/scripts/limpiar_pruebas_gestion_credito.js --dry-run\n    node backend/scripts/limpiar_pruebas_gestion_credito.js\nLos créditos vencidos y pagados de estas tiendas entran al conjunto de entrenamiento del\nRandom Forest mientras existan: limpiar pronto, y no dejar pasar un reentrenamiento por\nvolumen entre la corrida y la limpieza.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "S1 — Preparación: registrar tienda de prueba",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function hoyBogota() { return new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10); }",
+              "function sumarDias(clave, n) { const p = clave.split('-').map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2] + n)).toISOString().slice(0, 10); }",
+              "function diasEntre(desde, hasta) { const a = desde.split('-').map(Number), b = hasta.split('-').map(Number); return Math.round((Date.UTC(b[0], b[1] - 1, b[2]) - Date.UTC(a[0], a[1] - 1, a[2])) / 86400000); }",
+              "// Identificador único por corrida. Empieza en 1 para no perder ceros al pasar a número.",
+              "const ts = '1' + Date.now().toString().slice(-8);",
+              "pm.collectionVariables.set('runId', ts);",
+              "pm.collectionVariables.set('tenderoEmail', 'gcc.t.' + ts + '@test.fiadocheck.com');",
+              "pm.collectionVariables.set('tenderoCedula', ts);",
+              "pm.collectionVariables.set('clienteEmail', 'gcc.c1.' + ts + '@test.fiadocheck.com');",
+              "pm.collectionVariables.set('clienteCedula', String(Number(ts) + 1));",
+              "pm.collectionVariables.set('cliente2Email', 'gcc.c2.' + ts + '@test.fiadocheck.com');",
+              "pm.collectionVariables.set('cliente2Cedula', String(Number(ts) + 2));",
+              "pm.collectionVariables.set('fechaCorte', hoyBogota());"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Preparación — tienda de prueba registrada (201)', function () { pm.response.to.have.status(201); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/auth/registerTendero",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "registerTendero"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre_completo\": \"Tienda GC-CONT-06 {{runId}}\",\n  \"email\": \"{{tenderoEmail}}\",\n  \"telefono\": \"3001234567\",\n  \"cedula\": \"{{tenderoCedula}}\",\n  \"direccion\": \"Calle 10 # 20-30\",\n  \"num_camara_comercio\": \"CC-{{runId}}\",\n  \"password\": \"{{password}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "S2 — Preparación: login del tendero",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Preparación — login del tendero (200)', function () { pm.response.to.have.status(200); });",
+              "const b = pm.response.json();",
+              "pm.test('Preparación — la sesión es de tendero', function () { pm.expect(b.tendero).to.not.be.null; });",
+              "if (b.token) { pm.collectionVariables.set('tokenTendero', b.token); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "login"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"email\": \"{{tenderoEmail}}\", \"password\": \"{{password}}\" }"
+        }
+      }
+    },
+    {
+      "name": "S3 — Preparación: registrar Cliente de prueba (con cuenta propia)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Preparación — Cliente de prueba registrado (201)', function () { pm.response.to.have.status(201); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/auth/registerClientes",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "registerClientes"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre_completo\": \"Cliente de prueba {{runId}}\",\n  \"email\": \"{{clienteEmail}}\",\n  \"telefono\": \"3007654321\",\n  \"cedula\": \"{{clienteCedula}}\",\n  \"direccion\": \"Carrera 5 # 15-25\",\n  \"password\": \"{{password}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "S5 — Preparación: login del cliente",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Preparación — login del cliente (200)', function () { pm.response.to.have.status(200); });",
+              "const b = pm.response.json();",
+              "if (b.token) { pm.collectionVariables.set('tokenCliente', b.token); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "login"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"email\": \"{{clienteEmail}}\", \"password\": \"{{password}}\" }"
+        }
+      }
+    },
+    {
+      "name": "S6 — Preparación: vincular cliente de prueba a la tienda",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Preparación — cliente vinculado a la tienda (201)', function () { pm.response.to.have.status(201); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/clientes/asociar",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "clientes",
+            "asociar"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"id_cliente\": \"{{clienteCedula}}\" }"
+        }
+      }
+    },
+    {
+      "name": "S7 — Preparación: fiado abierto A ($100.000)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function hoyBogota() { return new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10); }",
+              "function sumarDias(clave, n) { const p = clave.split('-').map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2] + n)).toISOString().slice(0, 10); }",
+              "function diasEntre(desde, hasta) { const a = desde.split('-').map(Number), b = hasta.split('-').map(Number); return Math.round((Date.UTC(b[0], b[1] - 1, b[2]) - Date.UTC(a[0], a[1] - 1, a[2])) / 86400000); }",
+              "pm.collectionVariables.set('fechaCorte', hoyBogota());",
+              "pm.collectionVariables.set('fechaLimite', sumarDias(hoyBogota(), 15));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Preparación — fiado A creado (201)', function () { pm.response.to.have.status(201); });",
+              "pm.collectionVariables.set('idA', String(pm.response.json().id_credito));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/creditos",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "creditos"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"clienteId\": {{clienteCedula}},\n  \"montoTotal\": 100000,\n  \"fechaLimitePago\": \"{{fechaLimite}}\",\n  \"descripcion\": \"GC-CONT-06 abierto A\"\n}"
+        }
+      }
+    },
+    {
+      "name": "S8 — Preparación: fiado abierto B ($60.000)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function hoyBogota() { return new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10); }",
+              "function sumarDias(clave, n) { const p = clave.split('-').map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2] + n)).toISOString().slice(0, 10); }",
+              "function diasEntre(desde, hasta) { const a = desde.split('-').map(Number), b = hasta.split('-').map(Number); return Math.round((Date.UTC(b[0], b[1] - 1, b[2]) - Date.UTC(a[0], a[1] - 1, a[2])) / 86400000); }",
+              "pm.collectionVariables.set('fechaCorte', hoyBogota());",
+              "pm.collectionVariables.set('fechaLimite', sumarDias(hoyBogota(), 20));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Preparación — fiado B creado (201)', function () { pm.response.to.have.status(201); });",
+              "pm.collectionVariables.set('idB', String(pm.response.json().id_credito));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/creditos",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "creditos"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"clienteId\": {{clienteCedula}},\n  \"montoTotal\": 60000,\n  \"fechaLimitePago\": \"{{fechaLimite}}\",\n  \"descripcion\": \"GC-CONT-06 abierto B\"\n}"
+        }
+      }
+    },
+    {
+      "name": "S9 — Preparación: fiado saldado C ($30.000)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function hoyBogota() { return new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10); }",
+              "function sumarDias(clave, n) { const p = clave.split('-').map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2] + n)).toISOString().slice(0, 10); }",
+              "function diasEntre(desde, hasta) { const a = desde.split('-').map(Number), b = hasta.split('-').map(Number); return Math.round((Date.UTC(b[0], b[1] - 1, b[2]) - Date.UTC(a[0], a[1] - 1, a[2])) / 86400000); }",
+              "pm.collectionVariables.set('fechaCorte', hoyBogota());",
+              "pm.collectionVariables.set('fechaLimite', sumarDias(hoyBogota(), 10));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Preparación — fiado C creado (201)', function () { pm.response.to.have.status(201); });",
+              "pm.collectionVariables.set('idC', String(pm.response.json().id_credito));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/creditos",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "creditos"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"clienteId\": {{clienteCedula}},\n  \"montoTotal\": 30000,\n  \"fechaLimitePago\": \"{{fechaLimite}}\",\n  \"descripcion\": \"GC-CONT-06 saldado C\"\n}"
+        }
+      }
+    },
+    {
+      "name": "S10 — Preparación: saldar el fiado C (queda en cero)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Preparación — fiado C saldado', function () {",
+              "    pm.response.to.have.status(201);",
+              "    pm.expect(pm.response.json().estado_credito).to.eql('pagado');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/creditos/{{idC}}/abonos",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "creditos",
+            "{{idC}}",
+            "abonos"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"monto\": 30000, \"fechaAbono\": \"{{fechaCorte}}\" }"
+        }
+      }
+    },
+    {
+      "name": "Corte 1, el deudor — el cliente consulta cuánto debe en esa tienda",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Corte 1 — el cliente consulta la tienda (200)', function () { pm.response.to.have.status(200); });",
+              "pm.collectionVariables.set('deudaCliente1', String(pm.response.json().totales.total_deuda));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenCliente}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/clientes/me?id_tendero={{tenderoCedula}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "clientes",
+            "me"
+          ],
+          "query": [
+            {
+              "key": "id_tendero",
+              "value": "{{tenderoCedula}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Corte 1, el acreedor — ficha del cliente del tendero",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const TOL = 0.01;",
+              "pm.test('Corte 1 — la ficha responde 200', function () { pm.response.to.have.status(200); });",
+              "const deudaTendero = pm.response.json().totales.total_deuda;",
+              "const deudaCliente = Number(pm.collectionVariables.get('deudaCliente1'));",
+              "pm.collectionVariables.set('deudaTendero1', String(deudaTendero));",
+              "pm.test('06-A — total que ve el cliente = deuda que ve el tendero (±$0,01)', function () {",
+              "    pm.expect(Math.abs(deudaCliente - deudaTendero)).to.be.at.most(TOL);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/clientes/{{clienteCedula}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "clientes",
+            "{{clienteCedula}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Corte 1, detalle de cartera del tendero",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const TOL = 0.01;",
+              "pm.test('Corte 1 — el detalle responde 200', function () { pm.response.to.have.status(200); });",
+              "const b = pm.response.json();",
+              "const abiertos = b.creditos.filter(function (c) { return c.estado !== 'pagado'; });",
+              "const suma = abiertos.reduce(function (s, c) { return s + c.saldo_pendiente; }, 0);",
+              "const deudaCliente = Number(pm.collectionVariables.get('deudaCliente1'));",
+              "pm.test('06-B — la suma de saldos no saldados del detalle = total que vio el cliente (±$0,01)', function () {",
+              "    pm.expect(Math.abs(suma - deudaCliente), 'suma=' + suma + ' cliente=' + deudaCliente).to.be.at.most(TOL);",
+              "});",
+              "pm.test('06-B — el fiado ya pagado (C) no aumenta la deuda: está en cero', function () {",
+              "    const c = b.creditos.find(function (x) { return String(x.id_credito) === pm.collectionVariables.get('idC'); });",
+              "    pm.expect(c.saldo_pendiente).to.eql(0);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/cartera/cliente/{{clienteCedula}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "cartera",
+            "cliente",
+            "{{clienteCedula}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Corte 1, fiado A — lo abre el cliente",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Corte 1 — fiado A visible para el cliente (200)', function () { pm.response.to.have.status(200); });",
+              "const b = pm.response.json();",
+              "pm.collectionVariables.set('vistaCliente1A', JSON.stringify({ saldo: b.saldo_pendiente, monto: b.monto_total, estado: b.estado }));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenCliente}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/creditos/{{idA}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "creditos",
+            "{{idA}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Corte 1, fiado A — lo abre el tendero y se compara",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const TOL = 0.01;",
+              "pm.test('Corte 1 — fiado A visible para el tendero (200)', function () { pm.response.to.have.status(200); });",
+              "const b = pm.response.json();",
+              "const c = JSON.parse(pm.collectionVariables.get('vistaCliente1A'));",
+              "pm.test('06-C — fiado A: mismo saldo (±$0,01)', function () { pm.expect(Math.abs(c.saldo - b.saldo_pendiente)).to.be.at.most(TOL); });",
+              "pm.test('06-C — fiado A: mismo valor original y mismo estado', function () {",
+              "    pm.expect(c.monto).to.eql(b.monto_total);",
+              "    pm.expect(c.estado).to.eql(b.estado);",
+              "});",
+              "pm.collectionVariables.set('saldo1A', String(b.saldo_pendiente));",
+              ""
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/creditos/{{idA}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "creditos",
+            "{{idA}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Corte 1, fiado B — lo abre el cliente",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Corte 1 — fiado B visible para el cliente (200)', function () { pm.response.to.have.status(200); });",
+              "const b = pm.response.json();",
+              "pm.collectionVariables.set('vistaCliente1B', JSON.stringify({ saldo: b.saldo_pendiente, monto: b.monto_total, estado: b.estado }));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenCliente}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/creditos/{{idB}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "creditos",
+            "{{idB}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Corte 1, fiado B — lo abre el tendero y se compara",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const TOL = 0.01;",
+              "pm.test('Corte 1 — fiado B visible para el tendero (200)', function () { pm.response.to.have.status(200); });",
+              "const b = pm.response.json();",
+              "const c = JSON.parse(pm.collectionVariables.get('vistaCliente1B'));",
+              "pm.test('06-C — fiado B: mismo saldo (±$0,01)', function () { pm.expect(Math.abs(c.saldo - b.saldo_pendiente)).to.be.at.most(TOL); });",
+              "pm.test('06-C — fiado B: mismo valor original y mismo estado', function () {",
+              "    pm.expect(c.monto).to.eql(b.monto_total);",
+              "    pm.expect(c.estado).to.eql(b.estado);",
+              "});",
+              "pm.collectionVariables.set('saldo1B', String(b.saldo_pendiente));",
+              ""
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/creditos/{{idB}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "creditos",
+            "{{idB}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Abono — el tendero registra un abono parcial de $40.000 al fiado A",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function hoyBogota() { return new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10); }",
+              "function sumarDias(clave, n) { const p = clave.split('-').map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2] + n)).toISOString().slice(0, 10); }",
+              "function diasEntre(desde, hasta) { const a = desde.split('-').map(Number), b = hasta.split('-').map(Number); return Math.round((Date.UTC(b[0], b[1] - 1, b[2]) - Date.UTC(a[0], a[1] - 1, a[2])) / 86400000); }",
+              "pm.collectionVariables.set('fechaCorte', hoyBogota());"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Abono — registrado (201)', function () { pm.response.to.have.status(201); });",
+              "pm.test('Abono — el fiado A sigue abierto con saldo $60.000', function () {",
+              "    const r = pm.response.json();",
+              "    pm.expect(r.saldo_nuevo).to.eql(60000);",
+              "    pm.expect(r.estado_credito).to.not.eql('pagado');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/creditos/{{idA}}/abonos",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "creditos",
+            "{{idA}}",
+            "abonos"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"monto\": 40000, \"fechaAbono\": \"{{fechaCorte}}\" }"
+        }
+      }
+    },
+    {
+      "name": "Corte 2, el deudor — el cliente consulta cuánto debe en esa tienda",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Corte 2 — el cliente consulta la tienda (200)', function () { pm.response.to.have.status(200); });",
+              "pm.collectionVariables.set('deudaCliente2', String(pm.response.json().totales.total_deuda));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenCliente}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/clientes/me?id_tendero={{tenderoCedula}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "clientes",
+            "me"
+          ],
+          "query": [
+            {
+              "key": "id_tendero",
+              "value": "{{tenderoCedula}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Corte 2, el acreedor — ficha del cliente del tendero",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const TOL = 0.01;",
+              "pm.test('Corte 2 — la ficha responde 200', function () { pm.response.to.have.status(200); });",
+              "const deudaTendero = pm.response.json().totales.total_deuda;",
+              "const deudaCliente = Number(pm.collectionVariables.get('deudaCliente2'));",
+              "pm.collectionVariables.set('deudaTendero2', String(deudaTendero));",
+              "pm.test('06-D — total que ve el cliente = deuda que ve el tendero (±$0,01)', function () {",
+              "    pm.expect(Math.abs(deudaCliente - deudaTendero)).to.be.at.most(TOL);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/clientes/{{clienteCedula}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "clientes",
+            "{{clienteCedula}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Corte 2, detalle de cartera del tendero",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const TOL = 0.01;",
+              "pm.test('Corte 2 — el detalle responde 200', function () { pm.response.to.have.status(200); });",
+              "const b = pm.response.json();",
+              "const abiertos = b.creditos.filter(function (c) { return c.estado !== 'pagado'; });",
+              "const suma = abiertos.reduce(function (s, c) { return s + c.saldo_pendiente; }, 0);",
+              "const deudaCliente = Number(pm.collectionVariables.get('deudaCliente2'));",
+              "pm.test('06-D — la suma de saldos no saldados del detalle = total que vio el cliente (±$0,01)', function () {",
+              "    pm.expect(Math.abs(suma - deudaCliente), 'suma=' + suma + ' cliente=' + deudaCliente).to.be.at.most(TOL);",
+              "});",
+              ""
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/cartera/cliente/{{clienteCedula}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "cartera",
+            "cliente",
+            "{{clienteCedula}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Corte 2, fiado A — lo abre el cliente",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Corte 2 — fiado A visible para el cliente (200)', function () { pm.response.to.have.status(200); });",
+              "const b = pm.response.json();",
+              "pm.collectionVariables.set('vistaCliente2A', JSON.stringify({ saldo: b.saldo_pendiente, monto: b.monto_total, estado: b.estado }));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenCliente}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/creditos/{{idA}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "creditos",
+            "{{idA}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Corte 2, fiado A — lo abre el tendero y se compara",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const TOL = 0.01;",
+              "pm.test('Corte 2 — fiado A visible para el tendero (200)', function () { pm.response.to.have.status(200); });",
+              "const b = pm.response.json();",
+              "const c = JSON.parse(pm.collectionVariables.get('vistaCliente2A'));",
+              "pm.test('06-D — fiado A: mismo saldo (±$0,01)', function () { pm.expect(Math.abs(c.saldo - b.saldo_pendiente)).to.be.at.most(TOL); });",
+              "pm.test('06-D — fiado A: mismo valor original y mismo estado', function () {",
+              "    pm.expect(c.monto).to.eql(b.monto_total);",
+              "    pm.expect(c.estado).to.eql(b.estado);",
+              "});",
+              "pm.collectionVariables.set('saldo2A', String(b.saldo_pendiente));",
+              "pm.test('06-D — el saldo del fiado A bajó exactamente el valor del abono (en las dos cuentas)', function () {",
+              "    const antes = Number(pm.collectionVariables.get('saldo1A'));",
+              "    pm.expect(Math.abs((antes - 40000) - b.saldo_pendiente)).to.be.at.most(TOL);",
+              "    pm.expect(Math.abs((antes - 40000) - c.saldo)).to.be.at.most(TOL);",
+              "});",
+              "pm.test('06-D — la deuda total bajó exactamente el valor del abono', function () {",
+              "    const antes = Number(pm.collectionVariables.get('deudaCliente1'));",
+              "    const despues = Number(pm.collectionVariables.get('deudaCliente2'));",
+              "    pm.expect(Math.abs((antes - 40000) - despues)).to.be.at.most(TOL);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/creditos/{{idA}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "creditos",
+            "{{idA}}"
+          ]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "password",
+      "value": "GccPrueba2026"
+    },
+    {
+      "key": "runId",
+      "value": ""
+    },
+    {
+      "key": "tenderoEmail",
+      "value": ""
+    },
+    {
+      "key": "tenderoCedula",
+      "value": ""
+    },
+    {
+      "key": "clienteEmail",
+      "value": ""
+    },
+    {
+      "key": "clienteCedula",
+      "value": ""
+    },
+    {
+      "key": "cliente2Email",
+      "value": ""
+    },
+    {
+      "key": "cliente2Cedula",
+      "value": ""
+    },
+    {
+      "key": "fechaCorte",
+      "value": ""
+    },
+    {
+      "key": "tokenTendero",
+      "value": ""
+    },
+    {
+      "key": "tokenCliente",
+      "value": ""
+    },
+    {
+      "key": "fechaLimite",
+      "value": ""
+    },
+    {
+      "key": "idA",
+      "value": ""
+    },
+    {
+      "key": "idB",
+      "value": ""
+    },
+    {
+      "key": "idC",
+      "value": ""
+    },
+    {
+      "key": "deudaCliente1",
+      "value": ""
+    },
+    {
+      "key": "deudaTendero1",
+      "value": ""
+    },
+    {
+      "key": "deudaCliente2",
+      "value": ""
+    },
+    {
+      "key": "deudaTendero2",
+      "value": ""
+    },
+    {
+      "key": "vistaCliente1A",
+      "value": ""
+    },
+    {
+      "key": "saldo1A",
+      "value": ""
+    },
+    {
+      "key": "vistaCliente1B",
+      "value": ""
+    },
+    {
+      "key": "saldo1B",
+      "value": ""
+    },
+    {
+      "key": "vistaCliente2A",
+      "value": ""
+    },
+    {
+      "key": "saldo2A",
+      "value": ""
+    }
+  ]
+}

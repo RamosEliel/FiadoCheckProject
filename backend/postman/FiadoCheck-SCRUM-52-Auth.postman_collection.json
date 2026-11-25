@@ -659,6 +659,223 @@
         "body": { "mode": "raw", "raw": "{\n  \"pushToken\": \"ExponentPushToken[test-{{runId}}-v2]\"\n}" },
         "url": { "raw": "{{baseUrl}}/auth/push-token", "host": ["{{baseUrl}}"], "path": ["auth", "push-token"] }
       }
+    },
+    {
+      "name": "AUTH-21 — push-token con formato inválido → 400",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('AUTH-21 — un token que no es de Expo se rechaza', function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "pm.test('AUTH-21 — mensaje', function () {",
+              "    pm.expect(pm.response.json().error).to.match(/formato válido/);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/auth/push-token",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "push-token"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"pushToken\": \"fcm:no-es-un-token-de-expo\"\n}"
+        }
+      }
+    },
+    {
+      "name": "AUTH-21b — registrar un token de Expo sin dispositivo real → 200",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('AUTH-21b — el token con formato correcto se guarda', function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"pushToken\": \"ExponentPushToken[test-{{runId}}-v3]\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/push-token",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "push-token"
+          ]
+        }
+      }
+    },
+    {
+      "name": "AUTH-22 — push-token/prueba con dispositivo dado de baja en Expo → 409",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('AUTH-22 — Expo declara no registrado el dispositivo de prueba', function () {",
+              "    pm.response.to.have.status(409);",
+              "});",
+              "pm.test('AUTH-22 — mensaje', function () {",
+              "    pm.expect(pm.response.json().error).to.match(/ya no está registrado/);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/auth/push-token/prueba",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "push-token",
+            "prueba"
+          ]
+        }
+      }
+    },
+    {
+      "name": "AUTH-23 — push-token/prueba sin dispositivo registrado → 409 (el token inválido se limpió)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('AUTH-23 — tras DeviceNotRegistered el backend borró el token', function () {",
+              "    pm.response.to.have.status(409);",
+              "});",
+              "pm.test('AUTH-23 — mensaje', function () {",
+              "    pm.expect(pm.response.json().error).to.match(/no tiene un dispositivo registrado/);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/auth/push-token/prueba",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "push-token",
+            "prueba"
+          ]
+        }
+      }
+    },
+    {
+      "name": "AUTH-24 — DELETE /auth/push-token → 200",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('AUTH-24 — el usuario deja de recibir push', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test('AUTH-24 — mensaje', function () {",
+              "    pm.expect(pm.response.json().message).to.match(/Push token eliminado/);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/auth/push-token",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "push-token"
+          ]
+        }
+      }
     }
   ]
 }

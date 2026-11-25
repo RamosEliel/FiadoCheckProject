@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const pool = require('../config/database');
+const { esTokenExpoValido, enviarPushAUsuario } = require('../utils/pushNotifications');
 
 const router = express.Router();
 
@@ -103,6 +104,9 @@ router.post('/logout', require('../middleware/auth'), async (req, res) => {
       'UPDATE sesiones SET revocado = true WHERE token_hash = $1',
       [req.tokenHash]
     );
+
+    // Sin sesión no debe seguir recibiendo recordatorios en este dispositivo.
+    await pool.query('UPDATE usuario SET push_token = NULL WHERE id_usuario = $1', [req.user.id_usuario]);
 
     res.json({ message: 'Sesión cerrada correctamente' });
   } catch (err) {
@@ -229,12 +233,65 @@ router.put('/push-token', require('../middleware/auth'), async (req, res) => {
     if (!pushToken) {
       return res.status(400).json({ error: 'pushToken es requerido' });
     }
+    if (!esTokenExpoValido(pushToken)) {
+      return res.status(400).json({ error: 'pushToken no tiene un formato válido de Expo' });
+    }
 
-    await pool.query('UPDATE usuario SET push_token = $1 WHERE id_usuario = $2', [pushToken, idUsuario]);
+    const token = pushToken.trim();
+
+    // Un token identifica un dispositivo, no una persona: si otro usuario inició
+    // sesión antes en este mismo teléfono, se le retira para que los recordatorios
+    // de esa cuenta no lleguen a quien ahora usa el dispositivo.
+    // Una sola sentencia: asigna el token a este usuario y se lo quita a los demás.
+    await pool.query(
+      `UPDATE usuario
+          SET push_token = CASE WHEN id_usuario = $2 THEN $1 ELSE NULL END
+        WHERE id_usuario = $2 OR push_token = $1`,
+      [token, idUsuario]
+    );
 
     res.json({ message: 'Push token actualizado correctamente' });
   } catch (err) {
     console.error('Error actualizando push token:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// DELETE /api/auth/push-token
+// El usuario deja de recibir push (por ejemplo al desactivar las notificaciones).
+router.delete('/push-token', require('../middleware/auth'), async (req, res) => {
+  try {
+    await pool.query('UPDATE usuario SET push_token = NULL WHERE id_usuario = $1', [req.user.id_usuario]);
+    res.json({ message: 'Push token eliminado correctamente' });
+  } catch (err) {
+    console.error('Error eliminando push token:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// POST /api/auth/push-token/prueba
+// Envía una notificación de prueba al dispositivo del propio usuario: comprueba
+// de punta a punta que el token está registrado y que Expo lo acepta.
+router.post('/push-token/prueba', require('../middleware/auth'), async (req, res) => {
+  try {
+    const resultado = await enviarPushAUsuario(req.user.id_usuario, {
+      title: 'Notificación de prueba',
+      body: 'Las notificaciones push de FiadoCheck funcionan en este dispositivo.',
+      data: { type: 'prueba' },
+    });
+
+    if (resultado.ok) {
+      return res.json({ message: 'Notificación de prueba enviada', ticket: resultado.id });
+    }
+    if (resultado.error === 'SinToken') {
+      return res.status(409).json({ error: 'Este usuario no tiene un dispositivo registrado para recibir push' });
+    }
+    if (resultado.error === 'DeviceNotRegistered') {
+      return res.status(409).json({ error: 'El dispositivo ya no está registrado en Expo; vuelve a iniciar sesión en la app' });
+    }
+    return res.status(502).json({ error: `No se pudo enviar la notificación: ${resultado.mensaje}` });
+  } catch (err) {
+    console.error('Error enviando push de prueba:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });

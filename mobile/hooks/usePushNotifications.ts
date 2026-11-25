@@ -90,9 +90,17 @@ export const usePushNotificationListener = () => {
   }, [router]);
 };
 
+// Sesión (JWT) para la que ya se registró el token del dispositivo. El layout
+// raíz llama a registerPushToken en cada cambio de ruta; sin esta marca se
+// repetiría el permiso, la consulta a Expo y el PUT al backend en cada pantalla.
+let sesionRegistrada: string | null = null;
+let registroEnCurso: string | null = null;
+
 export const registerPushToken = async (authToken: string) => {
   if (Platform.OS === 'web') return;
+  if (sesionRegistrada === authToken || registroEnCurso === authToken) return;
 
+  registroEnCurso = authToken;
   try {
     await ensureAndroidNotificationChannel();
 
@@ -128,7 +136,10 @@ export const registerPushToken = async (authToken: string) => {
       body: JSON.stringify({ pushToken }),
     });
     console.log('[push] Respuesta del backend al registrar token:', response.status);
+    if (response.ok) sesionRegistrada = authToken;
   } catch (e) {
     console.error('Error registrando push token', e);
+  } finally {
+    registroEnCurso = null;
   }
 };

@@ -1,0 +1,7 @@
+# Una fila por participante, condición y tarea (6 tareas x 2 condiciones x N participantes).
+# participante: P1, P2, ... (sin nombres)   orden: 1 si esa condición fue la primera de la sesión, 2 si fue la segunda
+# variante: A o B (cada participante usa una variante distinta en cada condición)   condicion: manual | sistema
+# tarea: T1..T6   tiempo_s: segundos con cronómetro   correcta: 1 si la respuesta/registro fue correcto, 0 si no
+# Las líneas que empiezan con # se ignoran. No usar comas dentro de «observaciones». Agregar debajo de la
+# cabecera una fila por medición real.
+participante,orden,variante,condicion,tarea,tiempo_s,correcta,observaciones

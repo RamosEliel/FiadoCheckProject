@@ -119,7 +119,7 @@ El servicio verifica que el volumen de créditos cerrados haya crecido al menos 
 Si el microservicio no responde y no hay predicción cacheada, el backend responde **503**.
 
 ### Alertas y notificaciones
-Alertas clasificadas en `critica`, `proxima` e `informativa` según el rango de mora. Notificaciones push vía Expo con enlace profundo a la pantalla correspondiente. El icono de notificación en Android (`expo-notifications` en `app.json`) forma parte del build nativo: un cambio de logo exige un **nuevo development build**, no solo un reload de Metro.
+Alertas clasificadas en `critica`, `proxima` e `informativa` según el rango de mora. Notificaciones push vía Expo con enlace profundo a la pantalla correspondiente: la app registra el token del dispositivo (`PUT /api/auth/push-token`), el backend lo guarda en `usuario.push_token` y lo retira al cerrar sesión, y el flujo diario de n8n "Recordatorios Push" (08:05) envía el aviso a cliente y tendero con la API de Expo. `POST /api/auth/push-token/prueba` manda una notificación de prueba al dispositivo del usuario autenticado, y `npm test` en `backend/` ejecuta las pruebas del módulo sin base de datos ni Expo. El icono de notificación en Android (`expo-notifications` en `app.json`) forma parte del build nativo: un cambio de logo exige un **nuevo development build**, no solo un reload de Metro.
 
 ### Asistente IA
 Chat integrado en la app que consulta la cartera en lenguaje natural ("¿quién me debe más?", "créditos vencidos") y ejecuta operaciones de escritura: vincular clientes, registrar créditos y pagos. Implementado como workflow de n8n al que el backend accede por proxy.

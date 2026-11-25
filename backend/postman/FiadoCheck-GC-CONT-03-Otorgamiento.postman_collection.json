@@ -1,0 +1,1034 @@
+{
+  "info": {
+    "name": "FiadoCheck — GC-CONT-03 Cumplimiento de política de otorgamiento",
+    "description": "Dimensión: Otorgamiento del crédito. Fundamento: pruebas de transacciones contra la política vigente en el momento de la operación (Arens, Elder y Beasley).\n\nCada fiado se clasifica contra el límite sugerido que la caja Recomendación mostraba ANTES de guardarlo. El límite se copia una vez y no se vuelve a leer (un fiado nuevo cambia la recomendación). La recomendación orienta, no impide: el fiado por encima del límite se guarda igual y queda como excepción.\n\nCasos: 03-A cumplió (cliente con historial), 03-B excepción (+$1.000), 03-C cumplió ($50.000, cliente sin fiados cerrados), 03-D excepción ($51.000).\n\nRequisitos: backend y microservicio de riesgo en línea. Si la recomendación responde 503, no se ejecuta el caso.\nEjecutar con el entorno FiadoCheck-Azure o FiadoCheck-Local, una iteración, en orden.\nLIMPIEZA\nCada corrida crea una tienda y clientes desechables con correo gcc.*@test.fiadocheck.com,\ny créditos reales asociados. Cuando se terminen las corridas:\n    node backend/scripts/limpiar_pruebas_gestion_credito.js --dry-run\n    node backend/scripts/limpiar_pruebas_gestion_credito.js\nLos créditos vencidos y pagados de estas tiendas entran al conjunto de entrenamiento del\nRandom Forest mientras existan: limpiar pronto, y no dejar pasar un reentrenamiento por\nvolumen entre la corrida y la limpieza.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "S1 — Preparación: registrar tienda de prueba",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function hoyBogota() { return new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10); }",
+              "function sumarDias(clave, n) { const p = clave.split('-').map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2] + n)).toISOString().slice(0, 10); }",
+              "function diasEntre(desde, hasta) { const a = desde.split('-').map(Number), b = hasta.split('-').map(Number); return Math.round((Date.UTC(b[0], b[1] - 1, b[2]) - Date.UTC(a[0], a[1] - 1, a[2])) / 86400000); }",
+              "// Identificador único por corrida. Empieza en 1 para no perder ceros al pasar a número.",
+              "const ts = '1' + Date.now().toString().slice(-8);",
+              "pm.collectionVariables.set('runId', ts);",
+              "pm.collectionVariables.set('tenderoEmail', 'gcc.t.' + ts + '@test.fiadocheck.com');",
+              "pm.collectionVariables.set('tenderoCedula', ts);",
+              "pm.collectionVariables.set('clienteEmail', 'gcc.c1.' + ts + '@test.fiadocheck.com');",
+              "pm.collectionVariables.set('clienteCedula', String(Number(ts) + 1));",
+              "pm.collectionVariables.set('cliente2Email', 'gcc.c2.' + ts + '@test.fiadocheck.com');",
+              "pm.collectionVariables.set('cliente2Cedula', String(Number(ts) + 2));",
+              "pm.collectionVariables.set('fechaCorte', hoyBogota());"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Preparación — tienda de prueba registrada (201)', function () { pm.response.to.have.status(201); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/auth/registerTendero",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "registerTendero"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre_completo\": \"Tienda GC-CONT-03 {{runId}}\",\n  \"email\": \"{{tenderoEmail}}\",\n  \"telefono\": \"3001234567\",\n  \"cedula\": \"{{tenderoCedula}}\",\n  \"direccion\": \"Calle 10 # 20-30\",\n  \"num_camara_comercio\": \"CC-{{runId}}\",\n  \"password\": \"{{password}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "S2 — Preparación: login del tendero",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Preparación — login del tendero (200)', function () { pm.response.to.have.status(200); });",
+              "const b = pm.response.json();",
+              "pm.test('Preparación — la sesión es de tendero', function () { pm.expect(b.tendero).to.not.be.null; });",
+              "if (b.token) { pm.collectionVariables.set('tokenTendero', b.token); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "login"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"email\": \"{{tenderoEmail}}\", \"password\": \"{{password}}\" }"
+        }
+      }
+    },
+    {
+      "name": "S3 — Preparación: registrar Cliente con historial (con cuenta propia)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Preparación — Cliente con historial registrado (201)', function () { pm.response.to.have.status(201); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/auth/registerClientes",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "registerClientes"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre_completo\": \"Cliente con historial {{runId}}\",\n  \"email\": \"{{clienteEmail}}\",\n  \"telefono\": \"3007654321\",\n  \"cedula\": \"{{clienteCedula}}\",\n  \"direccion\": \"Carrera 5 # 15-25\",\n  \"password\": \"{{password}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "S4 — Preparación: registrar Cliente sin historial (con cuenta propia)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Preparación — Cliente sin historial registrado (201)', function () { pm.response.to.have.status(201); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/auth/registerClientes",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "registerClientes"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre_completo\": \"Cliente sin historial {{runId}}\",\n  \"email\": \"{{cliente2Email}}\",\n  \"telefono\": \"3007654321\",\n  \"cedula\": \"{{cliente2Cedula}}\",\n  \"direccion\": \"Carrera 5 # 15-25\",\n  \"password\": \"{{password}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "S5 — Preparación: login del cliente",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Preparación — login del cliente (200)', function () { pm.response.to.have.status(200); });",
+              "const b = pm.response.json();",
+              "if (b.token) { pm.collectionVariables.set('tokenCliente', b.token); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "login"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"email\": \"{{clienteEmail}}\", \"password\": \"{{password}}\" }"
+        }
+      }
+    },
+    {
+      "name": "S6 — Preparación: vincular cliente con historial a la tienda",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Preparación — cliente vinculado a la tienda (201)', function () { pm.response.to.have.status(201); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/clientes/asociar",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "clientes",
+            "asociar"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"id_cliente\": \"{{clienteCedula}}\" }"
+        }
+      }
+    },
+    {
+      "name": "S7 — Preparación: vincular cliente sin historial a la tienda",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Preparación — cliente vinculado a la tienda (201)', function () { pm.response.to.have.status(201); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/clientes/asociar",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "clientes",
+            "asociar"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"id_cliente\": \"{{cliente2Cedula}}\" }"
+        }
+      }
+    },
+    {
+      "name": "S8 — Preparación: crédito de historial del cliente con historial",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function hoyBogota() { return new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10); }",
+              "function sumarDias(clave, n) { const p = clave.split('-').map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2] + n)).toISOString().slice(0, 10); }",
+              "function diasEntre(desde, hasta) { const a = desde.split('-').map(Number), b = hasta.split('-').map(Number); return Math.round((Date.UTC(b[0], b[1] - 1, b[2]) - Date.UTC(a[0], a[1] - 1, a[2])) / 86400000); }",
+              "pm.collectionVariables.set('fechaLimite', sumarDias(hoyBogota(), 15));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Preparación — crédito de historial creado (201)', function () { pm.response.to.have.status(201); });",
+              "pm.collectionVariables.set('idCreditoHistorial', String(pm.response.json().id_credito));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/creditos",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "creditos"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"clienteId\": {{clienteCedula}},\n  \"montoTotal\": 100000,\n  \"fechaLimitePago\": \"{{fechaLimite}}\",\n  \"descripcion\": \"GC-CONT-03 historial\"\n}"
+        }
+      }
+    },
+    {
+      "name": "S9 — Preparación: saldar ese crédito para que quede cerrado",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function hoyBogota() { return new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10); }",
+              "function sumarDias(clave, n) { const p = clave.split('-').map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2] + n)).toISOString().slice(0, 10); }",
+              "function diasEntre(desde, hasta) { const a = desde.split('-').map(Number), b = hasta.split('-').map(Number); return Math.round((Date.UTC(b[0], b[1] - 1, b[2]) - Date.UTC(a[0], a[1] - 1, a[2])) / 86400000); }",
+              "pm.collectionVariables.set('fechaCorte', hoyBogota());"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Preparación — abono total registrado (201)', function () { pm.response.to.have.status(201); });",
+              "pm.test('Preparación — el crédito quedó pagado (historial cerrado)', function () {",
+              "    pm.expect(pm.response.json().estado_credito).to.eql('pagado');",
+              "});",
+              "pm.collectionVariables.set('planilla', '[]');"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/creditos/{{idCreditoHistorial}}/abonos",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "creditos",
+            "{{idCreditoHistorial}}",
+            "abonos"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"monto\": 100000, \"fechaAbono\": \"{{fechaCorte}}\" }"
+        }
+      }
+    },
+    {
+      "name": "03-A — Copiar el tope del momento (cliente con historial)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('03-A — la recomendación responde 200 (un 503 es la herramienta de riesgo caída: no se ejecuta el caso ni se inventa el límite)', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "const b = pm.response.json();",
+              "pm.test('03-A — estado con_historial', function () { pm.expect(b.estado).to.eql('con_historial'); });",
+              "const lim = Number(b.limite_sugerido);",
+              "pm.test('03-A — límite sugerido entre 1 y 300000 (precondición del caso)', function () {",
+              "    pm.expect(lim).to.be.above(0);",
+              "    pm.expect(lim).to.be.at.most(300000);",
+              "});",
+              "// El límite se copia ahora y no se vuelve a consultar para clasificar.",
+              "pm.collectionVariables.set('limiteH', String(lim));",
+              "console.log('Tope copiado:', lim, '| nivel:', b.nivel_riesgo, '| hora:', new Date().toISOString());"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/scoring/{{clienteCedula}}/recomendacion",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "scoring",
+            "{{clienteCedula}}",
+            "recomendacion"
+          ]
+        }
+      }
+    },
+    {
+      "name": "03-A — Fiar exactamente el tope",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function hoyBogota() { return new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10); }",
+              "function sumarDias(clave, n) { const p = clave.split('-').map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2] + n)).toISOString().slice(0, 10); }",
+              "function diasEntre(desde, hasta) { const a = desde.split('-').map(Number), b = hasta.split('-').map(Number); return Math.round((Date.UTC(b[0], b[1] - 1, b[2]) - Date.UTC(a[0], a[1] - 1, a[2])) / 86400000); }",
+              "const limite = Number(pm.collectionVariables.get('limiteH'));",
+              "const monto = limite;",
+              "pm.collectionVariables.set('montoIntentado', String(monto));",
+              "pm.collectionVariables.set('fechaLimite', sumarDias(hoyBogota(), 15));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('03-A — el fiado queda guardado (201); la recomendación orienta, no impide', function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "pm.collectionVariables.set('idCreditoCaso', String(pm.response.json().id_credito));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/creditos",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "creditos"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"clienteId\": {{clienteCedula}},\n  \"montoTotal\": {{montoIntentado}},\n  \"fechaLimitePago\": \"{{fechaLimite}}\",\n  \"descripcion\": \"GC-CONT-03 cumplio\"\n}"
+        }
+      }
+    },
+    {
+      "name": "03-A — Leer el valor guardado y clasificar",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const b = pm.response.json();",
+              "const limite = Number(pm.collectionVariables.get('limiteH'));",
+              "const intentado = Number(pm.collectionVariables.get('montoIntentado'));",
+              "pm.test('03-A — el valor guardado es el que se escribió', function () { pm.expect(b.monto_total).to.eql(intentado); });",
+              "const clasificacion = b.monto_total <= limite ? 'cumplio' : 'excepcion';",
+              "pm.test('03-A — clasificación: cumplio', function () { pm.expect(clasificacion).to.eql('cumplio'); });",
+              "",
+              "",
+              "const fila = { caso: '03-A', cliente: pm.collectionVariables.get('clienteCedula'),",
+              "  limite: Number(pm.collectionVariables.get('limiteH')), valor_intentado: Number(pm.collectionVariables.get('montoIntentado')),",
+              "  valor_guardado: b.monto_total, clasificacion: clasificacion, diferencia: b.monto_total - Number(pm.collectionVariables.get('limiteH')),",
+              "  id_credito: b.id_credito };",
+              "const p = JSON.parse(pm.collectionVariables.get('planilla') || '[]'); p.push(fila);",
+              "pm.collectionVariables.set('planilla', JSON.stringify(p));",
+              "console.log('PLANILLA', JSON.stringify(fila));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/creditos/{{idCreditoCaso}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "creditos",
+            "{{idCreditoCaso}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "03-B — Fiar mil pesos por encima del tope",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function hoyBogota() { return new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10); }",
+              "function sumarDias(clave, n) { const p = clave.split('-').map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2] + n)).toISOString().slice(0, 10); }",
+              "function diasEntre(desde, hasta) { const a = desde.split('-').map(Number), b = hasta.split('-').map(Number); return Math.round((Date.UTC(b[0], b[1] - 1, b[2]) - Date.UTC(a[0], a[1] - 1, a[2])) / 86400000); }",
+              "const limite = Number(pm.collectionVariables.get('limiteH'));",
+              "const monto = limite + 1000;",
+              "pm.collectionVariables.set('montoIntentado', String(monto));",
+              "pm.collectionVariables.set('fechaLimite', sumarDias(hoyBogota(), 15));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('03-B — el fiado queda guardado (201); la recomendación orienta, no impide', function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "pm.collectionVariables.set('idCreditoCaso', String(pm.response.json().id_credito));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/creditos",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "creditos"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"clienteId\": {{clienteCedula}},\n  \"montoTotal\": {{montoIntentado}},\n  \"fechaLimitePago\": \"{{fechaLimite}}\",\n  \"descripcion\": \"GC-CONT-03 excepcion\"\n}"
+        }
+      }
+    },
+    {
+      "name": "03-B — Leer el valor guardado y clasificar",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const b = pm.response.json();",
+              "const limite = Number(pm.collectionVariables.get('limiteH'));",
+              "const intentado = Number(pm.collectionVariables.get('montoIntentado'));",
+              "pm.test('03-B — el valor guardado es el que se escribió', function () { pm.expect(b.monto_total).to.eql(intentado); });",
+              "const clasificacion = b.monto_total <= limite ? 'cumplio' : 'excepcion';",
+              "pm.test('03-B — clasificación: excepcion', function () { pm.expect(clasificacion).to.eql('excepcion'); });",
+              "pm.test('03-B — diferencia sobre el límite = $1000', function () { pm.expect(b.monto_total - limite).to.eql(1000); });",
+              "",
+              "const fila = { caso: '03-B', cliente: pm.collectionVariables.get('clienteCedula'),",
+              "  limite: Number(pm.collectionVariables.get('limiteH')), valor_intentado: Number(pm.collectionVariables.get('montoIntentado')),",
+              "  valor_guardado: b.monto_total, clasificacion: clasificacion, diferencia: b.monto_total - Number(pm.collectionVariables.get('limiteH')),",
+              "  id_credito: b.id_credito };",
+              "const p = JSON.parse(pm.collectionVariables.get('planilla') || '[]'); p.push(fila);",
+              "pm.collectionVariables.set('planilla', JSON.stringify(p));",
+              "console.log('PLANILLA', JSON.stringify(fila));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/creditos/{{idCreditoCaso}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "creditos",
+            "{{idCreditoCaso}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "03-C — Copiar el tope de un cliente sin fiados cerrados",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('03-C — la recomendación responde 200', function () { pm.response.to.have.status(200); });",
+              "const b = pm.response.json();",
+              "pm.test('03-C — estado sin_credito_tienda', function () { pm.expect(b.estado).to.eql('sin_credito_tienda'); });",
+              "pm.test('03-C — el límite de la pantalla es $50.000', function () { pm.expect(Number(b.limite_sugerido)).to.eql(50000); });",
+              "pm.collectionVariables.set('limiteN', String(Number(b.limite_sugerido)));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/scoring/{{cliente2Cedula}}/recomendacion",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "scoring",
+            "{{cliente2Cedula}}",
+            "recomendacion"
+          ]
+        }
+      }
+    },
+    {
+      "name": "03-C — Fiar el tope fijo de $50.000",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function hoyBogota() { return new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10); }",
+              "function sumarDias(clave, n) { const p = clave.split('-').map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2] + n)).toISOString().slice(0, 10); }",
+              "function diasEntre(desde, hasta) { const a = desde.split('-').map(Number), b = hasta.split('-').map(Number); return Math.round((Date.UTC(b[0], b[1] - 1, b[2]) - Date.UTC(a[0], a[1] - 1, a[2])) / 86400000); }",
+              "const limite = Number(pm.collectionVariables.get('limiteN'));",
+              "const monto = limite;",
+              "pm.collectionVariables.set('montoIntentado', String(monto));",
+              "pm.collectionVariables.set('fechaLimite', sumarDias(hoyBogota(), 15));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('03-C — el fiado queda guardado (201); la recomendación orienta, no impide', function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "pm.collectionVariables.set('idCreditoCaso', String(pm.response.json().id_credito));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/creditos",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "creditos"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"clienteId\": {{cliente2Cedula}},\n  \"montoTotal\": {{montoIntentado}},\n  \"fechaLimitePago\": \"{{fechaLimite}}\",\n  \"descripcion\": \"GC-CONT-03 sin historial cumplio\"\n}"
+        }
+      }
+    },
+    {
+      "name": "03-C — Leer el valor guardado y clasificar",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const b = pm.response.json();",
+              "const limite = Number(pm.collectionVariables.get('limiteN'));",
+              "const intentado = Number(pm.collectionVariables.get('montoIntentado'));",
+              "pm.test('03-C — el valor guardado es el que se escribió', function () { pm.expect(b.monto_total).to.eql(intentado); });",
+              "const clasificacion = b.monto_total <= limite ? 'cumplio' : 'excepcion';",
+              "pm.test('03-C — clasificación: cumplio', function () { pm.expect(clasificacion).to.eql('cumplio'); });",
+              "",
+              "",
+              "const fila = { caso: '03-C', cliente: pm.collectionVariables.get('cliente2Cedula'),",
+              "  limite: Number(pm.collectionVariables.get('limiteN')), valor_intentado: Number(pm.collectionVariables.get('montoIntentado')),",
+              "  valor_guardado: b.monto_total, clasificacion: clasificacion, diferencia: b.monto_total - Number(pm.collectionVariables.get('limiteN')),",
+              "  id_credito: b.id_credito };",
+              "const p = JSON.parse(pm.collectionVariables.get('planilla') || '[]'); p.push(fila);",
+              "pm.collectionVariables.set('planilla', JSON.stringify(p));",
+              "console.log('PLANILLA', JSON.stringify(fila));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/creditos/{{idCreditoCaso}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "creditos",
+            "{{idCreditoCaso}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "03-D — Fiar pasándose del tope fijo ($51.000)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function hoyBogota() { return new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10); }",
+              "function sumarDias(clave, n) { const p = clave.split('-').map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2] + n)).toISOString().slice(0, 10); }",
+              "function diasEntre(desde, hasta) { const a = desde.split('-').map(Number), b = hasta.split('-').map(Number); return Math.round((Date.UTC(b[0], b[1] - 1, b[2]) - Date.UTC(a[0], a[1] - 1, a[2])) / 86400000); }",
+              "const limite = Number(pm.collectionVariables.get('limiteN'));",
+              "const monto = limite + 1000;",
+              "pm.collectionVariables.set('montoIntentado', String(monto));",
+              "pm.collectionVariables.set('fechaLimite', sumarDias(hoyBogota(), 15));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('03-D — el fiado queda guardado (201); la recomendación orienta, no impide', function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "pm.collectionVariables.set('idCreditoCaso', String(pm.response.json().id_credito));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/creditos",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "creditos"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"clienteId\": {{cliente2Cedula}},\n  \"montoTotal\": {{montoIntentado}},\n  \"fechaLimitePago\": \"{{fechaLimite}}\",\n  \"descripcion\": \"GC-CONT-03 sin historial excepcion\"\n}"
+        }
+      }
+    },
+    {
+      "name": "03-D — Leer el valor guardado y clasificar",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const b = pm.response.json();",
+              "const limite = Number(pm.collectionVariables.get('limiteN'));",
+              "const intentado = Number(pm.collectionVariables.get('montoIntentado'));",
+              "pm.test('03-D — el valor guardado es el que se escribió', function () { pm.expect(b.monto_total).to.eql(intentado); });",
+              "const clasificacion = b.monto_total <= limite ? 'cumplio' : 'excepcion';",
+              "pm.test('03-D — clasificación: excepcion', function () { pm.expect(clasificacion).to.eql('excepcion'); });",
+              "pm.test('03-D — diferencia sobre el límite = $1000', function () { pm.expect(b.monto_total - limite).to.eql(1000); });",
+              "",
+              "const fila = { caso: '03-D', cliente: pm.collectionVariables.get('cliente2Cedula'),",
+              "  limite: Number(pm.collectionVariables.get('limiteN')), valor_intentado: Number(pm.collectionVariables.get('montoIntentado')),",
+              "  valor_guardado: b.monto_total, clasificacion: clasificacion, diferencia: b.monto_total - Number(pm.collectionVariables.get('limiteN')),",
+              "  id_credito: b.id_credito };",
+              "const p = JSON.parse(pm.collectionVariables.get('planilla') || '[]'); p.push(fila);",
+              "pm.collectionVariables.set('planilla', JSON.stringify(p));",
+              "console.log('PLANILLA', JSON.stringify(fila));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/creditos/{{idCreditoCaso}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "creditos",
+            "{{idCreditoCaso}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Cierre — Planilla: los cuatro fiados cayeron en la casilla prevista",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const p = JSON.parse(pm.collectionVariables.get('planilla') || '[]');",
+              "pm.test('Planilla — hay cuatro fiados clasificados', function () { pm.expect(p.length).to.eql(4); });",
+              "pm.test('Planilla — 03-A cumplió, 03-B excepción, 03-C cumplió, 03-D excepción', function () {",
+              "    pm.expect(p.map(function (f) { return f.clasificacion; })).to.eql(['cumplio', 'excepcion', 'cumplio', 'excepcion']);",
+              "});",
+              "console.log('PLANILLA COMPLETA\\n' + p.map(function (f) { return [f.caso, f.cliente, f.limite, f.valor_intentado, f.valor_guardado, f.clasificacion, f.diferencia, f.id_credito].join(' | '); }).join('\\n'));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenTendero}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/creditos?clienteId={{clienteCedula}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "creditos"
+          ],
+          "query": [
+            {
+              "key": "clienteId",
+              "value": "{{clienteCedula}}"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "password",
+      "value": "GccPrueba2026"
+    },
+    {
+      "key": "runId",
+      "value": ""
+    },
+    {
+      "key": "tenderoEmail",
+      "value": ""
+    },
+    {
+      "key": "tenderoCedula",
+      "value": ""
+    },
+    {
+      "key": "clienteEmail",
+      "value": ""
+    },
+    {
+      "key": "clienteCedula",
+      "value": ""
+    },
+    {
+      "key": "cliente2Email",
+      "value": ""
+    },
+    {
+      "key": "cliente2Cedula",
+      "value": ""
+    },
+    {
+      "key": "fechaCorte",
+      "value": ""
+    },
+    {
+      "key": "tokenTendero",
+      "value": ""
+    },
+    {
+      "key": "tokenCliente",
+      "value": ""
+    },
+    {
+      "key": "fechaLimite",
+      "value": ""
+    },
+    {
+      "key": "idCreditoHistorial",
+      "value": ""
+    },
+    {
+      "key": "idCreditoCaso",
+      "value": ""
+    },
+    {
+      "key": "limiteH",
+      "value": ""
+    },
+    {
+      "key": "limiteN",
+      "value": ""
+    },
+    {
+      "key": "montoIntentado",
+      "value": ""
+    },
+    {
+      "key": "planilla",
+      "value": "[]"
+    }
+  ]
+}
